@@ -366,6 +366,26 @@ fetch('./details')
                                 })
 
                                 voronoiMap.addContactMenu(voronoiGUI);
+
+                                if(details['hasInteract']) {
+                                    fetch('./interact').then((response) => {
+                                        if (response.status !== 200) {
+                                            console.log('Looks like there was a problem. Status Code: ' +
+                                                response.status);
+                                            return;
+                                        }
+                    
+                                        response.json().then(interact => {
+                                            interact['Interactions'].forEach((interaction: any) => {
+                                                imageMap.addContact(interaction['SourceStart'], interaction['TargetStart']);
+                                                voronoiMap.addContact(interaction['SourceStart'], interaction['TargetStart']);
+                                            });
+
+                                            imageMap.redraw();
+                                            voronoiMap.redraw();
+                                        })
+                                    });
+                                }
                             });
                         });
                     });

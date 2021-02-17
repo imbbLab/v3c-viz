@@ -4,11 +4,13 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/binary"
+	"encoding/csv"
 	"encoding/json"
 	"fmt"
 	"image"
 	"image/color"
 	"image/png"
+	"io"
 	"log"
 	"net"
 	"net/http"
@@ -38,14 +40,41 @@ type Database struct {
 	maxValue uint32
 }
 
+type InteractFile struct {
+	Interactions []Interaction
+}
+
+type Interaction struct {
+	Chrom        string
+	ChromStart   uint64
+	ChromEnd     uint64
+	Name         string
+	Score        uint64
+	Value        float64
+	Exp          string
+	Colour       string
+	SourceChrom  string
+	SourceStart  uint64
+	SourceEnd    uint64
+	SourceName   string
+	SourceStrand string
+	TargetChrom  string
+	TargetStart  uint64
+	TargetEnd    uint64
+	TargetName   string
+	TargetStrand string
+}
+
 var db *chromDatabase
+var interactFile *InteractFile
 
 var numPixelsInOverviewImage uint32 = 200
 
 var opts struct {
 	// Example of a required flag
-	DataDirectory string `short:"d" long:"data" description:"data to load (.pairs)" required:"true"`
-	Port          string `short:"p" long:"port" description:"Port used for the server" default:"5002"`
+	DataFile     string `short:"d" long:"data" description:"Data to load (.pairs)" required:"true"`
+	InteractFile string `short:"i" long:"interact" description:"Interact file to visualise" required:"false"`
+	Port         string `short:"p" long:"port" description:"Port used for the server" default:"5002"`
 }
 
 // open opens the specified URL in the default browser of the user.
@@ -89,6 +118,91 @@ func open(url string) error {
 // 	server.Start(listener)
 // }
 
+func parseInteract(filename string) (*InteractFile, error) {
+	if filename == "" {
+		return nil, nil
+	}
+
+	iFile, err := os.Open(filename)
+	if err != nil {
+		return nil, err
+	}
+	defer iFile.Close()
+
+	// Skip the first line as it is a header
+	row1, err := bufio.NewReader(iFile).ReadSlice('\n')
+	if err != nil {
+		return nil, err
+	}
+	_, err = iFile.Seek(int64(len(row1)), io.SeekStart)
+	if err != nil {
+		return nil, err
+	}
+
+	reader := csv.NewReader(iFile)
+	reader.Comma = '\t'
+
+	var interactFile InteractFile
+
+	for {
+		row, err := reader.Read()
+		if err == io.EOF {
+			break
+		} else if err != nil {
+			panic(err) // or handle it another way
+		}
+		// use the `row` here
+
+		var interaction Interaction
+		interaction.Chrom = row[0]
+		interaction.ChromStart, err = strconv.ParseUint(row[1], 10, 64)
+		if err != nil {
+			return nil, err
+		}
+		interaction.ChromEnd, err = strconv.ParseUint(row[2], 10, 64)
+		if err != nil {
+			return nil, err
+		}
+		interaction.Name = row[3]
+		interaction.Score, err = strconv.ParseUint(row[4], 10, 64)
+		if err != nil {
+			return nil, err
+		}
+		interaction.Value, err = strconv.ParseFloat(row[5], 64)
+		if err != nil {
+			return nil, err
+		}
+		interaction.Exp = row[6]
+		interaction.Colour = row[7]
+		interaction.SourceChrom = row[8]
+		interaction.SourceStart, err = strconv.ParseUint(row[9], 10, 64)
+		if err != nil {
+			return nil, err
+		}
+		interaction.SourceEnd, err = strconv.ParseUint(row[10], 10, 64)
+		if err != nil {
+			return nil, err
+		}
+		interaction.SourceName = row[11]
+		interaction.SourceStrand = row[12]
+		interaction.TargetChrom = row[13]
+		interaction.TargetStart, err = strconv.ParseUint(row[14], 10, 64)
+		if err != nil {
+			return nil, err
+		}
+		interaction.TargetEnd, err = strconv.ParseUint(row[15], 10, 64)
+		if err != nil {
+			return nil, err
+		}
+		interaction.TargetName = row[16]
+		interaction.TargetStrand = row[17]
+
+		interactFile.Interactions = append(interactFile.Interactions, interaction)
+	}
+
+	return &interactFile, nil
+}
+
 func main() {
 	_, err := flags.Parse(&opts)
 
@@ -99,7 +213,13 @@ func main() {
 
 	//"/home/alan/Documents/Work/Alisa/Data_Dm/All_chr4.pairs"
 
-	db, err = createDB(opts.DataDirectory)
+	// Process interact file
+	interactFile, err = parseInteract(opts.InteractFile)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	db, err = createDB(opts.DataFile)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -141,14 +261,15 @@ func main() {
 
 func GetDetails(w http.ResponseWriter, r *http.Request) {
 	type details struct {
-		Name string `json:"name"`
-		MinX int    `json:"minX"`
-		MaxX int    `json:"maxX"`
-		MinY int    `json:"minY"`
-		MaxY int    `json:"maxY"`
+		Name        string `json:"name"`
+		HasInteract bool   `json:"hasInteract"`
+		MinX        int    `json:"minX"`
+		MaxX        int    `json:"maxX"`
+		MinY        int    `json:"minY"`
+		MaxY        int    `json:"maxY"`
 	}
 
-	dets, _ := json.Marshal(&details{Name: db.chromosomeName, MinX: 0, MinY: 0, MaxX: int(db.chromosomeLength), MaxY: int(db.chromosomeLength)})
+	dets, _ := json.Marshal(&details{Name: db.chromosomeName, HasInteract: interactFile != nil, MinX: 0, MinY: 0, MaxX: int(db.chromosomeLength), MaxY: int(db.chromosomeLength)})
 	w.Write(dets)
 }
 
@@ -255,6 +376,16 @@ func float64ToByte(floats []float64) []byte {
 	return buf.Bytes()
 }
 
+func GetInteract(w http.ResponseWriter, r *http.Request) {
+	bytes, err := json.Marshal(interactFile)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Write(bytes)
+}
+
 func GetDensityImage(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query()
 
@@ -358,6 +489,7 @@ func startServer(listener net.Listener) {
 
 	router.HandleFunc("/details", GetDetails)
 	router.HandleFunc("/points", GetPoints)
+	router.HandleFunc("/interact", GetInteract)
 	router.HandleFunc("/densityImage", GetDensityImage)
 	//router.HandleFunc("/", ListProjects).Methods("GET")
 	router.PathPrefix("/").Handler(http.FileServer(http.Dir("./static/")))

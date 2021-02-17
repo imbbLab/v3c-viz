@@ -52,11 +52,11 @@ export abstract class Axis {
         this.axisCanvas.width = this.axisWidth;
         this.axisCanvas.height = this.axisHeight;
 
-        this.boxesToDraw = new Array<number[]>(1);
+        this.boxesToDraw = new Array<number[]>();
 
-        this.boxesToDraw[0] = new Array<number>(2);
+        /*this.boxesToDraw[0] = new Array<number>(2);
         this.boxesToDraw[0][0] = 804435;
-        this.boxesToDraw[0][1] = 969587;
+        this.boxesToDraw[0][1] = 969587;*/
 
         //var canvasBufferContext = <CanvasRenderingContext2D>canvasBuffer.getContext('2d');
         var self = this;
@@ -224,6 +224,14 @@ export abstract class Axis {
     }
 
     abstract redraw(): void;
+
+    addContact(x: number, y: number) {
+        let contact = new Array<number>(2);
+        contact[0] = x;
+        contact[1] = y;
+
+        this.boxesToDraw.push(contact)
+    }
 
     addContactMenu(gui: dat.GUI) {
         const imageContactFolder = gui.addFolder('Contacts');
