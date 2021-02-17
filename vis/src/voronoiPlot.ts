@@ -95,7 +95,7 @@ export class VoronoiPlot extends Axis {
 
         //this.belowBrowser.search("chr4:" + minX + "-" + maxX)
         //this.rightBrowser.search("chr4:" + minY + "-" + maxY)
-        console.log("chr4:" + minY + "-" + maxY)
+        //console.log("chr4:" + minY + "-" + maxY)
 
         fetch('./points?xStart=' + minX + '&xEnd=' + maxX + '&yStart=' + minY + '&yEnd=' + maxY)
             .then((response) => {

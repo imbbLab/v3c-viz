@@ -35,53 +35,344 @@ let normPoints: Array<number[]>;
 var voronoiMap: VoronoiPlot;
 var imageMap: ImageMap;
 
+// First get the details of the chromosome from the server
+fetch('./details')
+            .then(
+                (response) => {
+                    if (response.status !== 200) {
+                        console.log('Looks like there was a problem. Status Code: ' +
+                            response.status);
+                        return;
+                    }
+
+                    response.json().then(details => {
+                        console.log(details);
+
+                        const chromosomeName = details['name']
+                        const locus = chromosomeName + ":" + details['minX'] + "-" + details['maxX']; //'chr4:0-1348131'
+
+                        // Set up the options
+                        const options: igv.IIGVBrowserOptions = {
+                            palette: ['#00A0B0', '#6A4A3C', '#CC333F', '#EB6841'],
+                            locus: locus,
+                        
+                            reference: {
+                                id: 'dm6',
+                                fastaURL: 'https://s3.amazonaws.com/igv.broadinstitute.org/genomes/seq/dm6/dm6.fa',
+                                indexURL: 'https://s3.amazonaws.com/igv.broadinstitute.org/genomes/seq/dm6/dm6.fa.fai',
+                                cytobandURL: "https://s3.amazonaws.com/igv.org.genomes/dm6/cytoBandIdeo.txt.gz"
+                            },
+                        
+                            //trackDefaults: {
+                            //  bam: {
+                            //    coverageThreshold: 0.2,
+                            //    coverageQualityWeight: true
+                            //  }
+                            //},
+                        
+                            tracks: [
+                                {
+                                    "name": "Ensembl Genes",
+                                    "type": "annotation",
+                                    "format": "ensgene",
+                                    "displayMode": "EXPANDED",
+                                    "url": "https://s3.dualstack.us-east-1.amazonaws.com/igv.org.genomes/dm6/ensGene.txt.gz",
+                                    "indexURL": "https://s3.dualstack.us-east-1.amazonaws.com/igv.org.genomes/dm6/ensGene.txt.gz.tbi",
+                                    "visibilityWindow": 20000000
+                                },
+                                {
+                                    "name": "Repeat Masker",
+                                    "type": "annotation",
+                                    "format": "rmsk",
+                                    "displayMode": "EXPANDED",
+                                    "url": "https://s3.dualstack.us-east-1.amazonaws.com/igv.org.genomes/dm6/rmsk.txt.gz",
+                                    "indexURL": "https://s3.dualstack.us-east-1.amazonaws.com/igv.org.genomes/dm6/rmsk.txt.gz.tbi",
+                                    "visibilityWindow": 1000000
+                                },
+                                //        {
+                                //          "name": "CpG Islands",
+                                //          "type": "annotation",
+                                //          "format": "cpgIslandExt",
+                                //          "displayMode": "EXPANDED",
+                                //          "url": "https://s3.dualstack.us-east-1.amazonaws.com/igv.org.genomes/dm6/cpgIslandExt.txt.gz"
+                                //        }
+                            ]
+                        }
+
+                        var bottomBrowser: igv.IGVBrowser; 
+                        var rightBrowser: igv.IGVBrowser;
+
+                        function overrideMouse() {
+                            let trackContainer = $(rightBrowser.trackContainer);
+                            console.log(trackContainer)
+                            console.log(rightBrowser.$root)
+                            //$(document).off('mousedown')
+                            //$(document).off('mouseup')
+                            rightBrowser.$root.off();
+                            $(rightBrowser.trackContainer).off('mousemove').on('mousemove', (event) => {
+                                console.log(event)
+                                event.stopPropagation();
+                            });
+                            $(rightBrowser.trackContainer).off('mouseup').on('mouseup', (event) => {
+                                console.log(event)
+                                event.stopPropagation();
+                            });
+                            //trackContainer.off('mouseup');
+
+                            rightBrowser.trackViews.forEach((track) => {
+                                track.viewports.forEach((viewport) => {
+                                    console.log(viewport)
+
+                                    viewport.trackView.$viewportContainer.off().on('mousemove', (event) => {
+                                        event.stopPropagation();
+
+                                        let self = rightBrowser;
+                                        var coords, viewport, viewportWidth, referenceFrame;
+
+                                        event.preventDefault();
+
+                                        if (self.loadInProgress()) {
+                                            return;
+                                        }
+
+                                        coords = igvutils.DOMUtils.pageCoordinates(event);
+
+                                        if (self.vpMouseDown) {
+
+                                            // Determine direction,  true == horizontal
+                                            const horizontal = Math.abs((coords.x - self.vpMouseDown.mouseDownX)) > Math.abs((coords.y - self.vpMouseDown.mouseDownY));
+                                            const vertical = !horizontal;
+
+                                            viewport = self.vpMouseDown.viewport;
+                                            viewportWidth = <number>viewport.$viewport.width();
+                                            referenceFrame = viewport.referenceFrame;
+
+                                            if (!self.dragObject && !self.isScrolling) {
+                                                self.dragObject = {
+                                                    viewport: viewport,
+                                                    start: referenceFrame.start
+                                                };
+                                            }
+
+                                            if (self.dragObject) {
+                                                const viewChanged = referenceFrame.shiftPixels(coords.y - self.vpMouseDown.lastMouseY, viewportWidth);
+                                                if (viewChanged) {
+
+                                                    if (self.referenceFrameList.length > 1) {
+                                                        self.updateLocusSearchWidget(self.referenceFrameList);
+                                                    } else {
+                                                        self.updateLocusSearchWidget([self.vpMouseDown.referenceFrame]);
+                                                    }
+
+                                                    self.updateViews();
+                                                }
+                                                self.fireEvent('trackdrag');
+
+                                                if (self.isScrolling) {
+                                                    const delta = self.vpMouseDown.r * (self.vpMouseDown.lastMouseY - coords.y);
+                                                    self.vpMouseDown.viewport.trackView.scrollBy(delta);
+                                                }
+                                            }
+
+                                            console.log(self.dragObject)
+
+                                            self.vpMouseDown.lastMouseX = coords.x;
+                                            self.vpMouseDown.lastMouseY = coords.y;
+                                        }
+                                    });
+
+                                    viewport.trackView.$viewportContainer.on('mouseup', (event) => {
+                                        console.log(event);
+                                        event.stopPropagation();
+                                    })
+
+                                    console.log("HERE")
+                                    console.log(viewport.$viewport)
+                                    viewport.$viewport.off().on('mouseup', (event) => {
+                                        console.log("MOUSE UP" + event);
+                                        event.stopPropagation();
+                                    })
+
+                                    /*console.log("Turning off $viewport")
+                                    viewport.$viewport.off().on('mousedown', (event) => {
+                                        console.log(event);
+                                        event.stopImmediatePropagation();
+                                        viewport.enableClick = true;
+
+                                        let coords = igvutils.DOMUtils.pageCoordinates(event);
+                                        rightBrowser.vpMouseDown = {
+                                            viewport: viewport,
+                                            lastMouseX: coords.x,
+                                            mouseDownX: coords.x,
+                                            lastMouseY: coords.y,
+                                            mouseDownY: coords.y,
+                                            referenceFrame: viewport.referenceFrame,
+                                            r: 1
+                                        };
+
+                                        //rightBrowser.mouseDownOnViewport(event, viewport);
+                                        //mouseDownCoords = igvutils.DOMUtils.pageCoordinates(event);
+                                    })*/
+                                    //viewport.$viewport.off('mouseup');
+                                })
+
+                                /*console.log(track);
+                                console.log(track.$trackDragScrim)
+
+                                if (track.$trackDragScrim) {
+                                    console.log("Turning off trackDragScrim")
+                                    track.$trackDragScrim.off(); //('mousedown');
+                                    //track.$trackDragScrim.off('mouseup');
+                                }
+                                if (track.$trackManipulationHandle) {
+                                    console.log("Turning off trackManipulationHandle")
+                                    track.$trackManipulationHandle.off(); //('mousedown');
+                                    //track.$trackManipulationHandle.off('mouseup');
+                                }
+
+                                //
+                                $(document).off() //('mousedown' + track.namespace);
+                                //$(document).off('mouseup' + track.namespace);
+                                */
+                            })
+                        }
+
+
+
+                        var promise: Promise<igv.IGVBrowser> = igv.createBrowser(<HTMLDivElement>document.getElementById('gene-browser-below'), options);
+                        promise.then(belowBrowser => {
+                            var promise: Promise<igv.IGVBrowser> = igv.createBrowser(<HTMLDivElement>document.getElementById('gene-browser-right'), options);
+                            promise.then(browser => {
+                                rightBrowser = browser;
+                                
+                                // Override the events for controlling scrolling
+                                overrideMouse();
+
+                                var HASH_PREFIX = "#/locus/";
+                                console.log(belowBrowser);
+                                belowBrowser.on('locuschange', function (referenceFrame: igv.ReferenceFrame) {
+                                    //console.log(referenceFrame)
+                                    //window.location.replace(HASH_PREFIX + referenceFrame.label);
+
+                                    //console.log(parseInt(referenceFrame.start.replace(',', '')))
+                                    voronoiMap.requestView(parseInt(referenceFrame.start.replace(/,/g, '')), parseInt(referenceFrame.end.replace(/,/g, '')), voronoiMap.minLoadedY, voronoiMap.maxLoadedY)
+                                });
+                                rightBrowser.on('locuschange', (referenceFrame: igv.ReferenceFrame) => {
+                                    voronoiMap.requestView(voronoiMap.minLoadedX, voronoiMap.maxLoadedX, parseInt(referenceFrame.start.replace(/,/g, '')), parseInt(referenceFrame.end.replace(/,/g, '')))
+                                });
+
+
+                                /**/
+
+                                let jQueryKeyName = Object.keys(belowBrowser.trackContainer)[0];
+                                //let obj = belowBrowser.trackContainer.
+                                console.log(jQueryKeyName)
+                                console.log(Object.keys(belowBrowser.trackContainer));
+                                console.log(belowBrowser.trackContainer);
+                                console.log(belowBrowser.trackViews);
+
+                                voronoiMap = new VoronoiPlot(belowBrowser, rightBrowser);
+                                imageMap = new ImageMap(numBins, voronoiMap);
+
+                                imageMap.setOnImageLoad((minX, maxX, minY, maxY) => {
+                                    belowBrowser.search(chromosomeName + ":" + minX + "-" + maxX).then(() => {
+                                        rightBrowser.search(chromosomeName + ":" + minY + "-" + maxY).then(() => {
+                                            voronoiMap.requestView(minX, maxX, minY, maxY);
+                                        })
+                                    })
+                                })
+                                //imageMap.loadDensityImage(200, xStart, xEnd, yStart, yEnd, voronoiMap.loadDataForVoronoi);
+
+                                let overviewNumBins = <HTMLInputElement>document.getElementById("overviewNumBins");
+
+                                overviewNumBins.addEventListener("change", function () {
+                                    //startXFrac = (parseFloat(minXText.value) - minX) / xDataDiff;
+                                    //updatePoints();
+                                    console.log(overviewNumBins.value)
+                                    imageMap.setNumberBins(parseFloat(overviewNumBins.value));
+                                    imageMap.updateView(imageMap.minDataX, imageMap.maxDataX, imageMap.minDataY, imageMap.maxDataY);
+                                });
+
+                                let percentileIntensity = <HTMLInputElement>document.getElementById("percentileIntensity");
+
+                                percentileIntensity.addEventListener("change", function () {
+                                    //startXFrac = (parseFloat(minXText.value) - minX) / xDataDiff;
+                                    //updatePoints();
+                                    console.log(percentileIntensity.value)
+                                    imageMap.setPercentile(parseFloat(percentileIntensity.value));
+                                });
+
+                                let intensityRange = <HTMLInputElement>document.getElementById("intensityRange");
+                                intensityRange.value = "950";
+                                intensityRange.oninput = (event: Event) => {
+                                    imageMap.setPercentile(parseFloat(intensityRange.value) / 1000);
+                                }
+
+                                let displayVoronoiEdges = <HTMLInputElement>document.getElementById('displayVoronoiEdges');
+                                displayVoronoiEdges.onchange = (event: Event) => {
+                                    voronoiMap.setDisplayVoronoiEdges(displayVoronoiEdges.checked);
+                                }
+
+                                let voronoiRepetitions = <HTMLInputElement>document.getElementById("voronoiRepetitions");
+                                voronoiRepetitions.value = "1";
+                                voronoiRepetitions.oninput = (event: Event) => {
+                                    voronoiMap.setSmoothingRepetitions(parseInt(voronoiRepetitions.value));
+                                }
+
+                                let voronoiOmega = <HTMLInputElement>document.getElementById("voronoiOmega");
+                                voronoiOmega.value = "1000";
+                                voronoiOmega.oninput = (event: Event) => {
+                                    voronoiMap.setOmega(parseFloat(voronoiOmega.value) / 1000);
+                                }
+
+                                (<HTMLDivElement>document.getElementById('gene-browser-right')).classList.add("rotated");//.setAttribute("class", "rotated")
+
+                                // Set up the options boxes
+                                const imageGUI = new dat.GUI({ name: "Image Options", autoPlace: false });
+                                //imageGUI.domElement.className = 'dgui main';
+                                document.getElementById('image-canvas-div')?.appendChild(imageGUI.domElement);
+                                //document.getElementById('image-canvas-div')?.insertBefore(imageGUI.domElement, document.getElementById('image-canvas'));
+                                imageGUI.add(imageMap, 'numBins').name('Number of bins').onChange((value) => {
+                                    imageMap.setNumberBins(parseInt(value));
+                                });
+                                imageGUI.add(imageMap, 'percentile', 0, 1, 0.001).name('Percentile (threshold) ').onChange((value) => {
+                                    imageMap.setPercentile(parseFloat(value));
+                                });
+
+                                imageMap.addContactMenu(imageGUI);
+
+
+                                // Set up the options for voronoi
+                                const voronoiGUI = new dat.GUI({ name: "Voronoi Options", autoPlace: false });
+                                console.log(document.getElementById('voronoi-canvas-div'))
+                                document.getElementById('voronoi-canvas-div')?.appendChild(voronoiGUI.domElement);
+
+                                voronoiGUI.add(voronoiMap, 'displayVoronoiEdges').name('Display edges').onChange((value) => {
+                                    voronoiMap.drawVoronoi();
+                                    voronoiMap.redraw();
+                                })
+
+                                const smoothingMenu = voronoiGUI.addFolder('Smoothing');
+                                smoothingMenu.add(voronoiMap, 'smoothingRepetitions', 0, 10, 1).name('Repetitions').onChange((value) => {
+                                    voronoiMap.calculateVoronoi();
+                                    voronoiMap.drawVoronoi();
+                                    voronoiMap.redraw();
+                                })
+
+                                smoothingMenu.add(voronoiMap, 'omega', 0, 2).name('Omega').onChange((value) => {
+                                    voronoiMap.calculateVoronoi();
+                                    voronoiMap.drawVoronoi();
+                                    voronoiMap.redraw();
+                                })
+
+                                voronoiMap.addContactMenu(voronoiGUI);
+                            });
+                        });
+                    });
+                });
+
 //https://s3.amazonaws.com/igv.org.genomes/genomes.json
-const options: igv.IIGVBrowserOptions = {
-    palette: ['#00A0B0', '#6A4A3C', '#CC333F', '#EB6841'],
-    locus: 'chr4:0-1348131',
 
-    reference: {
-        id: 'dm6',
-        fastaURL: 'https://s3.amazonaws.com/igv.broadinstitute.org/genomes/seq/dm6/dm6.fa',
-        indexURL: 'https://s3.amazonaws.com/igv.broadinstitute.org/genomes/seq/dm6/dm6.fa.fai',
-        cytobandURL: "https://s3.amazonaws.com/igv.org.genomes/dm6/cytoBandIdeo.txt.gz"
-    },
-
-    //trackDefaults: {
-    //  bam: {
-    //    coverageThreshold: 0.2,
-    //    coverageQualityWeight: true
-    //  }
-    //},
-
-    tracks: [
-        {
-            "name": "Ensembl Genes",
-            "type": "annotation",
-            "format": "ensgene",
-            "displayMode": "EXPANDED",
-            "url": "https://s3.dualstack.us-east-1.amazonaws.com/igv.org.genomes/dm6/ensGene.txt.gz",
-            "indexURL": "https://s3.dualstack.us-east-1.amazonaws.com/igv.org.genomes/dm6/ensGene.txt.gz.tbi",
-            "visibilityWindow": 20000000
-        },
-        {
-            "name": "Repeat Masker",
-            "type": "annotation",
-            "format": "rmsk",
-            "displayMode": "EXPANDED",
-            "url": "https://s3.dualstack.us-east-1.amazonaws.com/igv.org.genomes/dm6/rmsk.txt.gz",
-            "indexURL": "https://s3.dualstack.us-east-1.amazonaws.com/igv.org.genomes/dm6/rmsk.txt.gz.tbi",
-            "visibilityWindow": 1000000
-        },
-        //        {
-        //          "name": "CpG Islands",
-        //          "type": "annotation",
-        //          "format": "cpgIslandExt",
-        //          "displayMode": "EXPANDED",
-        //          "url": "https://s3.dualstack.us-east-1.amazonaws.com/igv.org.genomes/dm6/cpgIslandExt.txt.gz"
-        //        }
-    ]
-}
 
 
 
@@ -118,273 +409,7 @@ function sleep(ms: number) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-var bottomBrowser: igv.IGVBrowser; 
-var rightBrowser: igv.IGVBrowser;
 
-function overrideMouse() {
-    let trackContainer = $(rightBrowser.trackContainer);
-    console.log(trackContainer)
-    console.log(rightBrowser.$root)
-    //$(document).off('mousedown')
-    //$(document).off('mouseup')
-    rightBrowser.$root.off();
-    $(rightBrowser.trackContainer).off('mousemove').on('mousemove', (event) => {
-        console.log(event)
-        event.stopPropagation();
-    });
-    $(rightBrowser.trackContainer).off('mouseup').on('mouseup', (event) => {
-        console.log(event)
-        event.stopPropagation();
-    });
-    //trackContainer.off('mouseup');
-
-    rightBrowser.trackViews.forEach((track) => {
-        track.viewports.forEach((viewport) => {
-            console.log(viewport)
-
-            viewport.trackView.$viewportContainer.off().on('mousemove', (event) => {
-                event.stopPropagation();
-
-                let self = rightBrowser;
-                var coords, viewport, viewportWidth, referenceFrame;
-
-                event.preventDefault();
-
-                if (self.loadInProgress()) {
-                    return;
-                }
-
-                coords = igvutils.DOMUtils.pageCoordinates(event);
-
-                if (self.vpMouseDown) {
-
-                    // Determine direction,  true == horizontal
-                    const horizontal = Math.abs((coords.x - self.vpMouseDown.mouseDownX)) > Math.abs((coords.y - self.vpMouseDown.mouseDownY));
-                    const vertical = !horizontal;
-
-                    viewport = self.vpMouseDown.viewport;
-                    viewportWidth = <number>viewport.$viewport.width();
-                    referenceFrame = viewport.referenceFrame;
-
-                    if (!self.dragObject && !self.isScrolling) {
-                        self.dragObject = {
-                            viewport: viewport,
-                            start: referenceFrame.start
-                        };
-                    }
-
-                    if (self.dragObject) {
-                        const viewChanged = referenceFrame.shiftPixels(coords.y - self.vpMouseDown.lastMouseY, viewportWidth);
-                        if (viewChanged) {
-
-                            if (self.referenceFrameList.length > 1) {
-                                self.updateLocusSearchWidget(self.referenceFrameList);
-                            } else {
-                                self.updateLocusSearchWidget([self.vpMouseDown.referenceFrame]);
-                            }
-
-                            self.updateViews();
-                        }
-                        self.fireEvent('trackdrag');
-
-                        if (self.isScrolling) {
-                            const delta = self.vpMouseDown.r * (self.vpMouseDown.lastMouseY - coords.y);
-                            self.vpMouseDown.viewport.trackView.scrollBy(delta);
-                        }
-                    }
-
-                    console.log(self.dragObject)
-
-                    self.vpMouseDown.lastMouseX = coords.x;
-                    self.vpMouseDown.lastMouseY = coords.y;
-                }
-            });
-
-            viewport.trackView.$viewportContainer.on('mouseup', (event) => {
-                console.log(event);
-                event.stopPropagation();
-            })
-
-            console.log("HERE")
-            console.log(viewport.$viewport)
-            viewport.$viewport.off().on('mouseup', (event) => {
-                console.log("MOUSE UP" + event);
-                event.stopPropagation();
-            })
-
-            /*console.log("Turning off $viewport")
-            viewport.$viewport.off().on('mousedown', (event) => {
-                console.log(event);
-                event.stopImmediatePropagation();
-                viewport.enableClick = true;
-
-                let coords = igvutils.DOMUtils.pageCoordinates(event);
-                rightBrowser.vpMouseDown = {
-                    viewport: viewport,
-                    lastMouseX: coords.x,
-                    mouseDownX: coords.x,
-                    lastMouseY: coords.y,
-                    mouseDownY: coords.y,
-                    referenceFrame: viewport.referenceFrame,
-                    r: 1
-                };
-
-                //rightBrowser.mouseDownOnViewport(event, viewport);
-                //mouseDownCoords = igvutils.DOMUtils.pageCoordinates(event);
-            })*/
-            //viewport.$viewport.off('mouseup');
-        })
-
-        /*console.log(track);
-        console.log(track.$trackDragScrim)
-
-        if (track.$trackDragScrim) {
-            console.log("Turning off trackDragScrim")
-            track.$trackDragScrim.off(); //('mousedown');
-            //track.$trackDragScrim.off('mouseup');
-        }
-        if (track.$trackManipulationHandle) {
-            console.log("Turning off trackManipulationHandle")
-            track.$trackManipulationHandle.off(); //('mousedown');
-            //track.$trackManipulationHandle.off('mouseup');
-        }
-
-        //
-        $(document).off() //('mousedown' + track.namespace);
-        //$(document).off('mouseup' + track.namespace);
-        */
-    })
-}
-
-var promise: Promise<igv.IGVBrowser> = igv.createBrowser(<HTMLDivElement>document.getElementById('gene-browser-below'), options);
-promise.then(belowBrowser => {
-    var promise: Promise<igv.IGVBrowser> = igv.createBrowser(<HTMLDivElement>document.getElementById('gene-browser-right'), options);
-    promise.then(browser => {
-        rightBrowser = browser;
-        
-        // Override the events for controlling scrolling
-        overrideMouse();
-
-        var HASH_PREFIX = "#/locus/";
-        console.log(belowBrowser);
-        belowBrowser.on('locuschange', function (referenceFrame: igv.ReferenceFrame) {
-            //console.log(referenceFrame)
-            //window.location.replace(HASH_PREFIX + referenceFrame.label);
-
-            //console.log(parseInt(referenceFrame.start.replace(',', '')))
-            voronoiMap.requestView(parseInt(referenceFrame.start.replace(/,/g, '')), parseInt(referenceFrame.end.replace(/,/g, '')), voronoiMap.minLoadedY, voronoiMap.maxLoadedY)
-        });
-        rightBrowser.on('locuschange', (referenceFrame: igv.ReferenceFrame) => {
-            voronoiMap.requestView(voronoiMap.minLoadedX, voronoiMap.maxLoadedX, parseInt(referenceFrame.start.replace(/,/g, '')), parseInt(referenceFrame.end.replace(/,/g, '')))
-        });
-
-
-        /**/
-
-        let jQueryKeyName = Object.keys(belowBrowser.trackContainer)[0];
-        //let obj = belowBrowser.trackContainer.
-        console.log(jQueryKeyName)
-        console.log(Object.keys(belowBrowser.trackContainer));
-        console.log(belowBrowser.trackContainer);
-        console.log(belowBrowser.trackViews);
-
-        voronoiMap = new VoronoiPlot(belowBrowser, rightBrowser);
-        imageMap = new ImageMap(numBins, voronoiMap);
-
-        imageMap.setOnImageLoad((minX, maxX, minY, maxY) => {
-            belowBrowser.search("chr4:" + minX + "-" + maxX).then(() => {
-                rightBrowser.search("chr4:" + minY + "-" + maxY).then(() => {
-                    voronoiMap.requestView(minX, maxX, minY, maxY);
-                })
-            })
-        })
-        //imageMap.loadDensityImage(200, xStart, xEnd, yStart, yEnd, voronoiMap.loadDataForVoronoi);
-
-        let overviewNumBins = <HTMLInputElement>document.getElementById("overviewNumBins");
-
-        overviewNumBins.addEventListener("change", function () {
-            //startXFrac = (parseFloat(minXText.value) - minX) / xDataDiff;
-            //updatePoints();
-            console.log(overviewNumBins.value)
-            imageMap.setNumberBins(parseFloat(overviewNumBins.value));
-            imageMap.updateView(imageMap.minDataX, imageMap.maxDataX, imageMap.minDataY, imageMap.maxDataY);
-        });
-
-        let percentileIntensity = <HTMLInputElement>document.getElementById("percentileIntensity");
-
-        percentileIntensity.addEventListener("change", function () {
-            //startXFrac = (parseFloat(minXText.value) - minX) / xDataDiff;
-            //updatePoints();
-            console.log(percentileIntensity.value)
-            imageMap.setPercentile(parseFloat(percentileIntensity.value));
-        });
-
-        let intensityRange = <HTMLInputElement>document.getElementById("intensityRange");
-        intensityRange.value = "950";
-        intensityRange.oninput = (event: Event) => {
-            imageMap.setPercentile(parseFloat(intensityRange.value) / 1000);
-        }
-
-        let displayVoronoiEdges = <HTMLInputElement>document.getElementById('displayVoronoiEdges');
-        displayVoronoiEdges.onchange = (event: Event) => {
-            voronoiMap.setDisplayVoronoiEdges(displayVoronoiEdges.checked);
-        }
-
-        let voronoiRepetitions = <HTMLInputElement>document.getElementById("voronoiRepetitions");
-        voronoiRepetitions.value = "1";
-        voronoiRepetitions.oninput = (event: Event) => {
-            voronoiMap.setSmoothingRepetitions(parseInt(voronoiRepetitions.value));
-        }
-
-        let voronoiOmega = <HTMLInputElement>document.getElementById("voronoiOmega");
-        voronoiOmega.value = "1000";
-        voronoiOmega.oninput = (event: Event) => {
-            voronoiMap.setOmega(parseFloat(voronoiOmega.value) / 1000);
-        }
-
-        (<HTMLDivElement>document.getElementById('gene-browser-right')).classList.add("rotated");//.setAttribute("class", "rotated")
-
-        // Set up the options boxes
-        const imageGUI = new dat.GUI({ name: "Image Options", autoPlace: false });
-        //imageGUI.domElement.className = 'dgui main';
-        document.getElementById('image-canvas-div')?.appendChild(imageGUI.domElement);
-        //document.getElementById('image-canvas-div')?.insertBefore(imageGUI.domElement, document.getElementById('image-canvas'));
-        imageGUI.add(imageMap, 'numBins').name('Number of bins').onChange((value) => {
-            imageMap.setNumberBins(parseInt(value));
-        });
-        imageGUI.add(imageMap, 'percentile', 0, 1, 0.001).name('Percentile (threshold) ').onChange((value) => {
-            imageMap.setPercentile(parseFloat(value));
-        });
-
-        imageMap.addContactMenu(imageGUI);
-
-
-        // Set up the options for voronoi
-        const voronoiGUI = new dat.GUI({ name: "Voronoi Options", autoPlace: false });
-        console.log(document.getElementById('voronoi-canvas-div'))
-        document.getElementById('voronoi-canvas-div')?.appendChild(voronoiGUI.domElement);
-
-        voronoiGUI.add(voronoiMap, 'displayVoronoiEdges').name('Display edges').onChange((value) => {
-            voronoiMap.drawVoronoi();
-            voronoiMap.redraw();
-        })
-
-        const smoothingMenu = voronoiGUI.addFolder('Smoothing');
-        smoothingMenu.add(voronoiMap, 'smoothingRepetitions', 0, 10, 1).name('Repetitions').onChange((value) => {
-            voronoiMap.calculateVoronoi();
-            voronoiMap.drawVoronoi();
-            voronoiMap.redraw();
-        })
-
-        smoothingMenu.add(voronoiMap, 'omega', 0, 2).name('Omega').onChange((value) => {
-            voronoiMap.calculateVoronoi();
-            voronoiMap.drawVoronoi();
-            voronoiMap.redraw();
-        })
-
-        voronoiMap.addContactMenu(voronoiGUI);
-    });
-});
 
 /*
 function loadDataForVoronoi(miX: number, maX: number, miY: number, maY: number) {

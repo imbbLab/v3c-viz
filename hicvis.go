@@ -141,13 +141,14 @@ func main() {
 
 func GetDetails(w http.ResponseWriter, r *http.Request) {
 	type details struct {
-		MinX int `json:"minX"`
-		MaxX int `json:"maxX"`
-		MinY int `json:"minY"`
-		MaxY int `json:"maxY"`
+		Name string `json:"name"`
+		MinX int    `json:"minX"`
+		MaxX int    `json:"maxX"`
+		MinY int    `json:"minY"`
+		MaxY int    `json:"maxY"`
 	}
 
-	dets, _ := json.Marshal(&details{MinX: 0, MinY: 0, MaxX: int(db.chromosomeLength), MaxY: int(db.chromosomeLength)})
+	dets, _ := json.Marshal(&details{Name: db.chromosomeName, MinX: 0, MinY: 0, MaxX: int(db.chromosomeLength), MaxY: int(db.chromosomeLength)})
 	w.Write(dets)
 }
 
