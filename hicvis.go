@@ -6,6 +6,7 @@ import (
 	"encoding/binary"
 	"encoding/csv"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"image"
 	"image/color"
@@ -21,7 +22,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/boltdb/bolt"
+	"github.com/biogo/hts/bgzf"
+
 	"github.com/jessevdk/go-flags"
 	"github.com/tidwall/buntdb"
 
@@ -31,14 +33,22 @@ import (
 //type Bucket {
 //}
 
-type Database struct {
+type chromDatabase struct {
+	db               *buntdb.DB
+	chromosomeName   string
+	chromosomeLength uint32
+	overviewImage    []uint32
+	oNumBins         uint32
+}
+
+/*type Database struct {
 	db *bolt.DB
 
 	bucketSize uint32
 
 	minValue uint32
 	maxValue uint32
-}
+}*/
 
 type InteractFile struct {
 	Interactions []Interaction
@@ -203,6 +213,317 @@ func parseInteract(filename string) (*InteractFile, error) {
 	return &interactFile, nil
 }
 
+type Order int
+
+const (
+	Chr1Chr2Pos1Pos2 Order = iota
+)
+
+type Shape int
+
+const (
+	UpperTriangle Shape = iota
+)
+
+type Chromsize struct {
+	Name   string
+	Length uint64
+}
+
+type PairsFile struct {
+	Sorted         Order
+	Shape          Shape
+	GenomeAssembly string
+	Chromsizes     []Chromsize
+	Samheader      []string
+
+	Index PairsIndex
+}
+
+type PairsEntry struct {
+}
+
+func parseLine(line string) *PairsEntry {
+	return nil
+}
+
+type ChromChunk struct {
+	Chunk []bgzf.Chunk
+
+	Start uint64
+	End   uint64
+}
+
+type PairsIndex struct {
+	DataStart bgzf.Chunk
+
+	ChromPairStart map[string]bgzf.Chunk
+	ChromPairEnd   map[string]bgzf.Chunk
+
+	ChromPairChunks map[string][]ChromChunk
+}
+
+func processBGZF(reader io.Reader) error {
+	bReader, err := bgzf.NewReader(reader, 0)
+	if err != nil {
+		return err
+	}
+	defer bReader.Close()
+
+	bufReader := bufio.NewReader(bReader)
+
+	firstLine, err := bufReader.ReadBytes('\n')
+	if err != nil {
+		fmt.Println("Failed to read from buffer")
+		return err
+	}
+
+	if !strings.Contains(string(firstLine), "## pairs format v1.0") {
+		return errors.New("Invalid .pairs file: Missing header line")
+	}
+
+	var pairsFile PairsFile
+
+	var firstNonComment string
+
+	//lineNumber := 0
+	for {
+		lineData, err := bufReader.ReadBytes('\n')
+		if err != nil {
+			return err
+		}
+
+		lineToProcess := string(lineData[:len(lineData)-1])
+
+		if lineToProcess[0] == '#' {
+			splitString := strings.SplitN(lineToProcess[1:], ":", 2)
+
+			tag := strings.TrimSpace(splitString[0])
+			value := strings.TrimSpace(splitString[1])
+
+			switch tag {
+			case "sorted":
+				if value == "chr1-chr2-pos1-pos2" {
+					pairsFile.Sorted = Chr1Chr2Pos1Pos2
+				} else {
+					return errors.New("Unsupported .pairs file: not supported sorted: " + value)
+				}
+			case "shape":
+				if value == "upper triangle" {
+					pairsFile.Shape = UpperTriangle
+				} else {
+					return errors.New("Unsupported .pairs file: not supported shape: " + value)
+				}
+			case "genome_assembly":
+				pairsFile.GenomeAssembly = value
+			case "chromsize":
+				splitValue := strings.Split(value, " ")
+
+				var chromsize Chromsize
+				chromsize.Name = strings.TrimSpace(splitValue[0])
+				chromsize.Length, err = strconv.ParseUint(strings.TrimSpace(splitValue[1]), 10, 64)
+				if err != nil {
+					return err
+				}
+
+				pairsFile.Chromsizes = append(pairsFile.Chromsizes, chromsize)
+			case "samheader":
+				pairsFile.Samheader = append(pairsFile.Samheader, value)
+			default:
+				fmt.Println(lineToProcess)
+			}
+		} else {
+			firstNonComment = lineToProcess
+
+			break
+		}
+
+	}
+
+	//maxLinesPerIndex := 1000
+
+	pairsFile.Index.ChromPairStart = make(map[string]bgzf.Chunk)
+	pairsFile.Index.ChromPairEnd = make(map[string]bgzf.Chunk)
+
+	splitLine := strings.Split(firstNonComment, "\t")
+
+	chromPairName := splitLine[1] + "-" + splitLine[3]
+
+	pairsFile.Index.DataStart = bReader.LastChunk()
+	pairsFile.Index.ChromPairStart[chromPairName] = bReader.LastChunk()
+
+	lastEntry := chromPairName
+	startInfo := fmt.Sprintf("%s => %v | ", lastEntry, bReader.LastChunk())
+
+	//var curChromChunk ChromChunk
+	//curChromChunk.Start =
+
+	lineCount := 1
+
+	for {
+		lineData, err := bufReader.ReadBytes('\n')
+		if err != nil {
+			if err == io.EOF {
+				//fmt.Println("Finished reading data")
+				break
+			}
+			return err
+		}
+
+		lineToProcess := string(lineData[:len(lineData)-1])
+		splitLine := strings.Split(lineToProcess, "\t")
+		chromPairName := splitLine[1] + "-" + splitLine[3]
+
+		if lastEntry != chromPairName {
+			if lineCount > 1000 {
+				fmt.Printf("%s %d\n", startInfo, lineCount)
+			}
+
+			lineCount = 0
+			pairsFile.Index.ChromPairEnd[lastEntry] = bReader.LastChunk()
+			pairsFile.Index.ChromPairStart[chromPairName] = bReader.LastChunk()
+
+			startInfo = fmt.Sprintf("%s => %v | ", chromPairName, bReader.LastChunk())
+		}
+
+		lastEntry = chromPairName
+		lineCount++
+		// Check whether we are looking at a new chromosome
+	}
+
+	fmt.Printf("%s %d\n", startInfo, lineCount)
+	pairsFile.Index.ChromPairEnd[lastEntry] = bReader.LastChunk()
+
+	//fmt.Println(pairsFile)
+
+	startingChunk := bReader.LastChunk()
+
+	buf := make([]byte, int(startingChunk.End.Block-startingChunk.Begin.Block))
+
+	err = bReader.Seek(startingChunk.Begin)
+	if err != nil {
+		return err
+	}
+	_, err = bReader.Read(buf)
+	if err != nil {
+		return err
+	}
+
+	fmt.Println("-----")
+	fmt.Println(startingChunk)
+	fmt.Println("-----")
+	fmt.Println(string(buf))
+	fmt.Println("-----")
+
+	err = bReader.Seek(startingChunk.End)
+	if err != nil {
+		return err
+	}
+	_, err = bReader.Read(buf)
+	if err != nil {
+		return err
+	}
+
+	fmt.Println("-----")
+	fmt.Println(startingChunk)
+	fmt.Println("-----")
+	fmt.Println(string(buf))
+
+	return nil
+}
+
+func processPairsReader(reader io.Reader) error {
+	var err error
+	scanner := bufio.NewScanner(reader)
+
+	// Advance to the first line
+	if !scanner.Scan() {
+		return errors.New("Invalid .pairs file: No data?")
+	}
+	firstLine := scanner.Text()
+	if !strings.Contains(firstLine, "## pairs format v1.0") {
+		return errors.New("Invalid .pairs file: Missing header line")
+	}
+
+	var pairsFile PairsFile
+
+	lineNumber := 0
+	for scanner.Scan() {
+		lineToProcess := scanner.Text()
+
+		if lineToProcess[0] == '#' {
+			splitString := strings.SplitN(lineToProcess[1:], ":", 2)
+
+			tag := strings.TrimSpace(splitString[0])
+			value := strings.TrimSpace(splitString[1])
+
+			switch tag {
+			case "sorted":
+				if value == "chr1-chr2-pos1-pos2" {
+					pairsFile.Sorted = Chr1Chr2Pos1Pos2
+				} else {
+					return errors.New("Unsupported .pairs file: not supported sorted: " + value)
+				}
+			case "shape":
+				if value == "upper triangle" {
+					pairsFile.Shape = UpperTriangle
+				} else {
+					return errors.New("Unsupported .pairs file: not supported shape: " + value)
+				}
+			case "genome_assembly":
+				pairsFile.GenomeAssembly = value
+			case "chromsize":
+				splitValue := strings.Split(value, " ")
+
+				var chromsize Chromsize
+				chromsize.Name = strings.TrimSpace(splitValue[0])
+				chromsize.Length, err = strconv.ParseUint(strings.TrimSpace(splitValue[1]), 10, 64)
+				if err != nil {
+					return err
+				}
+
+				pairsFile.Chromsizes = append(pairsFile.Chromsizes, chromsize)
+			case "samheader":
+				pairsFile.Samheader = append(pairsFile.Samheader, value)
+			default:
+				fmt.Println(lineToProcess)
+			}
+		} else {
+			fmt.Println(lineToProcess)
+
+		}
+
+		lineNumber++
+
+		if lineNumber > 5000 {
+			fmt.Println(pairsFile)
+			break
+		}
+	}
+
+	return nil
+}
+
+func processPairsFile(filename string) error {
+	file, err := os.Open(filename)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer file.Close()
+
+	// TODO: Check if .gz, if so then create gzip reader
+	/*gz, err := gzip.NewReader(file)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	defer gz.Close()*/
+
+	return processBGZF(file)
+}
+
 func main() {
 	_, err := flags.Parse(&opts)
 
@@ -210,6 +531,14 @@ func main() {
 		log.Fatal(err)
 		return
 	}
+
+	err = processPairsFile("/home/alan/Documents/Chung/Data_Dm/Lib001.U_dedup.pairs.gz")
+	if err != nil {
+		log.Fatal(err)
+		return
+	}
+
+	return
 
 	//"/home/alan/Documents/Work/Alisa/Data_Dm/All_chr4.pairs"
 
@@ -495,14 +824,6 @@ func startServer(listener net.Listener) {
 	router.PathPrefix("/").Handler(http.FileServer(http.Dir("./static/")))
 
 	log.Fatal(http.Serve(listener, router))
-}
-
-type chromDatabase struct {
-	db               *buntdb.DB
-	chromosomeName   string
-	chromosomeLength uint32
-	overviewImage    []uint32
-	oNumBins         uint32
 }
 
 func (cdb *chromDatabase) createOverviewImage(numBins uint32) {

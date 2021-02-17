@@ -255,10 +255,10 @@ fetch('./details')
                                     //window.location.replace(HASH_PREFIX + referenceFrame.label);
 
                                     //console.log(parseInt(referenceFrame.start.replace(',', '')))
-                                    voronoiMap.requestView(parseInt(referenceFrame.start.replace(/,/g, '')), parseInt(referenceFrame.end.replace(/,/g, '')), voronoiMap.minLoadedY, voronoiMap.maxLoadedY)
+                                    voronoiMap.requestView(parseInt(referenceFrame.start.replace(/,/g, '')), parseInt(referenceFrame.end.replace(/,/g, '')), voronoiMap.minViewY, voronoiMap.maxViewY)
                                 });
                                 rightBrowser.on('locuschange', (referenceFrame: igv.ReferenceFrame) => {
-                                    voronoiMap.requestView(voronoiMap.minLoadedX, voronoiMap.maxLoadedX, parseInt(referenceFrame.start.replace(/,/g, '')), parseInt(referenceFrame.end.replace(/,/g, '')))
+                                    voronoiMap.requestView(voronoiMap.minViewX, voronoiMap.maxViewX, parseInt(referenceFrame.start.replace(/,/g, '')), parseInt(referenceFrame.end.replace(/,/g, '')))
                                 });
 
 

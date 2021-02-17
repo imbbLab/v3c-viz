@@ -203,8 +203,8 @@ export abstract class Axis {
                 x = (x - startX) * xScaleFactor;
                 y = (y - startY) * yScaleFactor;
 
-                let halfWidth = 2500 * xScaleFactor;
-                let halfHeight = 2500 * yScaleFactor;
+                let halfWidth = 250 * xScaleFactor;
+                let halfHeight = 250 * yScaleFactor;
 
                 // Make sure it is visible
                 halfWidth = Math.max(halfWidth, this.contactSize);
