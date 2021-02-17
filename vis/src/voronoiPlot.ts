@@ -63,16 +63,38 @@ export class VoronoiPlot extends Axis {
         //this.imageDiv.appendChild(this.numPointsLabel);
     }
 
+    minLoadedX = -1;
+    maxLoadedX = -1;
+    minLoadedY = -1;
+    maxLoadedY = -1;
+
+    timeoutFunction: any;
+
+    requestView(minX: number, maxX: number, minY: number, maxY: number) {
+        // If the requested view is out of bounds, then load the data, otherwise, just display it
+
+        clearTimeout(this.timeoutFunction);
+
+        this.timeoutFunction = setTimeout(() => {
+            if(minX < this.minLoadedX || maxX > this.maxLoadedX || minY < this.minLoadedY || maxY > this.maxLoadedY) {
+                this.loadDataForVoronoi(minX, maxX, minY, maxY);
+            } else {
+                this.updateView(minX, maxX, minY, maxY)
+            }
+        }, 200);
+
+    }
+
     loadDataForVoronoi(minX: number, maxX: number, minY: number, maxY: number) {
-        /*this.minX = minX;
-        this.maxX = maxX;
-        this.minY = minY;
-        this.maxY = maxY;*/
+        this.minLoadedX = minX;
+        this.maxLoadedX = maxX;
+        this.minLoadedY = minY;
+        this.maxLoadedY = maxY;
 
         var self = this;
 
-        this.belowBrowser.search("chr4:" + minX + "-" + maxX)
-        this.rightBrowser.search("chr4:" + minY + "-" + maxY)
+        //this.belowBrowser.search("chr4:" + minX + "-" + maxX)
+        //this.rightBrowser.search("chr4:" + minY + "-" + maxY)
         console.log("chr4:" + minY + "-" + maxY)
 
         fetch('./points?xStart=' + minX + '&xEnd=' + maxX + '&yStart=' + minY + '&yEnd=' + maxY)

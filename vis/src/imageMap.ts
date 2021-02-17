@@ -102,9 +102,16 @@ export class ImageMap extends Axis {
         this.callback = callback;
     }
 
+    onImageLoad: (minX: number, maxX: number, minY: number, maxY: number) => void = () => {};
+
+    setOnImageLoad(onImageLoad: (minX: number, maxX: number, minY: number, maxY: number) => void) {
+        this.onImageLoad = onImageLoad;
+    }
+
     updateView(minX: number, maxX: number, minY: number, maxY: number) {
         this.loadDensityImage(Math.round(minX), Math.round(maxX), Math.round(minY), Math.round(maxY), () => {
-            this.voronoiPlot.loadDataForVoronoi(Math.round(minX), Math.round(maxX), Math.round(minY), Math.round(maxY));
+            this.onImageLoad(Math.round(minX), Math.round(maxX), Math.round(minY), Math.round(maxY));
+            //this.voronoiPlot.requestView(Math.round(minX), Math.round(maxX), Math.round(minY), Math.round(maxY));
         });
     }
 

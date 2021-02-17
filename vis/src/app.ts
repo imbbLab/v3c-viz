@@ -118,140 +118,165 @@ function sleep(ms: number) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+var bottomBrowser: igv.IGVBrowser; 
+var rightBrowser: igv.IGVBrowser;
+
+function overrideMouse() {
+    let trackContainer = $(rightBrowser.trackContainer);
+    console.log(trackContainer)
+    console.log(rightBrowser.$root)
+    //$(document).off('mousedown')
+    //$(document).off('mouseup')
+    rightBrowser.$root.off();
+    $(rightBrowser.trackContainer).off('mousemove').on('mousemove', (event) => {
+        console.log(event)
+        event.stopPropagation();
+    });
+    $(rightBrowser.trackContainer).off('mouseup').on('mouseup', (event) => {
+        console.log(event)
+        event.stopPropagation();
+    });
+    //trackContainer.off('mouseup');
+
+    rightBrowser.trackViews.forEach((track) => {
+        track.viewports.forEach((viewport) => {
+            console.log(viewport)
+
+            viewport.trackView.$viewportContainer.off().on('mousemove', (event) => {
+                event.stopPropagation();
+
+                let self = rightBrowser;
+                var coords, viewport, viewportWidth, referenceFrame;
+
+                event.preventDefault();
+
+                if (self.loadInProgress()) {
+                    return;
+                }
+
+                coords = igvutils.DOMUtils.pageCoordinates(event);
+
+                if (self.vpMouseDown) {
+
+                    // Determine direction,  true == horizontal
+                    const horizontal = Math.abs((coords.x - self.vpMouseDown.mouseDownX)) > Math.abs((coords.y - self.vpMouseDown.mouseDownY));
+                    const vertical = !horizontal;
+
+                    viewport = self.vpMouseDown.viewport;
+                    viewportWidth = <number>viewport.$viewport.width();
+                    referenceFrame = viewport.referenceFrame;
+
+                    if (!self.dragObject && !self.isScrolling) {
+                        self.dragObject = {
+                            viewport: viewport,
+                            start: referenceFrame.start
+                        };
+                    }
+
+                    if (self.dragObject) {
+                        const viewChanged = referenceFrame.shiftPixels(coords.y - self.vpMouseDown.lastMouseY, viewportWidth);
+                        if (viewChanged) {
+
+                            if (self.referenceFrameList.length > 1) {
+                                self.updateLocusSearchWidget(self.referenceFrameList);
+                            } else {
+                                self.updateLocusSearchWidget([self.vpMouseDown.referenceFrame]);
+                            }
+
+                            self.updateViews();
+                        }
+                        self.fireEvent('trackdrag');
+
+                        if (self.isScrolling) {
+                            const delta = self.vpMouseDown.r * (self.vpMouseDown.lastMouseY - coords.y);
+                            self.vpMouseDown.viewport.trackView.scrollBy(delta);
+                        }
+                    }
+
+                    console.log(self.dragObject)
+
+                    self.vpMouseDown.lastMouseX = coords.x;
+                    self.vpMouseDown.lastMouseY = coords.y;
+                }
+            });
+
+            viewport.trackView.$viewportContainer.on('mouseup', (event) => {
+                console.log(event);
+                event.stopPropagation();
+            })
+
+            console.log("HERE")
+            console.log(viewport.$viewport)
+            viewport.$viewport.off().on('mouseup', (event) => {
+                console.log("MOUSE UP" + event);
+                event.stopPropagation();
+            })
+
+            /*console.log("Turning off $viewport")
+            viewport.$viewport.off().on('mousedown', (event) => {
+                console.log(event);
+                event.stopImmediatePropagation();
+                viewport.enableClick = true;
+
+                let coords = igvutils.DOMUtils.pageCoordinates(event);
+                rightBrowser.vpMouseDown = {
+                    viewport: viewport,
+                    lastMouseX: coords.x,
+                    mouseDownX: coords.x,
+                    lastMouseY: coords.y,
+                    mouseDownY: coords.y,
+                    referenceFrame: viewport.referenceFrame,
+                    r: 1
+                };
+
+                //rightBrowser.mouseDownOnViewport(event, viewport);
+                //mouseDownCoords = igvutils.DOMUtils.pageCoordinates(event);
+            })*/
+            //viewport.$viewport.off('mouseup');
+        })
+
+        /*console.log(track);
+        console.log(track.$trackDragScrim)
+
+        if (track.$trackDragScrim) {
+            console.log("Turning off trackDragScrim")
+            track.$trackDragScrim.off(); //('mousedown');
+            //track.$trackDragScrim.off('mouseup');
+        }
+        if (track.$trackManipulationHandle) {
+            console.log("Turning off trackManipulationHandle")
+            track.$trackManipulationHandle.off(); //('mousedown');
+            //track.$trackManipulationHandle.off('mouseup');
+        }
+
+        //
+        $(document).off() //('mousedown' + track.namespace);
+        //$(document).off('mouseup' + track.namespace);
+        */
+    })
+}
+
 var promise: Promise<igv.IGVBrowser> = igv.createBrowser(<HTMLDivElement>document.getElementById('gene-browser-below'), options);
 promise.then(belowBrowser => {
     var promise: Promise<igv.IGVBrowser> = igv.createBrowser(<HTMLDivElement>document.getElementById('gene-browser-right'), options);
-    promise.then(rightBrowser => {
+    promise.then(browser => {
+        rightBrowser = browser;
+        
+        // Override the events for controlling scrolling
+        overrideMouse();
+
         var HASH_PREFIX = "#/locus/";
         console.log(belowBrowser);
         belowBrowser.on('locuschange', function (referenceFrame: igv.ReferenceFrame) {
-            console.log(referenceFrame)
-            window.location.replace(HASH_PREFIX + referenceFrame.label);
+            //console.log(referenceFrame)
+            //window.location.replace(HASH_PREFIX + referenceFrame.label);
 
-            rightBrowser.search("chr4:727991-835841").then((referenceList) => {
-                console.log("Finished searching");
-                console.log(referenceList)
-                let trackContainer = $(rightBrowser.trackContainer);
-                console.log(trackContainer)
-                console.log(rightBrowser.$root)
-                //$(document).off('mousedown')
-                //$(document).off('mouseup')
-                rightBrowser.$root.off();
-                $(rightBrowser.trackContainer).off('mousemove').on('mousemove', (event) => {
-                    console.log(event)
-                    event.stopPropagation();
-                });
-                //trackContainer.off('mouseup');
-
-                rightBrowser.trackViews.forEach((track) => {
-                    track.viewports.forEach((viewport) => {
-                        console.log(viewport)
-
-                        viewport.trackView.$viewportContainer.off().on('mousemove', (event) => {
-                            event.stopPropagation();
-
-                            let self = rightBrowser;
-                            var coords, viewport, viewportWidth, referenceFrame;
-
-                            event.preventDefault();
-
-                            if (self.loadInProgress()) {
-                                return;
-                            }
-
-                            coords = igvutils.DOMUtils.pageCoordinates(event);
-
-                            if (self.vpMouseDown) {
-
-                                // Determine direction,  true == horizontal
-                                const horizontal = Math.abs((coords.x - self.vpMouseDown.mouseDownX)) > Math.abs((coords.y - self.vpMouseDown.mouseDownY));
-                                const vertical = !horizontal;
-
-                                viewport = self.vpMouseDown.viewport;
-                                viewportWidth = <number>viewport.$viewport.width();
-                                referenceFrame = viewport.referenceFrame;
-
-                                if (!self.dragObject && !self.isScrolling) {
-                                    self.dragObject = {
-                                        viewport: viewport,
-                                        start: referenceFrame.start
-                                    };
-                                }
-
-                                if (self.dragObject) {
-                                    const viewChanged = referenceFrame.shiftPixels(coords.y - self.vpMouseDown.lastMouseY, viewportWidth);
-                                    if (viewChanged) {
-
-                                        if (self.referenceFrameList.length > 1) {
-                                            self.updateLocusSearchWidget(self.referenceFrameList);
-                                        } else {
-                                            self.updateLocusSearchWidget([self.vpMouseDown.referenceFrame]);
-                                        }
-
-                                        self.updateViews();
-                                    }
-                                    self.fireEvent('trackdrag');
-
-                                    if (self.isScrolling) {
-                                        const delta = self.vpMouseDown.r * (self.vpMouseDown.lastMouseY - coords.y);
-                                        self.vpMouseDown.viewport.trackView.scrollBy(delta);
-                                    }
-                                }
-
-                                console.log(self.dragObject)
-
-                                self.vpMouseDown.lastMouseX = coords.x;
-                                self.vpMouseDown.lastMouseY = coords.y;
-                            }
-                        });
-
-                        console.log("Turning off $viewport")
-                        viewport.$viewport.off().on('mousedown', (event) => {
-                            console.log(event);
-                            event.stopImmediatePropagation();
-                            viewport.enableClick = true;
-
-                            let coords = igvutils.DOMUtils.pageCoordinates(event);
-                            rightBrowser.vpMouseDown = {
-                                viewport: viewport,
-                                lastMouseX: coords.x,
-                                mouseDownX: coords.x,
-                                lastMouseY: coords.y,
-                                mouseDownY: coords.y,
-                                referenceFrame: viewport.referenceFrame,
-                                r: 1
-                            };
-
-                            //rightBrowser.mouseDownOnViewport(event, viewport);
-                            //mouseDownCoords = igvutils.DOMUtils.pageCoordinates(event);
-                        })
-                        //viewport.$viewport.off('mouseup');
-                    })
-
-                    console.log(track);
-                    console.log(track.$trackDragScrim)
-
-                    if (track.$trackDragScrim) {
-                        console.log("Turning off trackDragScrim")
-                        track.$trackDragScrim.off(); //('mousedown');
-                        //track.$trackDragScrim.off('mouseup');
-                    }
-                    if (track.$trackManipulationHandle) {
-                        console.log("Turning off trackManipulationHandle")
-                        track.$trackManipulationHandle.off(); //('mousedown');
-                        //track.$trackManipulationHandle.off('mouseup');
-                    }
-
-                    //
-                    $(document).off() //('mousedown' + track.namespace);
-                    //$(document).off('mouseup' + track.namespace);
-                })
-            })
+            //console.log(parseInt(referenceFrame.start.replace(',', '')))
+            voronoiMap.requestView(parseInt(referenceFrame.start.replace(/,/g, '')), parseInt(referenceFrame.end.replace(/,/g, '')), voronoiMap.minLoadedY, voronoiMap.maxLoadedY)
         });
-
-
-
-
+        rightBrowser.on('locuschange', (referenceFrame: igv.ReferenceFrame) => {
+            voronoiMap.requestView(voronoiMap.minLoadedX, voronoiMap.maxLoadedX, parseInt(referenceFrame.start.replace(/,/g, '')), parseInt(referenceFrame.end.replace(/,/g, '')))
+        });
 
 
         /**/
@@ -266,7 +291,13 @@ promise.then(belowBrowser => {
         voronoiMap = new VoronoiPlot(belowBrowser, rightBrowser);
         imageMap = new ImageMap(numBins, voronoiMap);
 
-
+        imageMap.setOnImageLoad((minX, maxX, minY, maxY) => {
+            belowBrowser.search("chr4:" + minX + "-" + maxX).then(() => {
+                rightBrowser.search("chr4:" + minY + "-" + maxY).then(() => {
+                    voronoiMap.requestView(minX, maxX, minY, maxY);
+                })
+            })
+        })
         //imageMap.loadDensityImage(200, xStart, xEnd, yStart, yEnd, voronoiMap.loadDataForVoronoi);
 
         let overviewNumBins = <HTMLInputElement>document.getElementById("overviewNumBins");
