@@ -2,7 +2,6 @@ import { Axis } from './axis'
 import { Delaunay, Voronoi } from "d3-delaunay";
 import * as igv from 'igv';
 import * as d3 from 'd3';
-import { start } from 'repl';
 
 export class VoronoiPlot extends Axis {
 

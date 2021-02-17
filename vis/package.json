@@ -5,9 +5,9 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "tsc && webpack app/app.js -o app/app.bundle.js --mode=production",
-    "build:dev": "tsc && webpack app/app.js -o app/app.bundle.js --mode=development",
-    "watch": "webpack app/app.ts --module-bind tsx=awesome-typescript-loader -o app/app.bundle.js --mode=development --watch",
+    "build": "tsc && webpack src/app.js -o ../static/js/app.bundle.js --mode=production",
+    "build:dev": "tsc && webpack src/app.js -o ../static/js/app.bundle.js --mode=development",
+    "watch": "webpack src/app.ts --module-bind tsx=awesome-typescript-loader -o ../static/js/app.bundle.js --mode=development --watch",
     "start": "node server.js"
   },
   "author": "Alan Race",
@@ -22,7 +22,6 @@
     "delaunator": "^4.0.1",
     "express": "^4.17.1",
     "igv": "^2.7.4",
-    "igv_wrapper": "github:datavisyn/igv_wrapper",
     "n": "^6.7.0"
   },
   "type": "module",

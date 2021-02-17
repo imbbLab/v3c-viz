@@ -1,5 +1,5 @@
-import { Delaunay } from "d3-delaunay";
-import { createGzip } from "zlib";
+//import { Delaunay } from "d3-delaunay";
+//import { createGzip } from "zlib";
 import { ImageMap } from "./imageMap";
 import { VoronoiPlot } from "./voronoiPlot";
 

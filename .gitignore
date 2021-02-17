@@ -13,3 +13,6 @@ static/
 my.tree
 
 oldstuff.txt
+
+vis/node_modules/
+vis/package-lock.json
