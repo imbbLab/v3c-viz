@@ -1,0 +1,15 @@
+
+*.db
+
+hicvis
+
+*.zip
+
+*.png
+
+software/
+static/
+
+my.tree
+
+oldstuff.txt

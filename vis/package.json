@@ -1,0 +1,42 @@
+{
+  "name": "vis",
+  "version": "1.0.0",
+  "description": "Visualisation ",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "tsc && webpack app/app.js -o app/app.bundle.js --mode=production",
+    "build:dev": "tsc && webpack app/app.js -o app/app.bundle.js --mode=development",
+    "watch": "webpack app/app.ts --module-bind tsx=awesome-typescript-loader -o app/app.bundle.js --mode=development --watch",
+    "start": "node server.js"
+  },
+  "author": "Alan Race",
+  "license": "MIT",
+  "dependencies": {
+    "@types/d3-delaunay": "^4.1.0",
+    "@types/delaunator": "^3.0.0",
+    "canvas": "^2.6.1",
+    "d3": "^6.5.0",
+    "d3-delaunay": "^5.3.0",
+    "dat.gui": "^0.7.7",
+    "delaunator": "^4.0.1",
+    "express": "^4.17.1",
+    "igv": "^2.7.4",
+    "igv_wrapper": "github:datavisyn/igv_wrapper",
+    "n": "^6.7.0"
+  },
+  "type": "module",
+  "devDependencies": {
+    "@types/btoa": "^1.2.3",
+    "@types/d3": "^6.3.0",
+    "@types/dat.gui": "^0.7.6",
+    "@types/jquery": "^3.5.5",
+    "@types/node": "^14.10.2",
+    "awesome-typescript-loader": "^5.2.1",
+    "btoa": "^1.2.1",
+    "ts-loader": "^8.0.3",
+    "typescript": "^4.0.2",
+    "webpack": "^4.44.1",
+    "webpack-cli": "^3.3.12"
+  }
+}
