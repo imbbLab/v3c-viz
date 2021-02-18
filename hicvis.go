@@ -235,7 +235,7 @@ type PairsFile struct {
 	Sorted         Order
 	Shape          Shape
 	GenomeAssembly string
-	Chromsizes     []Chromsize
+	Chromsizes     map[string]Chromsize
 	Samheader      []string
 
 	Index PairsIndex
@@ -451,10 +451,36 @@ func (index PairsIndex) Search(reader *bgzf.Reader, pairsQuery PairsQuery) ([]*P
 	return pairs, nil
 }
 
-func processBGZF(reader io.Reader) error {
+func outputImage(overviewImage []uint32, numBins int, name string) {
+	maxValue := uint32(0)
+
+	for i := 0; i < len(overviewImage); i++ {
+		if overviewImage[i] > maxValue {
+			maxValue = overviewImage[i]
+		}
+	}
+
+	if maxValue > 100 {
+		fmt.Println(maxValue)
+
+		img := image.NewGray(image.Rect(0, 0, numBins, numBins))
+		for y := 0; y < numBins; y++ {
+			for x := 0; x < numBins; x++ {
+				pos := (y * numBins) + x
+				img.Set(x, y, color.Gray{uint8(float64(overviewImage[pos]) / float64(maxValue) * 25555)})
+			}
+		}
+
+		f, _ := os.Create(name + ".png")
+		png.Encode(f, img)
+	}
+
+}
+
+func processBGZF(reader io.Reader) (*PairsFile, error) {
 	bReader, err := bgzf.NewReader(reader, 0)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer bReader.Close()
 
@@ -463,14 +489,15 @@ func processBGZF(reader io.Reader) error {
 	firstLine, err := bufReader.ReadBytes('\n')
 	if err != nil {
 		fmt.Println("Failed to read from buffer")
-		return err
+		return nil, err
 	}
 
 	if !strings.Contains(string(firstLine), "## pairs format v1.0") {
-		return errors.New("Invalid .pairs file: Missing header line. First line is: " + string(firstLine))
+		return nil, errors.New("Invalid .pairs file: Missing header line. First line is: " + string(firstLine))
 	}
 
 	var pairsFile PairsFile
+	pairsFile.Chromsizes = make(map[string]Chromsize)
 
 	var firstNonComment string
 
@@ -478,7 +505,7 @@ func processBGZF(reader io.Reader) error {
 	for {
 		lineData, err := bufReader.ReadBytes('\n')
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		lineToProcess := string(lineData[:len(lineData)-1])
@@ -494,13 +521,13 @@ func processBGZF(reader io.Reader) error {
 				if value == "chr1-chr2-pos1-pos2" {
 					pairsFile.Sorted = Chr1Chr2Pos1Pos2
 				} else {
-					return errors.New("Unsupported .pairs file: not supported sorted: " + value)
+					return nil, errors.New("Unsupported .pairs file: not supported sorted: " + value)
 				}
 			case "shape":
 				if value == "upper triangle" {
 					pairsFile.Shape = UpperTriangle
 				} else {
-					return errors.New("Unsupported .pairs file: not supported shape: " + value)
+					return nil, errors.New("Unsupported .pairs file: not supported shape: " + value)
 				}
 			case "genome_assembly":
 				pairsFile.GenomeAssembly = value
@@ -511,10 +538,11 @@ func processBGZF(reader io.Reader) error {
 				chromsize.Name = strings.TrimSpace(splitValue[0])
 				chromsize.Length, err = strconv.ParseUint(strings.TrimSpace(splitValue[1]), 10, 64)
 				if err != nil {
-					return err
+					return nil, err
 				}
 
-				pairsFile.Chromsizes = append(pairsFile.Chromsizes, chromsize)
+				//pairsFile.Chromsizes = append(pairsFile.Chromsizes, chromsize)
+				pairsFile.Chromsizes[chromsize.Name] = chromsize
 			case "samheader":
 				pairsFile.Samheader = append(pairsFile.Samheader, value)
 			default:
@@ -529,6 +557,9 @@ func processBGZF(reader io.Reader) error {
 	}
 
 	maxLinesPerIndex := 100000
+	numBins := uint64(500)
+
+	imageData := make([]uint32, numBins*numBins)
 
 	pairsFile.Index.ChromPairStart = make(map[string]bgzf.Chunk)
 	pairsFile.Index.ChromPairEnd = make(map[string]bgzf.Chunk)
@@ -536,20 +567,29 @@ func processBGZF(reader io.Reader) error {
 
 	firstEntry, err := parseEntry(firstNonComment)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	pairsFile.Index.DataStart = bReader.LastChunk()
 	pairsFile.Index.ChromPairStart[firstEntry.ChromPairName()] = bReader.LastChunk()
 
 	lastEntry := firstEntry.ChromPairName()
-	startInfo := fmt.Sprintf("%s => %v | ", lastEntry, bReader.LastChunk())
 
 	curChromPairChunk := &ChromPairChunk{}
 	pairsFile.Index.ChromPairChunks[firstEntry.ChromPairName()] = append(pairsFile.Index.ChromPairChunks[firstEntry.ChromPairName()], curChromPairChunk)
 	curChromPairChunk.StartChunk = bReader.LastChunk()
 	curChromPairChunk.StartEntry = firstEntry
+	curChromPairChunk.EndChunk = bReader.LastChunk()
+	curChromPairChunk.EndEntry = firstEntry
 
+	binSizeX := (pairsFile.Chromsizes[firstEntry.SourceChrom].Length / numBins) + 1
+	binSizeY := (pairsFile.Chromsizes[firstEntry.TargetChrom].Length / numBins) + 1
+	imageIndex := int(firstEntry.TargetPosition/binSizeY)*int(numBins) + int(firstEntry.SourcePosition/binSizeX)
+	imageData[imageIndex]++
+	imageIndex = int(firstEntry.SourcePosition/binSizeX)*int(numBins) + int(firstEntry.TargetPosition/binSizeY)
+	imageData[imageIndex]++
+
+	// Already looked at the first line (above) so start at 1
 	lineCount := 1
 
 	for {
@@ -559,95 +599,67 @@ func processBGZF(reader io.Reader) error {
 				//fmt.Println("Finished reading data")
 				break
 			}
-			return err
+			return nil, err
 		}
 
 		lineToProcess := string(lineData[:len(lineData)-1])
 		curEntry, err := parseEntry(lineToProcess)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
+		// Check if the new line is describing a different source and target chromosome
+		if lastEntry != curEntry.ChromPairName() {
+			lineCount = 0
+
+			pairsFile.Index.ChromPairEnd[lastEntry] = bReader.LastChunk()
+			pairsFile.Index.ChromPairStart[curEntry.ChromPairName()] = bReader.LastChunk()
+
+			outputImage(imageData, int(numBins), lastEntry)
+			imageData = make([]uint32, numBins*numBins)
+			binSizeX = (pairsFile.Chromsizes[curEntry.SourceChrom].Length / numBins) + 1
+			binSizeY = (pairsFile.Chromsizes[curEntry.TargetChrom].Length / numBins) + 1
+		}
+
+		// Starting a new chunk when lineCount reset to 0 (either because new source/target or too many lines)
 		if lineCount == 0 {
 			curChromPairChunk = &ChromPairChunk{}
 			pairsFile.Index.ChromPairChunks[curEntry.ChromPairName()] = append(pairsFile.Index.ChromPairChunks[curEntry.ChromPairName()], curChromPairChunk)
 			curChromPairChunk.StartChunk = bReader.LastChunk()
 			curChromPairChunk.StartEntry = curEntry
+			curChromPairChunk.EndChunk = bReader.LastChunk()
+			curChromPairChunk.EndEntry = curEntry
 		}
 
-		if lastEntry != curEntry.ChromPairName() {
-			if lineCount > 1000 {
-				fmt.Printf("%s %d\n", startInfo, lineCount)
-			}
+		// Update the line count
+		lineCount++
 
+		// Update the latest 'end' chunk found and the current line count
+		curChromPairChunk.NumberLines = lineCount
+		curChromPairChunk.EndChunk = bReader.LastChunk()
+		curChromPairChunk.EndEntry = curEntry
+
+		imageIndex = int(curEntry.TargetPosition/binSizeY)*int(numBins) + int(curEntry.SourcePosition/binSizeX)
+		imageData[imageIndex]++
+		imageIndex = int(curEntry.SourcePosition/binSizeX)*int(numBins) + int(curEntry.TargetPosition/binSizeY)
+		imageData[imageIndex]++
+
+		// If we have too many lines, then start a new indexed chunk on the next line
+		if lineCount >= maxLinesPerIndex {
 			lineCount = 0
-			pairsFile.Index.ChromPairEnd[lastEntry] = bReader.LastChunk()
-			pairsFile.Index.ChromPairStart[curEntry.ChromPairName()] = bReader.LastChunk()
-
-			startInfo = fmt.Sprintf("%s => %v | ", curEntry.ChromPairName(), bReader.LastChunk())
 		}
 
 		lastEntry = curEntry.ChromPairName()
-		lineCount++
-
-		curChromPairChunk.NumberLines = lineCount
-
-		// If we have too many lines, then start a new indexed chunk
-		if lineCount >= maxLinesPerIndex {
-			curChromPairChunk.EndChunk = bReader.LastChunk()
-			curChromPairChunk.EndEntry = curEntry
-
-			fmt.Printf("%s %d\n", startInfo, lineCount)
-			fmt.Println(curChromPairChunk)
-			startInfo = fmt.Sprintf("%s => %v | ", curEntry.ChromPairName(), bReader.LastChunk())
-			lineCount = 0
-		}
-		// Check whether we are looking at a new chromosome
 	}
 
-	fmt.Printf("%s %d\n", startInfo, lineCount)
 	pairsFile.Index.ChromPairEnd[lastEntry] = bReader.LastChunk()
 
-	pairsFile.Index.Search(bReader, PairsQuery{SourceChrom: "chr2L", SourceStart: 1200000, SourceEnd: 1500000, TargetChrom: "chr2L", TargetStart: 1000000, TargetEnd: 1500000})
+	fmt.Println("Finished creating index")
 
-	return nil
+	//a, err := pairsFile.Index.Search(bReader, PairsQuery{SourceChrom: "chr2L", SourceStart: 12000000, SourceEnd: 15000000, TargetChrom: "chr2L", TargetStart: 10000000, TargetEnd: 15000000})
 
-	//fmt.Println(pairsFile)
-
-	startingChunk := bReader.LastChunk()
-
-	buf := make([]byte, int(startingChunk.End.Block-startingChunk.Begin.Block))
-
-	err = bReader.Seek(startingChunk.Begin)
-	if err != nil {
-		return err
-	}
-	_, err = bReader.Read(buf)
-	if err != nil {
-		return err
-	}
-
-	fmt.Println("-----")
-	fmt.Println(startingChunk)
-	fmt.Println("-----")
-	fmt.Println(string(buf))
-	fmt.Println("-----")
-
-	err = bReader.Seek(startingChunk.End)
-	if err != nil {
-		return err
-	}
-	_, err = bReader.Read(buf)
-	if err != nil {
-		return err
-	}
-
-	fmt.Println("-----")
-	fmt.Println(startingChunk)
-	fmt.Println("-----")
-	fmt.Println(string(buf))
-
-	return nil
+	//fmt.Println(len(a))
+	return &pairsFile, nil
 }
 
 func processPairsReader(reader io.Reader) error {
@@ -664,6 +676,7 @@ func processPairsReader(reader io.Reader) error {
 	}
 
 	var pairsFile PairsFile
+	pairsFile.Chromsizes = make(map[string]Chromsize)
 
 	lineNumber := 0
 	for scanner.Scan() {
@@ -700,7 +713,8 @@ func processPairsReader(reader io.Reader) error {
 					return err
 				}
 
-				pairsFile.Chromsizes = append(pairsFile.Chromsizes, chromsize)
+				pairsFile.Chromsizes[chromsize.Name] = chromsize
+				//pairsFile.Chromsizes = append(pairsFile.Chromsizes, chromsize)
 			case "samheader":
 				pairsFile.Samheader = append(pairsFile.Samheader, value)
 			default:
@@ -722,7 +736,7 @@ func processPairsReader(reader io.Reader) error {
 	return nil
 }
 
-func processPairsFile(filename string) error {
+func processPairsFile(filename string) (*PairsFile, error) {
 	file, err := os.Open(filename)
 
 	if err != nil {
@@ -742,6 +756,8 @@ func processPairsFile(filename string) error {
 	return processBGZF(file)
 }
 
+var pairsFile *PairsFile
+
 func main() {
 	_, err := flags.Parse(&opts)
 
@@ -750,7 +766,7 @@ func main() {
 		return
 	}
 
-	err = processPairsFile(opts.DataFile) //"/home/alan/Documents/Chung/Data_Dm/Lib001.U_dedup.pairs.gz")
+	pairsFile, err = processPairsFile(opts.DataFile) //"/home/alan/Documents/Chung/Data_Dm/Lib001.U_dedup.pairs.gz")
 	if err != nil {
 		log.Fatal(err)
 		return
@@ -766,10 +782,10 @@ func main() {
 		log.Fatal(err)
 	}
 
-	db, err = createDB(opts.DataFile)
+	/*db, err = createDB(opts.DataFile)
 	if err != nil {
 		log.Fatal(err)
-	}
+	}*/
 
 	//fmt.Println(db)
 
