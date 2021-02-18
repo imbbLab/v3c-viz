@@ -19,6 +19,7 @@ import (
 	"os/exec"
 	"regexp"
 	"runtime"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -240,18 +241,88 @@ type PairsFile struct {
 	Index PairsIndex
 }
 
+type PairsQuery struct {
+	SourceChrom string
+	SourceStart uint64
+	SourceEnd   uint64
+
+	TargetChrom string
+	TargetStart uint64
+	TargetEnd   uint64
+}
+
+func (query PairsQuery) Reverse() PairsQuery {
+	var revQuery PairsQuery
+	revQuery.SourceChrom = query.TargetChrom
+	revQuery.SourceStart = query.TargetStart
+	revQuery.SourceEnd = query.TargetEnd
+
+	revQuery.TargetChrom = query.SourceChrom
+	revQuery.TargetStart = query.SourceStart
+	revQuery.TargetEnd = query.SourceEnd
+
+	return revQuery
+}
+
 type PairsEntry struct {
+	SourceChrom    string
+	SourcePosition uint64
+	TargetChrom    string
+	TargetPosition uint64
 }
 
-func parseLine(line string) *PairsEntry {
-	return nil
+func (entry PairsEntry) ChromPairName() string {
+	return entry.SourceChrom + "-" + entry.TargetChrom
 }
 
-type ChromChunk struct {
-	Chunk []bgzf.Chunk
+func (entry PairsEntry) IsInRange(query PairsQuery) bool {
+	if entry.SourceChrom != query.SourceChrom || entry.TargetChrom != query.TargetChrom {
+		return false
+	}
+	if entry.SourcePosition >= query.SourceStart && entry.SourcePosition <= query.SourceEnd &&
+		entry.TargetPosition >= query.TargetStart && entry.TargetPosition <= query.TargetEnd {
+		return true
+	}
 
-	Start uint64
-	End   uint64
+	return false
+}
+
+func parseEntry(line string) (*PairsEntry, error) {
+	var entry PairsEntry
+	var err error
+
+	splitLine := strings.Split(line, "\t")
+
+	if len(splitLine) < 4 {
+		// We have a problem, the line isn't formatted correctly
+		fmt.Println(line)
+		return nil, errors.New("Invalid line")
+	}
+
+	entry.SourceChrom = splitLine[1]
+	entry.TargetChrom = splitLine[3]
+
+	entry.SourcePosition, err = strconv.ParseUint(splitLine[2], 10, 64)
+	if err != nil {
+		return nil, err
+	}
+	entry.TargetPosition, err = strconv.ParseUint(splitLine[4], 10, 64)
+	if err != nil {
+		return nil, err
+	}
+
+	return &entry, nil
+}
+
+type ChromPairChunk struct {
+	StartChunk bgzf.Chunk
+	EndChunk   bgzf.Chunk
+
+	ChromPairName string
+	NumberLines   int
+
+	StartEntry *PairsEntry
+	EndEntry   *PairsEntry
 }
 
 type PairsIndex struct {
@@ -260,7 +331,124 @@ type PairsIndex struct {
 	ChromPairStart map[string]bgzf.Chunk
 	ChromPairEnd   map[string]bgzf.Chunk
 
-	ChromPairChunks map[string][]ChromChunk
+	ChromPairChunks map[string][]*ChromPairChunk
+}
+
+func (index PairsIndex) Search(reader *bgzf.Reader, pairsQuery PairsQuery) ([]*PairsEntry, error) {
+	var err error
+
+	// TODO: Check validity of search (e.g. start < end)
+
+	// Create the reverse query to make searching easier
+	revQuery := pairsQuery.Reverse()
+
+	var chunkstoLoad []*ChromPairChunk
+	withinBounds := false
+
+	chromPairName := pairsQuery.SourceChrom + "-" + pairsQuery.TargetChrom
+	if chromPairs, ok := index.ChromPairChunks[chromPairName]; ok {
+		for index, pair := range chromPairs {
+			if pairsQuery.SourceStart > pair.StartEntry.SourcePosition && pairsQuery.SourceStart < pair.EndEntry.SourcePosition {
+				withinBounds = true
+			}
+			if withinBounds {
+				chunkstoLoad = append(chunkstoLoad, chromPairs[index])
+			}
+
+			if pairsQuery.SourceEnd > pair.StartEntry.SourcePosition && pairsQuery.SourceEnd < pair.EndEntry.SourcePosition {
+				withinBounds = false
+			}
+		}
+	}
+	// Process the inverse chrom pair
+	chromPairName = pairsQuery.TargetChrom + "-" + pairsQuery.SourceChrom
+	if chromPairs, ok := index.ChromPairChunks[chromPairName]; ok {
+		for index, pair := range chromPairs {
+			if pairsQuery.TargetStart > pair.StartEntry.SourcePosition && pairsQuery.TargetStart < pair.EndEntry.SourcePosition {
+				withinBounds = true
+			}
+			if withinBounds {
+				chunkstoLoad = append(chunkstoLoad, chromPairs[index])
+			}
+
+			if pairsQuery.TargetEnd > pair.StartEntry.SourcePosition && pairsQuery.TargetEnd < pair.EndEntry.SourcePosition {
+				withinBounds = false
+			}
+		}
+	}
+
+	// Sort the chunks to load by File position
+	sort.Slice(chunkstoLoad, func(i, j int) bool {
+		return chunkstoLoad[i].StartChunk.Begin.File < chunkstoLoad[j].StartChunk.Begin.File
+	})
+
+	// Merge together chunks (skipping) they follow on from one another to
+	// avoid seeking, then read in necessary number of lines to find desired data points
+	seekRequired := true
+	var bufReader *bufio.Reader
+	var lineData []byte
+
+	var pairs []*PairsEntry
+
+	for index, chunk := range chunkstoLoad {
+		if index > 0 {
+			// Same chunk as before, so skip it
+			if chunk == chunkstoLoad[index-1] {
+				continue
+			}
+
+			// Chunks follow on, so don't need to seek
+			if chunk.StartChunk.Begin.File == chunkstoLoad[index-1].EndChunk.End.File {
+				seekRequired = false
+			} else {
+				seekRequired = true
+			}
+		}
+
+		if seekRequired {
+			err := reader.Seek(chunk.StartChunk.Begin)
+			if err != nil {
+				return nil, err
+			}
+
+			bufReader = bufio.NewReader(reader)
+
+			// Skip the first partial line, this should be captured by the previous chunk
+			_, err = bufReader.ReadBytes('\n')
+			if err != nil {
+				return nil, err
+			}
+		}
+
+		for i := 0; i < chunk.NumberLines; i++ {
+			lineData, err = bufReader.ReadBytes('\n')
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			// Skip all comments
+			for lineData[0] == '#' {
+				lineData, err = bufReader.ReadBytes('\n')
+				if err != nil {
+					return nil, err
+				}
+			}
+
+			entry, err := parseEntry(string(lineData))
+			if err != nil {
+				return nil, err
+			}
+
+			// Check that the data fits in the requested window
+			if entry.IsInRange(pairsQuery) || entry.IsInRange(revQuery) {
+				pairs = append(pairs, entry)
+			}
+
+			//fmt.Println(entry)
+		}
+	}
+
+	return pairs, nil
 }
 
 func processBGZF(reader io.Reader) error {
@@ -279,7 +467,7 @@ func processBGZF(reader io.Reader) error {
 	}
 
 	if !strings.Contains(string(firstLine), "## pairs format v1.0") {
-		return errors.New("Invalid .pairs file: Missing header line")
+		return errors.New("Invalid .pairs file: Missing header line. First line is: " + string(firstLine))
 	}
 
 	var pairsFile PairsFile
@@ -340,23 +528,27 @@ func processBGZF(reader io.Reader) error {
 
 	}
 
-	//maxLinesPerIndex := 1000
+	maxLinesPerIndex := 100000
 
 	pairsFile.Index.ChromPairStart = make(map[string]bgzf.Chunk)
 	pairsFile.Index.ChromPairEnd = make(map[string]bgzf.Chunk)
+	pairsFile.Index.ChromPairChunks = make(map[string][]*ChromPairChunk)
 
-	splitLine := strings.Split(firstNonComment, "\t")
-
-	chromPairName := splitLine[1] + "-" + splitLine[3]
+	firstEntry, err := parseEntry(firstNonComment)
+	if err != nil {
+		return err
+	}
 
 	pairsFile.Index.DataStart = bReader.LastChunk()
-	pairsFile.Index.ChromPairStart[chromPairName] = bReader.LastChunk()
+	pairsFile.Index.ChromPairStart[firstEntry.ChromPairName()] = bReader.LastChunk()
 
-	lastEntry := chromPairName
+	lastEntry := firstEntry.ChromPairName()
 	startInfo := fmt.Sprintf("%s => %v | ", lastEntry, bReader.LastChunk())
 
-	//var curChromChunk ChromChunk
-	//curChromChunk.Start =
+	curChromPairChunk := &ChromPairChunk{}
+	pairsFile.Index.ChromPairChunks[firstEntry.ChromPairName()] = append(pairsFile.Index.ChromPairChunks[firstEntry.ChromPairName()], curChromPairChunk)
+	curChromPairChunk.StartChunk = bReader.LastChunk()
+	curChromPairChunk.StartEntry = firstEntry
 
 	lineCount := 1
 
@@ -371,28 +563,54 @@ func processBGZF(reader io.Reader) error {
 		}
 
 		lineToProcess := string(lineData[:len(lineData)-1])
-		splitLine := strings.Split(lineToProcess, "\t")
-		chromPairName := splitLine[1] + "-" + splitLine[3]
+		curEntry, err := parseEntry(lineToProcess)
+		if err != nil {
+			return err
+		}
 
-		if lastEntry != chromPairName {
+		if lineCount == 0 {
+			curChromPairChunk = &ChromPairChunk{}
+			pairsFile.Index.ChromPairChunks[curEntry.ChromPairName()] = append(pairsFile.Index.ChromPairChunks[curEntry.ChromPairName()], curChromPairChunk)
+			curChromPairChunk.StartChunk = bReader.LastChunk()
+			curChromPairChunk.StartEntry = curEntry
+		}
+
+		if lastEntry != curEntry.ChromPairName() {
 			if lineCount > 1000 {
 				fmt.Printf("%s %d\n", startInfo, lineCount)
 			}
 
 			lineCount = 0
 			pairsFile.Index.ChromPairEnd[lastEntry] = bReader.LastChunk()
-			pairsFile.Index.ChromPairStart[chromPairName] = bReader.LastChunk()
+			pairsFile.Index.ChromPairStart[curEntry.ChromPairName()] = bReader.LastChunk()
 
-			startInfo = fmt.Sprintf("%s => %v | ", chromPairName, bReader.LastChunk())
+			startInfo = fmt.Sprintf("%s => %v | ", curEntry.ChromPairName(), bReader.LastChunk())
 		}
 
-		lastEntry = chromPairName
+		lastEntry = curEntry.ChromPairName()
 		lineCount++
+
+		curChromPairChunk.NumberLines = lineCount
+
+		// If we have too many lines, then start a new indexed chunk
+		if lineCount >= maxLinesPerIndex {
+			curChromPairChunk.EndChunk = bReader.LastChunk()
+			curChromPairChunk.EndEntry = curEntry
+
+			fmt.Printf("%s %d\n", startInfo, lineCount)
+			fmt.Println(curChromPairChunk)
+			startInfo = fmt.Sprintf("%s => %v | ", curEntry.ChromPairName(), bReader.LastChunk())
+			lineCount = 0
+		}
 		// Check whether we are looking at a new chromosome
 	}
 
 	fmt.Printf("%s %d\n", startInfo, lineCount)
 	pairsFile.Index.ChromPairEnd[lastEntry] = bReader.LastChunk()
+
+	pairsFile.Index.Search(bReader, PairsQuery{SourceChrom: "chr2L", SourceStart: 1200000, SourceEnd: 1500000, TargetChrom: "chr2L", TargetStart: 1000000, TargetEnd: 1500000})
+
+	return nil
 
 	//fmt.Println(pairsFile)
 
@@ -442,7 +660,7 @@ func processPairsReader(reader io.Reader) error {
 	}
 	firstLine := scanner.Text()
 	if !strings.Contains(firstLine, "## pairs format v1.0") {
-		return errors.New("Invalid .pairs file: Missing header line")
+		return errors.New("Invalid .pairs file: Missing header line. First line is: " + firstLine)
 	}
 
 	var pairsFile PairsFile
@@ -532,7 +750,7 @@ func main() {
 		return
 	}
 
-	err = processPairsFile("/home/alan/Documents/Chung/Data_Dm/Lib001.U_dedup.pairs.gz")
+	err = processPairsFile(opts.DataFile) //"/home/alan/Documents/Chung/Data_Dm/Lib001.U_dedup.pairs.gz")
 	if err != nil {
 		log.Fatal(err)
 		return
