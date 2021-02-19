@@ -83,7 +83,7 @@ export class VoronoiPlot extends Axis {
                 this.loadDataForVoronoi(sourceChrom, targetChrom, minX, maxX, minY, maxY);
                 //this.updateView(minX, maxX, minY, maxY)
             }
-        }, 200);
+        }, 50);
 
     }
 
@@ -122,9 +122,21 @@ export class VoronoiPlot extends Axis {
                     let voronoiCanvasCTX = <CanvasRenderingContext2D> this.voronoiCanvas.getContext("2d");
                     voronoiCanvasCTX.clearRect(0, 0, this.voronoiCanvas.width, this.voronoiCanvas.height);
 
+                    
+
+                    let colours = 200;
+                    var scale = d3.scaleQuantize()
+                    .range(d3.range(colours))
+                    .domain([Math.log(5e6), Math.log(5e7)]);
+
+                    var colorScale = d3.scaleLinear<string>()
+                    .range(["saddlebrown", "lightgreen", "steelblue"])
+                    .domain([0, 2*colours / 3, colours]);
+
                     for(let i = 0; i < polygons.length; i++) {
                         let points = polygons[i]['Points']
-                        
+                        voronoiCanvasCTX.fillStyle = colorScale(scale(Math.log(polygons[i]['Area'])));
+
                         voronoiCanvasCTX.beginPath();
                         voronoiCanvasCTX.moveTo(((points[0]['X'] - minX) / (maxX - minX)) * axisCanvas.width, ((points[0]['Y'] - minY) / (maxY - minY)) * axisCanvas.height)
             
