@@ -1,4 +1,4 @@
-module gitea.alanrace.com/hicvis
+module github.com/imbbLab/hicvis
 
 go 1.16
 
