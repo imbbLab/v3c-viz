@@ -2,7 +2,7 @@ package pairs
 
 import (
 	"bufio"
-	"log"
+	"fmt"
 	"sort"
 
 	"github.com/biogo/hts/bgzf"
@@ -31,55 +31,77 @@ func (query Query) Reverse() Query {
 	return revQuery
 }
 
-type Index struct {
+type Index interface {
+	ChromPairList() []string
+	Search(pairsQuery Query) ([]*Entry, error)
+
+	//Image(pairsQuery Query, numBins int) ([]uint32, error)
+}
+
+type BGZFIndex struct {
+	reader *bgzf.Reader
+
 	DataStart bgzf.Chunk
 
 	ChromPairStart map[string]bgzf.Chunk
 	ChromPairEnd   map[string]bgzf.Chunk
 
+	ChromPairCounts map[string]uint64
 	ChromPairChunks map[string][]*ChromPairChunk
 }
 
-func (index Index) Search(reader *bgzf.Reader, pairsQuery Query) ([]*Entry, error) {
-	var err error
+func (index BGZFIndex) ChromPairList() []string {
+	keys := make([]string, 0, len(index.ChromPairChunks))
+	for k := range index.ChromPairChunks {
+		keys = append(keys, k)
+	}
 
+	return keys
+}
+
+func (index BGZFIndex) getChunksFromQuery(query Query) []*ChromPairChunk {
 	// TODO: Check validity of search (e.g. start < end)
 
-	// Create the reverse query to make searching easier
-	revQuery := pairsQuery.Reverse()
-
 	var chunkstoLoad []*ChromPairChunk
-	withinBounds := false
 
-	chromPairName := pairsQuery.SourceChrom + "-" + pairsQuery.TargetChrom
+	chromPairName := query.SourceChrom + "-" + query.TargetChrom
 	if chromPairs, ok := index.ChromPairChunks[chromPairName]; ok {
 		for index, pair := range chromPairs {
-			if pairsQuery.SourceStart > pair.StartEntry.SourcePosition && pairsQuery.SourceStart < pair.EndEntry.SourcePosition {
-				withinBounds = true
-			}
-			if withinBounds {
+			if query.SourceStart < pair.EndEntry.SourcePosition {
 				chunkstoLoad = append(chunkstoLoad, chromPairs[index])
 			}
-
-			if pairsQuery.SourceEnd > pair.StartEntry.SourcePosition && pairsQuery.SourceEnd < pair.EndEntry.SourcePosition {
-				withinBounds = false
+			if query.SourceEnd > pair.StartEntry.SourcePosition {
+				break
 			}
 		}
 	}
+
+	fmt.Println(query)
+	fmt.Println(index.ChromPairChunks[chromPairName])
+	fmt.Println(index.ChromPairChunks[chromPairName][0])
+	fmt.Println(index.ChromPairChunks[chromPairName][0].StartEntry)
+	fmt.Println(index.ChromPairChunks[chromPairName][0].EndEntry)
+
 	// Process the inverse chrom pair
-	chromPairName = pairsQuery.TargetChrom + "-" + pairsQuery.SourceChrom
+	chromPairName = query.TargetChrom + "-" + query.SourceChrom
 	if chromPairs, ok := index.ChromPairChunks[chromPairName]; ok {
 		for index, pair := range chromPairs {
-			if pairsQuery.TargetStart > pair.StartEntry.SourcePosition && pairsQuery.TargetStart < pair.EndEntry.SourcePosition {
+			if query.TargetStart < pair.EndEntry.SourcePosition {
+				chunkstoLoad = append(chunkstoLoad, chromPairs[index])
+			}
+			if query.TargetEnd > pair.StartEntry.SourcePosition {
+				break
+			}
+			/*if query.TargetStart >= pair.StartEntry.SourcePosition && query.TargetStart <= pair.EndEntry.SourcePosition {
 				withinBounds = true
 			}
 			if withinBounds {
 				chunkstoLoad = append(chunkstoLoad, chromPairs[index])
 			}
 
-			if pairsQuery.TargetEnd > pair.StartEntry.SourcePosition && pairsQuery.TargetEnd < pair.EndEntry.SourcePosition {
+			if query.TargetEnd >= pair.StartEntry.SourcePosition && query.TargetEnd <= pair.EndEntry.SourcePosition {
 				withinBounds = false
-			}
+			}*/
 		}
 	}
 
@@ -88,23 +110,34 @@ func (index Index) Search(reader *bgzf.Reader, pairsQuery Query) ([]*Entry, erro
 		return chunkstoLoad[i].StartChunk.Begin.File < chunkstoLoad[j].StartChunk.Begin.File
 	})
 
+	return chunkstoLoad
+}
+
+func (index BGZFIndex) Query(query Query, entryFunction func(entry *Entry)) error {
+	var err error
+
+	// Create the reverse query to make searching easier
+	revQuery := query.Reverse()
+	chunks := index.getChunksFromQuery(query)
+
 	// Merge together chunks (skipping) they follow on from one another to
 	// avoid seeking, then read in necessary number of lines to find desired data points
 	seekRequired := true
 	var bufReader *bufio.Reader
 	var lineData []byte
 
-	var pairs []*Entry
+	fmt.Printf("About to process chunks %v\n", chunks)
 
-	for index, chunk := range chunkstoLoad {
-		if index > 0 {
+	for chunkIndex, chunk := range chunks {
+		fmt.Printf("About to process chunk %v\n", chunk)
+		if chunkIndex > 0 {
 			// Same chunk as before, so skip it
-			if chunk == chunkstoLoad[index-1] {
+			if chunk == chunks[chunkIndex-1] {
 				continue
 			}
 
 			// Chunks follow on, so don't need to seek
-			if chunk.StartChunk.Begin.File == chunkstoLoad[index-1].EndChunk.End.File {
+			if chunk.StartChunk.Begin.File == chunks[chunkIndex-1].EndChunk.End.File {
 				seekRequired = false
 			} else {
 				seekRequired = true
@@ -112,47 +145,57 @@ func (index Index) Search(reader *bgzf.Reader, pairsQuery Query) ([]*Entry, erro
 		}
 
 		if seekRequired {
-			err := reader.Seek(chunk.StartChunk.Begin)
+			err := index.reader.Seek(chunk.StartChunk.Begin)
 			if err != nil {
-				return nil, err
+				return err
 			}
 
-			bufReader = bufio.NewReader(reader)
+			bufReader = bufio.NewReader(index.reader)
 
 			// Skip the first partial line, this should be captured by the previous chunk
 			_, err = bufReader.ReadBytes('\n')
 			if err != nil {
-				return nil, err
+				return err
 			}
 		}
 
 		for i := 0; i < chunk.NumberLines; i++ {
 			lineData, err = bufReader.ReadBytes('\n')
 			if err != nil {
-				log.Fatal(err)
+				return err
 			}
 
 			// Skip all comments
 			for lineData[0] == '#' {
 				lineData, err = bufReader.ReadBytes('\n')
 				if err != nil {
-					return nil, err
+					return err
 				}
 			}
 
 			entry, err := parseEntry(string(lineData))
 			if err != nil {
-				return nil, err
+				return err
 			}
 
 			// Check that the data fits in the requested window
-			if entry.IsInRange(pairsQuery) || entry.IsInRange(revQuery) {
-				pairs = append(pairs, entry)
+			if entry.IsInRange(query) || entry.IsInRange(revQuery) {
+				entryFunction(entry)
 			}
-
-			//fmt.Println(entry)
 		}
 	}
 
-	return pairs, nil
+	return err
+}
+
+func (index BGZFIndex) Search(query Query) ([]*Entry, error) {
+	var err error
+
+	var pairs []*Entry
+
+	err = index.Query(query, func(entry *Entry) {
+		pairs = append(pairs, entry)
+	})
+
+	return pairs, err
 }

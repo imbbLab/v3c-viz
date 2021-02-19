@@ -8,6 +8,7 @@ import * as dat from 'dat.gui';
 //import 'jquery-ui-dist/jquery-ui';
 import * as igv from 'igv';
 import * as igvutils from 'igv-utils';
+import { Chromosome } from "./chromosome";
 
 //import igv = require('igv');
 //import { browser } from "igv_wrapper";
@@ -35,6 +36,9 @@ let normPoints: Array<number[]>;
 var voronoiMap: VoronoiPlot;
 var imageMap: ImageMap;
 
+var sourceChrom: Chromosome;
+var targetChrom: Chromosome;
+
 // First get the details of the chromosome from the server
 fetch('./details')
             .then(
@@ -48,8 +52,10 @@ fetch('./details')
                     response.json().then(details => {
                         console.log(details);
 
-                        const chromosomeName = details['name']
-                        const locus = chromosomeName + ":" + details['minX'] + "-" + details['maxX']; //'chr4:0-1348131'
+                        sourceChrom = Chromosome.fromJSON(details['Chromosomes'][6])
+                        targetChrom = Chromosome.fromJSON(details['Chromosomes'][6])
+
+                        const locus = sourceChrom.name + ":" + details['minX'] + "-" + details['maxX']; //'chr4:0-1348131'
 
                         // Set up the options
                         const options: igv.IIGVBrowserOptions = {
@@ -255,10 +261,10 @@ fetch('./details')
                                     //window.location.replace(HASH_PREFIX + referenceFrame.label);
 
                                     //console.log(parseInt(referenceFrame.start.replace(',', '')))
-                                    voronoiMap.requestView(parseInt(referenceFrame.start.replace(/,/g, '')), parseInt(referenceFrame.end.replace(/,/g, '')), voronoiMap.minViewY, voronoiMap.maxViewY)
+                                    voronoiMap.requestView(sourceChrom, targetChrom, parseInt(referenceFrame.start.replace(/,/g, '')), parseInt(referenceFrame.end.replace(/,/g, '')), voronoiMap.minViewY, voronoiMap.maxViewY)
                                 });
                                 rightBrowser.on('locuschange', (referenceFrame: igv.ReferenceFrame) => {
-                                    voronoiMap.requestView(voronoiMap.minViewX, voronoiMap.maxViewX, parseInt(referenceFrame.start.replace(/,/g, '')), parseInt(referenceFrame.end.replace(/,/g, '')))
+                                    voronoiMap.requestView(sourceChrom, targetChrom, voronoiMap.minViewX, voronoiMap.maxViewX, parseInt(referenceFrame.start.replace(/,/g, '')), parseInt(referenceFrame.end.replace(/,/g, '')))
                                 });
 
 
@@ -275,13 +281,15 @@ fetch('./details')
                                 imageMap = new ImageMap(numBins, voronoiMap);
 
                                 imageMap.setOnImageLoad((minX, maxX, minY, maxY) => {
-                                    belowBrowser.search(chromosomeName + ":" + minX + "-" + maxX).then(() => {
-                                        rightBrowser.search(chromosomeName + ":" + minY + "-" + maxY).then(() => {
-                                            voronoiMap.requestView(minX, maxX, minY, maxY);
+                                    belowBrowser.search(sourceChrom.name + ":" + minX + "-" + maxX).then(() => {
+                                        rightBrowser.search(targetChrom.name + ":" + minY + "-" + maxY).then(() => {
+                                            voronoiMap.requestView(sourceChrom, targetChrom, minX, maxX, minY, maxY);
                                         })
                                     })
                                 })
                                 //imageMap.loadDensityImage(200, xStart, xEnd, yStart, yEnd, voronoiMap.loadDataForVoronoi);
+
+                                imageMap.setChromPair(sourceChrom, targetChrom)
 
                                 let overviewNumBins = <HTMLInputElement>document.getElementById("overviewNumBins");
 

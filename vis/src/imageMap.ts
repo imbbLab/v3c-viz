@@ -1,4 +1,5 @@
 import { Axis } from './axis'
+import { Chromosome } from './chromosome';
 import { VoronoiPlot } from './voronoiPlot'
 
 export class ImageMap extends Axis {
@@ -34,7 +35,7 @@ export class ImageMap extends Axis {
         this.iData = axisCanvasCTX.createImageData(this.numBins, this.numBins);
         this.iData.data.set(this.buffer);
 
-        this.updateView(this.minDataX, this.maxDataX, this.minDataY, this.maxDataY);
+        //this.updateView(this.minDataX, this.maxDataX, this.minDataY, this.maxDataY);
     }
 
     constructor(numBins: number, voronoiPlot: VoronoiPlot) {
@@ -59,7 +60,7 @@ export class ImageMap extends Axis {
         this.setNumberBins(numBins);
 
 
-        fetch('./details')
+        /*fetch('./details')
             .then(
                 (response) => {
                     if (response.status !== 200) {
@@ -78,7 +79,7 @@ export class ImageMap extends Axis {
 
                         this.updateView(this.minDataX, this.maxDataX, this.minDataY, this.maxDataY);
                     });
-                });
+                });*/
 
         //this.canvas.addEventListener('dblclick', () => { 
         //    // TODO: Get the 
@@ -107,6 +108,22 @@ export class ImageMap extends Axis {
     setOnImageLoad(onImageLoad: (minX: number, maxX: number, minY: number, maxY: number) => void) {
         this.onImageLoad = onImageLoad;
     }
+
+    sourceChrom: Chromosome = new Chromosome("", 0)
+    targetChrom: Chromosome = new Chromosome("", 0)
+
+    setChromPair(sourceChrom: Chromosome, targetChrom: Chromosome) {
+        this.sourceChrom = sourceChrom;
+        this.targetChrom = targetChrom;
+
+        this.minDataX = 0
+        this.maxDataX = sourceChrom.length
+        this.minDataY = 0
+        this.maxDataY = targetChrom.length
+
+        this.updateView(0, sourceChrom.length, 0, targetChrom.length)
+    }
+    
 
     updateView(minX: number, maxX: number, minY: number, maxY: number) {
         this.loadDensityImage(Math.round(minX), Math.round(maxX), Math.round(minY), Math.round(maxY), () => {
@@ -189,7 +206,7 @@ export class ImageMap extends Axis {
 
         var self = this;
 
-        fetch('./densityImage?numBins=' + this.numBins + '&xStart=' + startX + '&xEnd=' + endX + '&yStart=' + startY + '&yEnd=' + endY)
+        fetch('./densityImage?numBins=' + this.numBins + '&sourceChrom=' + this.sourceChrom.name + '&targetChrom=' + this.targetChrom.name + '&xStart=' + startX + '&xEnd=' + endX + '&yStart=' + startY + '&yEnd=' + endY)
             .then(
                 (response) => {
                     if (response.status !== 200) {
@@ -221,7 +238,9 @@ export class ImageMap extends Axis {
                             }
                         })
 
-                        if (numPoints < 2e5) {
+                        console.log("Found number of points = " + numPoints)
+
+                        if (numPoints < this.voronoiPlot.maxNumberPointsToLoad) {
                             callback();
                         }
 

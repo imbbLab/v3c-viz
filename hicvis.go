@@ -18,6 +18,7 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/jessevdk/go-flags"
 	"github.com/tidwall/buntdb"
@@ -26,6 +27,8 @@ import (
 
 	"github.com/imbbLab/hicvis/interact"
 	"github.com/imbbLab/hicvis/pairs"
+
+	"github.com/fogleman/delaunay"
 )
 
 //type Bucket {
@@ -101,7 +104,7 @@ func open(url string) error {
 // 	server.Start(listener)
 // }
 
-var pairsFile *pairs.File
+var pairsFile pairs.File
 
 func main() {
 	_, err := flags.Parse(&opts)
@@ -117,7 +120,11 @@ func main() {
 		return
 	}
 
-	return
+	fmt.Println(pairsFile.Chromosomes())
+
+	a, err := pairsFile.Index().Search(pairs.Query{SourceChrom: "chr2L", SourceStart: 12000000, SourceEnd: 15000000, TargetChrom: "chr2L", TargetStart: 10000000, TargetEnd: 15000000})
+
+	fmt.Println(len(a))
 
 	//"/home/alan/Documents/Work/Alisa/Data_Dm/All_chr4.pairs"
 
@@ -127,10 +134,10 @@ func main() {
 		log.Fatal(err)
 	}
 
-	/*db, err = createDB(opts.DataFile)
+	db, err = createDB("/home/alan/Documents/Chung/Data_Dm/All_chr4.pairs")
 	if err != nil {
 		log.Fatal(err)
-	}*/
+	}
 
 	//fmt.Println(db)
 
@@ -167,8 +174,19 @@ func main() {
 	startServer(listener)
 }
 
+// GetDetails provides information on the loaded file
 func GetDetails(w http.ResponseWriter, r *http.Request) {
+	chromosomes := pairsFile.Chromosomes()
+	chromsizes := pairsFile.Chromsizes()
+
+	orderedChromosomes := make([]pairs.Chromsize, len(chromosomes))
+
+	for index, chrom := range chromosomes {
+		orderedChromosomes[index] = chromsizes[chrom]
+	}
+
 	type details struct {
+		Chromosomes []pairs.Chromsize
 		Name        string `json:"name"`
 		HasInteract bool   `json:"hasInteract"`
 		MinX        int    `json:"minX"`
@@ -177,12 +195,15 @@ func GetDetails(w http.ResponseWriter, r *http.Request) {
 		MaxY        int    `json:"maxY"`
 	}
 
-	dets, _ := json.Marshal(&details{Name: db.chromosomeName, HasInteract: interactFile != nil, MinX: 0, MinY: 0, MaxX: int(db.chromosomeLength), MaxY: int(db.chromosomeLength)})
+	dets, _ := json.Marshal(&details{Chromosomes: orderedChromosomes, Name: db.chromosomeName, HasInteract: interactFile != nil, MinX: 0, MinY: 0, MaxX: int(db.chromosomeLength), MaxY: int(db.chromosomeLength)})
 	w.Write(dets)
 }
 
 func GetPoints(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query()
+
+	sourceChrom := query.Get("sourceChrom")
+	targetChrom := query.Get("targetChrom")
 
 	minX, err := strconv.Atoi(query.Get("xStart"))
 	if err != nil {
@@ -208,48 +229,255 @@ func GetPoints(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	/*
+		var pointData []uint32
+
+		db.db.View(func(tx *buntdb.Tx) error {
+			tx.Intersects(db.chromosomeName, fmt.Sprintf("[%d %d],[%d %d]", minX, minY, maxX, maxY), func(key, val string) bool {
+				points := strings.Split(val[1:len(val)-1], " ")
+
+				xPos, err := strconv.Atoi(points[0])
+				if err != nil {
+					return false
+				}
+				yPos, err := strconv.Atoi(points[1])
+				if err != nil {
+					return false
+				}
+
+				pointData = append(pointData, uint32(xPos), uint32(yPos))
+				return true
+			})
+			return nil
+		})
+
+		db.db.View(func(tx *buntdb.Tx) error {
+			tx.Intersects(db.chromosomeName, fmt.Sprintf("[%d %d],[%d %d]", minY, minX, maxY, maxX), func(key, val string) bool {
+				points := strings.Split(val[1:len(val)-1], " ")
+
+				yPos, err := strconv.Atoi(points[0])
+				if err != nil {
+					return false
+				}
+				xPos, err := strconv.Atoi(points[1])
+				if err != nil {
+					return false
+				}
+
+				pointData = append(pointData, uint32(xPos), uint32(yPos))
+				return true
+			})
+			return nil
+		})*/
+
+	points, err := pairsFile.Index().Search(pairs.Query{SourceChrom: sourceChrom, SourceStart: uint64(minX), SourceEnd: uint64(maxX), TargetChrom: targetChrom, TargetStart: uint64(minY), TargetEnd: uint64(maxY)})
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	var dPoints []delaunay.Point
+
 	var pointData []uint32
+	for _, point := range points {
+		pointData = append(pointData, uint32(point.SourcePosition), uint32(point.TargetPosition))
 
-	db.db.View(func(tx *buntdb.Tx) error {
-		tx.Intersects(db.chromosomeName, fmt.Sprintf("[%d %d],[%d %d]", minX, minY, maxX, maxY), func(key, val string) bool {
-			points := strings.Split(val[1:len(val)-1], " ")
+		dPoints = append(dPoints, delaunay.Point{X: float64(point.SourcePosition), Y: float64(point.TargetPosition)})
+		dPoints = append(dPoints, delaunay.Point{X: float64(point.TargetPosition), Y: float64(point.SourcePosition)})
+	}
 
-			xPos, err := strconv.Atoi(points[0])
-			if err != nil {
-				return false
-			}
-			yPos, err := strconv.Atoi(points[1])
-			if err != nil {
-				return false
-			}
+	start := time.Now()
+	fmt.Printf("Starting vornoi calculation with %d points\n", len(dPoints))
+	fmt.Printf("10th point = %v\n", dPoints[10])
+	triangulation, err := delaunay.Triangulate(dPoints)
+	voronoi := calculateVoronoi(triangulation)
+	elapsed := time.Since(start)
+	//fmt.Println(triangulation)
+	fmt.Printf("Finishing voronoi calculation: %s\n", elapsed)
 
-			pointData = append(pointData, uint32(xPos), uint32(yPos))
-			return true
-		})
-		return nil
-	})
+	bytes, err := json.Marshal(voronoi)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 
-	db.db.View(func(tx *buntdb.Tx) error {
-		tx.Intersects(db.chromosomeName, fmt.Sprintf("[%d %d],[%d %d]", minY, minX, maxY, maxX), func(key, val string) bool {
-			points := strings.Split(val[1:len(val)-1], " ")
-
-			yPos, err := strconv.Atoi(points[0])
-			if err != nil {
-				return false
-			}
-			xPos, err := strconv.Atoi(points[1])
-			if err != nil {
-				return false
-			}
-
-			pointData = append(pointData, uint32(xPos), uint32(yPos))
-			return true
-		})
-		return nil
-	})
+	w.Write(bytes)
+	return
 
 	w.Header().Set("Content-Type", "application/octet-stream")
 	w.Write(uint32ToByte(pointData))
+}
+
+type Polygon struct {
+	Points []delaunay.Point
+}
+
+type Voronoi struct {
+	Polygons []Polygon
+}
+
+func calculateVoronoi(triangulation *delaunay.Triangulation) *Voronoi {
+	// See https://mapbox.github.io/delaunator/ for information
+
+	/*circumcenters := make([]delaunay.Point, len(triangulation.Triangles)/3)
+	//vectors := make([]float64, len(triangulation.Points)*2)
+
+	fmt.Printf("Delauney: #points = %d, #triangles = %d, #halfedges = %d\n", len(triangulation.Points), len(triangulation.Triangles), len(triangulation.Halfedges))
+
+	pointIndex := 0
+	for i := 0; i < len(triangulation.Triangles); i += 3 {
+		t1 := triangulation.Triangles[i]
+		t2 := triangulation.Triangles[i+1]
+		t3 := triangulation.Triangles[i+2]
+
+		point1 := triangulation.Points[t1]
+		point2 := triangulation.Points[t2]
+		point3 := triangulation.Points[t3]
+
+		dx := point2.X - point1.X
+		dy := point2.Y - point1.Y
+		ex := point3.X - point1.X
+		ey := point3.Y - point1.Y
+		b1 := dx*dx + dy*dy
+		c1 := ex*ex + ey*ey
+		ab := (dx*ey - dy*ex) * 2
+
+		var x, y float64
+
+		// TODO: Not handling degenerate case https://github.com/d3/d3-delaunay/blob/9258fa3fb6bf0e6ab6d56009f2472807f461109f/src/voronoi.js#L107
+		if math.Abs(ab) < 1e-8 {
+			x = (point1.X + point3.X) / 2
+			y = (point1.Y + point3.Y) / 2
+		} else {
+			d := 1 / ab
+			x = point1.X + (ey*b1-dy*c1)*d
+			y = point1.Y + (dx*c1-ex*b1)*d
+		}
+
+		circumcenters[pointIndex] = delaunay.Point{X: x, Y: y}
+		pointIndex++
+	}*/
+
+	indexMap := make(map[int]int)
+	for e := 0; e < len(triangulation.Triangles); e++ {
+		endpoint := triangulation.Triangles[nextHalfEdge(e)]
+
+		if _, ok := indexMap[endpoint]; !ok || triangulation.Halfedges[e] == -1 {
+			indexMap[endpoint] = e
+		}
+	}
+
+	var voronoi Voronoi
+	voronoi.Polygons = make([]Polygon, 0, len(triangulation.Points))
+
+	for p := 0; p < len(triangulation.Points); p++ {
+		incoming := indexMap[p]
+		edges := edgesAroundPoint(triangulation, incoming)
+
+		var polygon Polygon
+		polygon.Points = make([]delaunay.Point, 0, len(edges))
+
+		for i := 0; i < len(edges); i++ {
+			polygon.Points = append(polygon.Points, triangleCenter(triangulation, triangleOfEdge(edges[i])))
+		}
+
+		voronoi.Polygons = append(voronoi.Polygons, polygon)
+	}
+	return &voronoi
+
+	/*var voronoi Voronoi
+	voronoi.Polygons = make([]Polygon, len(triangulation.Triangles))
+
+	for i := 0; i < len(triangulation.Triangles); i += 3 {
+		var polygon Polygon
+		polygon.Points = make([]delaunay.Point, 0, 3)
+
+		e0 := i
+		e := e0
+
+		firstTime := true
+		for firstTime || (e != e0 && e != -1) {
+			polygon.Points = append(polygon.Points, circumcenters[e])
+
+			if e%3 == 2 {
+				e -= 2
+			} else {
+				e++
+			}
+
+			e = triangulation.Halfedges[e]
+
+			firstTime = false
+		}
+	}
+
+	return &voronoi*/
+
+	/*t1 := triangulation.Triangles[i]
+	t2 := triangulation.Triangles[i+1]
+	t3 := triangulation.Triangles[i+2]
+
+	point1 := triangulation.Points[t1]
+	point2 := triangulation.Points[t2]
+	point3 := triangulation.Points[t3]
+
+	for
+	fmt.Println(circumcenters[i])
+	fmt.Printf("Indicies: %d %d %d\n", t1, t2, t3)
+	fmt.Println(point1)
+	fmt.Println(point2)
+	fmt.Println(point3)*/
+
+	//points := clip(i)
+}
+
+func edgesAroundPoint(triangulation *delaunay.Triangulation, start int) []int {
+	var result []int
+
+	var outgoing int
+	incoming := start
+	firstTime := true
+	for firstTime || (incoming != -1 && incoming != start) {
+		result = append(result, incoming)
+		outgoing = nextHalfEdge(incoming)
+		incoming = triangulation.Halfedges[outgoing]
+
+		firstTime = false
+	}
+
+	return result
+}
+
+func pointsOfTriangle(triangulation *delaunay.Triangulation, t int) []delaunay.Point {
+	return []delaunay.Point{triangulation.Points[triangulation.Triangles[t*3]], triangulation.Points[triangulation.Triangles[t*3+1]], triangulation.Points[triangulation.Triangles[t*3+2]]}
+}
+
+func circumcenter(a, b, c delaunay.Point) delaunay.Point {
+	ad := a.X*a.X + a.Y*a.Y
+	bd := b.X*b.X + b.Y*b.Y
+	cd := c.X*c.X + c.Y*c.Y
+	D := 2 * (a.X*(b.Y-c.Y) + b.X*(c.Y-a.Y) + c.X*(a.Y-b.Y))
+	return delaunay.Point{
+		X: 1 / D * (ad*(b.Y-c.Y) + bd*(c.Y-a.Y) + cd*(a.Y-b.Y)),
+		Y: 1 / D * (ad*(c.X-b.X) + bd*(a.X-c.X) + cd*(b.X-a.X)),
+	}
+}
+
+func triangleCenter(triangulation *delaunay.Triangulation, t int) delaunay.Point {
+	vertices := pointsOfTriangle(triangulation, t)
+
+	return circumcenter(vertices[0], vertices[1], vertices[2])
+}
+
+func triangleOfEdge(e int) int {
+	return e / 3
+}
+
+func nextHalfEdge(e int) int {
+	if e%3 == 2 {
+		return e - 2
+	}
+	return e + 1
 }
 
 func uint32ToByte(data []uint32) []byte {
@@ -297,6 +525,9 @@ func GetInteract(w http.ResponseWriter, r *http.Request) {
 func GetDensityImage(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query()
 
+	sourceChrom := query.Get("sourceChrom")
+	targetChrom := query.Get("targetChrom")
+
 	numBins, err := strconv.Atoi(query.Get("numBins"))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -326,9 +557,7 @@ func GetDensityImage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/octet-stream")
-
-	if minX == 0 && minY == 0 && maxX == int(db.chromosomeLength) && maxY == int(db.chromosomeLength) {
+	/*if minX == 0 && minY == 0 && maxX == int(db.chromosomeLength) && maxY == int(db.chromosomeLength) {
 		if uint32(numBins) != db.oNumBins {
 			db.createOverviewImage(uint32(numBins))
 		}
@@ -388,8 +617,16 @@ func GetDensityImage(w http.ResponseWriter, r *http.Request) {
 			return nil
 		})
 
-		w.Write(uint32ToByte(overviewImage))
+	}*/
+
+	overviewImage, err := pairsFile.Image(pairs.Query{SourceChrom: sourceChrom, SourceStart: uint64(minX), SourceEnd: uint64(maxX), TargetChrom: targetChrom, TargetStart: uint64(minY), TargetEnd: uint64(maxY)}, uint64(numBins))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
+
+	w.Header().Set("Content-Type", "application/octet-stream")
+	w.Write(uint32ToByte(overviewImage))
 }
 
 func startServer(listener net.Listener) {
