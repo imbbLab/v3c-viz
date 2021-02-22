@@ -6,9 +6,6 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
-	"image"
-	"image/color"
-	"image/png"
 	"log"
 	"net"
 	"net/http"
@@ -120,11 +117,11 @@ func main() {
 		return
 	}
 
-	fmt.Println(pairsFile.Chromosomes())
+	//fmt.Println(pairsFile.Chromosomes())
 
-	a, err := pairsFile.Index().Search(pairs.Query{SourceChrom: "chr2L", SourceStart: 12000000, SourceEnd: 15000000, TargetChrom: "chr2L", TargetStart: 10000000, TargetEnd: 15000000})
+	//a, err := pairsFile.Index().Search(pairs.Query{SourceChrom: "chr2L", SourceStart: 12000000, SourceEnd: 15000000, TargetChrom: "chr2L", TargetStart: 10000000, TargetEnd: 15000000})
 
-	fmt.Println(len(a))
+	//fmt.Println(len(a))
 
 	//"/home/alan/Documents/Work/Alisa/Data_Dm/All_chr4.pairs"
 
@@ -134,7 +131,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	db, err = createDB("/home/alan/Documents/Chung/Data_Dm/All_chr4.pairs")
+	/*db, err = createDB("/home/alan/Documents/Chung/Data_Dm/All_chr4.pairs")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -149,7 +146,7 @@ func main() {
 		}
 	}
 
-	fmt.Println(maxValue)
+	//fmt.Println(maxValue)
 
 	img := image.NewGray(image.Rect(0, 0, int(numPixelsInOverviewImage), int(numPixelsInOverviewImage)))
 	for y := 0; y < int(numPixelsInOverviewImage); y++ {
@@ -160,7 +157,7 @@ func main() {
 	}
 
 	f, _ := os.Create("image.png")
-	png.Encode(f, img)
+	png.Encode(f, img)*/
 
 	location := ":" + opts.Port
 
@@ -187,15 +184,10 @@ func GetDetails(w http.ResponseWriter, r *http.Request) {
 
 	type details struct {
 		Chromosomes []pairs.Chromsize
-		Name        string `json:"name"`
-		HasInteract bool   `json:"hasInteract"`
-		MinX        int    `json:"minX"`
-		MaxX        int    `json:"maxX"`
-		MinY        int    `json:"minY"`
-		MaxY        int    `json:"maxY"`
+		HasInteract bool `json:"hasInteract"`
 	}
 
-	dets, _ := json.Marshal(&details{Chromosomes: orderedChromosomes, Name: db.chromosomeName, HasInteract: interactFile != nil, MinX: 0, MinY: 0, MaxX: int(db.chromosomeLength), MaxY: int(db.chromosomeLength)})
+	dets, _ := json.Marshal(&details{Chromosomes: orderedChromosomes, HasInteract: interactFile != nil})
 	w.Write(dets)
 }
 
@@ -270,8 +262,13 @@ func GetPoints(w http.ResponseWriter, r *http.Request) {
 			return nil
 		})*/
 
-	points, err := pairsFile.Index().Search(pairs.Query{SourceChrom: sourceChrom, SourceStart: uint64(minX), SourceEnd: uint64(maxX), TargetChrom: targetChrom, TargetStart: uint64(minY), TargetEnd: uint64(maxY)})
+	pairsQuery := pairs.Query{SourceChrom: sourceChrom, SourceStart: uint64(minX), SourceEnd: uint64(maxX), TargetChrom: targetChrom, TargetStart: uint64(minY), TargetEnd: uint64(maxY)}
+
+	fmt.Printf("Processing Search query %v\n", pairsQuery)
+
+	points, err := pairsFile.Index().Search(pairsQuery)
 	if err != nil {
+		fmt.Println(err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}

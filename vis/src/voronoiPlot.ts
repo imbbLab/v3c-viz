@@ -77,7 +77,7 @@ export class VoronoiPlot extends Axis {
         clearTimeout(this.timeoutFunction);
 
         this.timeoutFunction = setTimeout(() => {
-            if(minX < this.minLoadedX || maxX > this.maxLoadedX || minY < this.minLoadedY || maxY > this.maxLoadedY) {
+            if(this.sourceChrom != sourceChrom || this.targetChrom != targetChrom || minX < this.minLoadedX || maxX > this.maxLoadedX || minY < this.minLoadedY || maxY > this.maxLoadedY) {
                 this.loadDataForVoronoi(sourceChrom, targetChrom, minX, maxX, minY, maxY);
             } else {
                 //this.loadDataForVoronoi(sourceChrom, targetChrom, minX, maxX, minY, maxY);

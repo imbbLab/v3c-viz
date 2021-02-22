@@ -2,7 +2,6 @@ package pairs
 
 import (
 	"bufio"
-	"fmt"
 	"sort"
 
 	"github.com/biogo/hts/bgzf"
@@ -76,12 +75,6 @@ func (index BGZFIndex) getChunksFromQuery(query Query) []*ChromPairChunk {
 		}
 	}
 
-	fmt.Println(query)
-	fmt.Println(index.ChromPairChunks[chromPairName])
-	fmt.Println(index.ChromPairChunks[chromPairName][0])
-	fmt.Println(index.ChromPairChunks[chromPairName][0].StartEntry)
-	fmt.Println(index.ChromPairChunks[chromPairName][0].EndEntry)
-
 	// Process the inverse chrom pair
 	chromPairName = query.TargetChrom + "-" + query.SourceChrom
 	if chromPairs, ok := index.ChromPairChunks[chromPairName]; ok {
@@ -126,10 +119,10 @@ func (index BGZFIndex) Query(query Query, entryFunction func(entry *Entry)) erro
 	var bufReader *bufio.Reader
 	var lineData []byte
 
-	fmt.Printf("About to process chunks %v\n", chunks)
+	//fmt.Printf("About to process chunks %v\n", chunks)
 
 	for chunkIndex, chunk := range chunks {
-		fmt.Printf("About to process chunk %v\n", chunk)
+		//fmt.Printf("About to process chunk %v\n", chunk)
 		if chunkIndex > 0 {
 			// Same chunk as before, so skip it
 			if chunk == chunks[chunkIndex-1] {

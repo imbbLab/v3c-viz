@@ -9,6 +9,7 @@ import * as dat from 'dat.gui';
 import * as igv from 'igv';
 import * as igvutils from 'igv-utils';
 import { Chromosome } from "./chromosome";
+import { copyFileSync } from "fs";
 
 //import igv = require('igv');
 //import { browser } from "igv_wrapper";
@@ -36,8 +37,12 @@ let normPoints: Array<number[]>;
 var voronoiMap: VoronoiPlot;
 var imageMap: ImageMap;
 
+var chromosomes: Map<string, Chromosome> = new Map();
 var sourceChrom: Chromosome;
 var targetChrom: Chromosome;
+
+var bottomBrowser: igv.IGVBrowser; 
+var rightBrowser: igv.IGVBrowser;
 
 // First get the details of the chromosome from the server
 fetch('./details')
@@ -52,10 +57,38 @@ fetch('./details')
                     response.json().then(details => {
                         console.log(details);
 
-                        sourceChrom = Chromosome.fromJSON(details['Chromosomes'][6])
-                        targetChrom = Chromosome.fromJSON(details['Chromosomes'][6])
+                        var sourceChromSelect = <HTMLSelectElement>document.getElementById('sourceChromSelect');
+                        var targetChromSelect = <HTMLSelectElement>document.getElementById('targetChromSelect');
+                        // Clear all options 
+                        var i, L = sourceChromSelect.options.length - 1;
+                        for(i = L; i >= 0; i--) {
+                            sourceChromSelect.remove(i);
+                            targetChromSelect.remove(i);
+                        }
 
-                        const locus = sourceChrom.name + ":" + details['minX'] + "-" + details['maxX']; //'chr4:0-1348131'
+                        var chromosomeDetails = details['Chromosomes'];
+                        chromosomeDetails.forEach((chromosome: any) => {
+                            sourceChromSelect.options.add(new Option(chromosome['Name'], chromosome['Name']));
+                            targetChromSelect.options.add(new Option(chromosome['Name'], chromosome['Name']));
+
+                            chromosomes.set(chromosome['Name'], Chromosome.fromJSON(chromosome))
+                        });
+                        sourceChromSelect.addEventListener("change", (event) => {
+                            sourceChrom = <Chromosome>chromosomes.get(sourceChromSelect.value);
+
+                            imageMap.setChromPair(sourceChrom, targetChrom)
+                        })
+                        targetChromSelect.addEventListener("change", (event) => {
+                            targetChrom = <Chromosome>chromosomes.get(targetChromSelect.value);
+
+                            imageMap.setChromPair(sourceChrom, targetChrom)
+                        })
+
+
+                        sourceChrom = <Chromosome>chromosomes.get(details['Chromosomes'][0]['Name']) 
+                        targetChrom = sourceChrom
+
+                        const locus = sourceChrom.name + ":0-" + sourceChrom.length; //'chr4:0-1348131'
 
                         // Set up the options
                         const options: igv.IIGVBrowserOptions = {
@@ -105,8 +138,6 @@ fetch('./details')
                             ]
                         }
 
-                        var bottomBrowser: igv.IGVBrowser; 
-                        var rightBrowser: igv.IGVBrowser;
 
                         function overrideMouse() {
                             let trackContainer = $(rightBrowser.trackContainer);
@@ -247,6 +278,8 @@ fetch('./details')
 
                         var promise: Promise<igv.IGVBrowser> = igv.createBrowser(<HTMLDivElement>document.getElementById('gene-browser-below'), options);
                         promise.then(belowBrowser => {
+                            bottomBrowser = belowBrowser;
+
                             var promise: Promise<igv.IGVBrowser> = igv.createBrowser(<HTMLDivElement>document.getElementById('gene-browser-right'), options);
                             promise.then(browser => {
                                 rightBrowser = browser;

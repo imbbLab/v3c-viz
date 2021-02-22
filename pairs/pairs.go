@@ -220,9 +220,18 @@ func (file bgzfFile) Image(query Query, numBins uint64) ([]uint32, error) {
 	binSizeX := ((query.SourceEnd - query.SourceStart) / numBins) + 1
 	binSizeY := ((query.TargetEnd - query.TargetStart) / numBins) + 1
 
+	sameChrom := query.SourceChrom == query.TargetChrom
+
+	var xPos, yPos uint64
+
 	err := file.index.Query(query, func(entry *Entry) {
-		xPos := (entry.SourcePosition - query.SourceStart) / binSizeX
-		yPos := (entry.TargetPosition - query.TargetStart) / binSizeY
+		if entry.SourceChrom != query.SourceChrom {
+			xPos = (entry.TargetPosition - query.SourceStart) / binSizeX
+			yPos = (entry.SourcePosition - query.TargetStart) / binSizeY
+		} else {
+			xPos = (entry.SourcePosition - query.SourceStart) / binSizeX
+			yPos = (entry.TargetPosition - query.TargetStart) / binSizeY
+		}
 
 		if xPos >= 0 && yPos >= 0 && xPos < numBins && yPos < numBins {
 			imageIndex := int(yPos)*int(numBins) + int(xPos)
@@ -230,12 +239,14 @@ func (file bgzfFile) Image(query Query, numBins uint64) ([]uint32, error) {
 		}
 
 		// Check if reverse is within view, as we only store diagonal
-		xPos = (entry.TargetPosition - query.SourceStart) / binSizeX
-		yPos = (entry.SourcePosition - query.TargetStart) / binSizeY
+		if sameChrom {
+			xPos = (entry.TargetPosition - query.SourceStart) / binSizeX
+			yPos = (entry.SourcePosition - query.TargetStart) / binSizeY
 
-		if xPos >= 0 && yPos >= 0 && xPos < numBins && yPos < numBins {
-			imageIndex := int(yPos)*int(numBins) + int(xPos)
-			imageData[imageIndex]++
+			if xPos >= 0 && yPos >= 0 && xPos < numBins && yPos < numBins {
+				imageIndex := int(yPos)*int(numBins) + int(xPos)
+				imageData[imageIndex]++
+			}
 		}
 	})
 
@@ -266,12 +277,12 @@ func ParseBGZF(filename string) (File, error) {
 		return nil, err
 	}
 
-	fmt.Println("Finished parsing header")
+	fmt.Println("Finished parsing header, creating index...")
 
 	maxLinesPerIndex := 100000
-	numBins := uint64(500)
+	//numBins := uint64(500)
 
-	imageData := make([]uint32, numBins*numBins)
+	//imageData := make([]uint32, numBins*numBins)
 
 	pairsFile.index.ChromPairStart = make(map[string]bgzf.Chunk)
 	pairsFile.index.ChromPairEnd = make(map[string]bgzf.Chunk)
@@ -302,12 +313,12 @@ func ParseBGZF(filename string) (File, error) {
 	curChromPairChunk.EndChunk = pairsFile.bgzfReader.LastChunk()
 	curChromPairChunk.EndEntry = firstEntry
 
-	binSizeX := (pairsFile.chromsizes[firstEntry.SourceChrom].Length / numBins) + 1
-	binSizeY := (pairsFile.chromsizes[firstEntry.TargetChrom].Length / numBins) + 1
-	imageIndex := int(firstEntry.TargetPosition/binSizeY)*int(numBins) + int(firstEntry.SourcePosition/binSizeX)
-	imageData[imageIndex]++
-	imageIndex = int(firstEntry.SourcePosition/binSizeX)*int(numBins) + int(firstEntry.TargetPosition/binSizeY)
-	imageData[imageIndex]++
+	//binSizeX := (pairsFile.chromsizes[firstEntry.SourceChrom].Length / numBins) + 1
+	//binSizeY := (pairsFile.chromsizes[firstEntry.TargetChrom].Length / numBins) + 1
+	//imageIndex := int(firstEntry.TargetPosition/binSizeY)*int(numBins) + int(firstEntry.SourcePosition/binSizeX)
+	//imageData[imageIndex]++
+	//imageIndex = int(firstEntry.SourcePosition/binSizeX)*int(numBins) + int(firstEntry.TargetPosition/binSizeY)
+	//imageData[imageIndex]++
 
 	// Already looked at the first line (above) so start at 1
 	lineCount := 1
@@ -338,10 +349,10 @@ func ParseBGZF(filename string) (File, error) {
 			pairsFile.index.ChromPairCounts[lastEntry] = totalLineCount
 			pairsFile.index.ChromPairStart[curEntry.ChromPairName()] = pairsFile.bgzfReader.LastChunk()
 
-			outputImage(imageData, int(numBins), lastEntry)
-			imageData = make([]uint32, numBins*numBins)
-			binSizeX = (pairsFile.chromsizes[curEntry.SourceChrom].Length / numBins) + 1
-			binSizeY = (pairsFile.chromsizes[curEntry.TargetChrom].Length / numBins) + 1
+			//outputImage(imageData, int(numBins), lastEntry)
+			//imageData = make([]uint32, numBins*numBins)
+			//binSizeX = (pairsFile.chromsizes[curEntry.SourceChrom].Length / numBins) + 1
+			//binSizeY = (pairsFile.chromsizes[curEntry.TargetChrom].Length / numBins) + 1
 		}
 
 		// Starting a new chunk when lineCount reset to 0 (either because new source/target or too many lines)
@@ -363,10 +374,10 @@ func ParseBGZF(filename string) (File, error) {
 		curChromPairChunk.EndChunk = pairsFile.bgzfReader.LastChunk()
 		curChromPairChunk.EndEntry = curEntry
 
-		imageIndex = int(curEntry.TargetPosition/binSizeY)*int(numBins) + int(curEntry.SourcePosition/binSizeX)
-		imageData[imageIndex]++
-		imageIndex = int(curEntry.SourcePosition/binSizeX)*int(numBins) + int(curEntry.TargetPosition/binSizeY)
-		imageData[imageIndex]++
+		//imageIndex = int(curEntry.TargetPosition/binSizeY)*int(numBins) + int(curEntry.SourcePosition/binSizeX)
+		//imageData[imageIndex]++
+		//imageIndex = int(curEntry.SourcePosition/binSizeX)*int(numBins) + int(curEntry.TargetPosition/binSizeY)
+		//imageData[imageIndex]++
 
 		// If we have too many lines, then start a new indexed chunk on the next line
 		if lineCount >= maxLinesPerIndex {
