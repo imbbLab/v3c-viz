@@ -8,7 +8,7 @@ import * as dat from 'dat.gui';
 //import 'jquery-ui-dist/jquery-ui';
 import * as igv from 'igv';
 import * as igvutils from 'igv-utils';
-import { Chromosome } from "./chromosome";
+import { Chromosome, Interaction } from "./chromosome";
 import { copyFileSync } from "fs";
 
 //import igv = require('igv');
@@ -38,6 +38,7 @@ var voronoiMap: VoronoiPlot;
 var imageMap: ImageMap;
 
 var chromosomes: Map<string, Chromosome> = new Map();
+var interactions: Map<string, Interaction[]> = new Map();
 var sourceChrom: Chromosome;
 var targetChrom: Chromosome;
 
@@ -77,11 +78,23 @@ fetch('./details')
                             sourceChrom = <Chromosome>chromosomes.get(sourceChromSelect.value);
 
                             imageMap.setChromPair(sourceChrom, targetChrom)
+                            let interactionSet = interactions.get(sourceChrom.name+"-"+targetChrom.name)
+                            if(interactionSet) {
+                                imageMap.setInteractions(interactionSet);
+                            } else {
+                                imageMap.setInteractions([])
+                            }
                         })
                         targetChromSelect.addEventListener("change", (event) => {
                             targetChrom = <Chromosome>chromosomes.get(targetChromSelect.value);
 
                             imageMap.setChromPair(sourceChrom, targetChrom)
+                            let interactionSet = interactions.get(sourceChrom.name+"-"+targetChrom.name)
+                            if(interactionSet) {
+                                imageMap.setInteractions(interactionSet);
+                            } else {
+                                imageMap.setInteractions([])
+                            }
                         })
 
 
@@ -417,13 +430,23 @@ fetch('./details')
                                         }
                     
                                         response.json().then(interact => {
-                                            interact['Interactions'].forEach((interaction: any) => {
+                                            
+                                            for(var chromPair in interact['Interactions']) {
+                                                var interactionArray: Interaction[] = []; 
+                                                interact['Interactions'][chromPair].forEach((interaction: any) => {
+                                                    interactionArray.push(Interaction.fromJSON(interaction, chromosomes));
+                                                });
+
+                                                interactions.set(chromPair, interactionArray)
+                                            }
+                                            
+                                            /*interact['Interactions'].forEach((interaction: any) => {
                                                 imageMap.addContact(interaction['SourceStart'], interaction['TargetStart']);
                                                 voronoiMap.addContact(interaction['SourceStart'], interaction['TargetStart']);
                                             });
 
                                             imageMap.redraw();
-                                            voronoiMap.redraw();
+                                            voronoiMap.redraw();*/
                                         })
                                     });
                                 }

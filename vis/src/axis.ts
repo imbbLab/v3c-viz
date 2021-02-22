@@ -1,4 +1,4 @@
-
+import {Chromosome, Interaction} from "./chromosome"
 
 export interface Coordinate {
     x: number;
@@ -34,7 +34,7 @@ export abstract class Axis {
     contactSize = 10;
 
     // Contacts
-    boxesToDraw: Array<number[]>;
+    interactions: Interaction[]
 
     axisWidth;
     axisHeight;
@@ -52,7 +52,7 @@ export abstract class Axis {
         this.axisCanvas.width = this.axisWidth;
         this.axisCanvas.height = this.axisHeight;
 
-        this.boxesToDraw = new Array<number[]>();
+        this.interactions = [];
 
         /*this.boxesToDraw[0] = new Array<number>(2);
         this.boxesToDraw[0][0] = 804435;
@@ -195,9 +195,20 @@ export abstract class Axis {
         axisCanvasCTX.strokeStyle = "#" + this.contactEdgeColour.toString(16);
         axisCanvasCTX.lineWidth = this.edgeWidth;
         axisCanvasCTX.fillStyle = "#" + this.contactFillColour.toString(16);//"rgba(0, 0, 255, 0.75)";
-        for (let i = 0; i < this.boxesToDraw.length; i++) {
-            let x = this.boxesToDraw[i][0];
-            let y = this.boxesToDraw[i][1];
+        for (let i = 0; i < this.interactions.length; i++) {
+            var x, y
+            if(this.interactions[i].sourceChrom == this.sourceChrom && this.interactions[i].targetChrom == this.targetChrom) {
+                x = this.interactions[i].sourceStart;
+                y = this.interactions[i].targetStart;
+            } else if(this.interactions[i].sourceChrom == this.targetChrom && this.interactions[i].targetChrom == this.sourceChrom)  {
+                y = this.interactions[i].sourceStart;
+                x = this.interactions[i].targetStart;
+            }
+
+            // For some reason the interaction isn't appropriate, so skip it
+            if(!x || !y) {
+                continue;
+            }
 
             if (x >= this.minViewX && x <= this.maxDataX && y >= this.minViewY && y <= this.maxViewY) {
                 x = (x - startX) * xScaleFactor;
@@ -225,13 +236,33 @@ export abstract class Axis {
 
     abstract redraw(): void;
 
-    addContact(x: number, y: number) {
+    /*addContact(x: number, y: number) {
         let contact = new Array<number>(2);
         contact[0] = x;
         contact[1] = y;
 
         this.boxesToDraw.push(contact)
+    }*/
+
+    setInteractions(interactions: Interaction[]) {
+        this.interactions = interactions;
     }
+
+    sourceChrom: Chromosome = new Chromosome("", 0)
+    targetChrom: Chromosome = new Chromosome("", 0)
+
+    setChromPair(sourceChrom: Chromosome, targetChrom: Chromosome) {
+        this.sourceChrom = sourceChrom;
+        this.targetChrom = targetChrom;
+
+        this.minDataX = 0
+        this.maxDataX = sourceChrom.length
+        this.minDataY = 0
+        this.maxDataY = targetChrom.length
+
+        this.updateView(0, sourceChrom.length, 0, targetChrom.length)
+    }
+    
 
     addContactMenu(gui: dat.GUI) {
         const imageContactFolder = gui.addFolder('Contacts');

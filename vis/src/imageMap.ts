@@ -109,24 +109,12 @@ export class ImageMap extends Axis {
         this.onImageLoad = onImageLoad;
     }
 
-    sourceChrom: Chromosome = new Chromosome("", 0)
-    targetChrom: Chromosome = new Chromosome("", 0)
-
     setChromPair(sourceChrom: Chromosome, targetChrom: Chromosome) {
-        this.sourceChrom = sourceChrom;
-        this.targetChrom = targetChrom;
-
-        this.minDataX = 0
-        this.maxDataX = sourceChrom.length
-        this.minDataY = 0
-        this.maxDataY = targetChrom.length
+        super.setChromPair(sourceChrom, targetChrom);
 
         // Reset image threshold so that we recalculate an appropriate threshold
         this.imageThreshold = -1;
-
-        this.updateView(0, sourceChrom.length, 0, targetChrom.length)
     }
-    
 
     updateView(minX: number, maxX: number, minY: number, maxY: number) {
         this.loadDensityImage(Math.round(minX), Math.round(maxX), Math.round(minY), Math.round(maxY), () => {
