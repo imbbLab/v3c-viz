@@ -140,9 +140,9 @@ fetch('./details')
 
 
                         function overrideMouse() {
-                            let trackContainer = $(rightBrowser.trackContainer);
-                            console.log(trackContainer)
-                            console.log(rightBrowser.$root)
+                            //let trackContainer = $(rightBrowser.trackContainer);
+                            //console.log(trackContainer)
+                            //console.log(rightBrowser.$root)
                             //$(document).off('mousedown')
                             //$(document).off('mouseup')
                             rightBrowser.$root.off();
@@ -158,7 +158,7 @@ fetch('./details')
 
                             rightBrowser.trackViews.forEach((track) => {
                                 track.viewports.forEach((viewport) => {
-                                    console.log(viewport)
+                                    //console.log(viewport)
 
                                     viewport.trackView.$viewportContainer.off().on('mousemove', (event) => {
                                         event.stopPropagation();
@@ -211,7 +211,7 @@ fetch('./details')
                                                 }
                                             }
 
-                                            console.log(self.dragObject)
+                                            //console.log(self.dragObject)
 
                                             self.vpMouseDown.lastMouseX = coords.x;
                                             self.vpMouseDown.lastMouseY = coords.y;
@@ -223,10 +223,10 @@ fetch('./details')
                                         event.stopPropagation();
                                     })
 
-                                    console.log("HERE")
-                                    console.log(viewport.$viewport)
+                                    //console.log("HERE")
+                                    //console.log(viewport.$viewport)
                                     viewport.$viewport.off().on('mouseup', (event) => {
-                                        console.log("MOUSE UP" + event);
+                                        //console.log("MOUSE UP" + event);
                                         event.stopPropagation();
                                     })
 
@@ -288,7 +288,7 @@ fetch('./details')
                                 overrideMouse();
 
                                 var HASH_PREFIX = "#/locus/";
-                                console.log(belowBrowser);
+                                //console.log(belowBrowser);
                                 belowBrowser.on('locuschange', function (referenceFrame: igv.ReferenceFrame) {
                                     //console.log(referenceFrame)
                                     //window.location.replace(HASH_PREFIX + referenceFrame.label);
@@ -305,10 +305,10 @@ fetch('./details')
 
                                 let jQueryKeyName = Object.keys(belowBrowser.trackContainer)[0];
                                 //let obj = belowBrowser.trackContainer.
-                                console.log(jQueryKeyName)
-                                console.log(Object.keys(belowBrowser.trackContainer));
-                                console.log(belowBrowser.trackContainer);
-                                console.log(belowBrowser.trackViews);
+                                //console.log(jQueryKeyName)
+                                //console.log(Object.keys(belowBrowser.trackContainer));
+                                //console.log(belowBrowser.trackContainer);
+                                //console.log(belowBrowser.trackViews);
 
                                 voronoiMap = new VoronoiPlot(belowBrowser, rightBrowser);
                                 imageMap = new ImageMap(numBins, voronoiMap);

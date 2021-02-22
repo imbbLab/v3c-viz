@@ -121,6 +121,9 @@ export class ImageMap extends Axis {
         this.minDataY = 0
         this.maxDataY = targetChrom.length
 
+        // Reset image threshold so that we recalculate an appropriate threshold
+        this.imageThreshold = -1;
+
         this.updateView(0, sourceChrom.length, 0, targetChrom.length)
     }
     
@@ -225,7 +228,7 @@ export class ImageMap extends Axis {
                     // Examine the text in the response
                     response.arrayBuffer().then((byteBuffer) => {
                         this.imageData = new Uint32Array(byteBuffer);
-                        console.log(this.imageData);
+                        //console.log(this.imageData);
 
 
                         let maxIntensity = 0;

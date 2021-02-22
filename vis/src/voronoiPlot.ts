@@ -326,11 +326,11 @@ export class VoronoiPlot extends Axis {
         let areaNormCoeff = (endX - startX) * (endY - startY)
         minArea = Math.round(minArea) + 1
         maxArea = Math.round(maxArea)
-        console.log(minArea)
-        console.log(maxArea)
-        console.log(Math.log(minArea ))
-        console.log(Math.log(minArea *  areaNormCoeff))
-        console.log(Math.log(maxArea * areaNormCoeff))
+        //console.log(minArea)
+        //console.log(maxArea)
+        //console.log(Math.log(minArea ))
+        //console.log(Math.log(minArea *  areaNormCoeff))
+        //console.log(Math.log(maxArea * areaNormCoeff))
 
         let areaDifference = (maxArea - minArea)
         minArea *= 1.25
