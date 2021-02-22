@@ -460,6 +460,13 @@ export class VoronoiPlot extends Axis {
     }
 
     updateView(minX: number, maxX: number, minY: number, maxY: number): void {
+        if(minX < 0) {
+            minX = 0;
+        }
+        if(minY < 0) {
+            minY = 0;
+        }
+
         this.minViewX = minX;
         this.maxViewX = maxX;
         this.minViewY = minY;

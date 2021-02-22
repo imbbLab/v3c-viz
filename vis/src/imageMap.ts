@@ -117,6 +117,13 @@ export class ImageMap extends Axis {
     }
 
     updateView(minX: number, maxX: number, minY: number, maxY: number) {
+        if(minX < 0) {
+            minX = 0;
+        }
+        if(minY < 0) {
+            minY = 0;
+        }
+
         this.loadDensityImage(Math.round(minX), Math.round(maxX), Math.round(minY), Math.round(maxY), () => {
             this.onImageLoad(Math.round(minX), Math.round(maxX), Math.round(minY), Math.round(maxY));
             //this.voronoiPlot.requestView(Math.round(minX), Math.round(maxX), Math.round(minY), Math.round(maxY));
