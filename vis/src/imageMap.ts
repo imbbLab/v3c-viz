@@ -14,7 +14,7 @@ export class ImageMap extends Axis {
     // Editable options
     numBins = 200;
     percentile = 0.97;
-   
+    imageThreshold = -1;
 
     voronoiPlot: VoronoiPlot
 
@@ -143,9 +143,13 @@ export class ImageMap extends Axis {
     setPercentile(percentile: number) {
         this.percentile = percentile;
 
-        let threshold = this.calculatePercentile(percentile);
-        this.setImageThreshold(threshold);
-        this.redraw();
+       let imageThreshold = this.calculatePercentile(this.percentile);
+        this.setImageThreshold(imageThreshold);
+    }
+    
+    setImageThreshold(threshold: number) {
+        this.imageThreshold = threshold;
+        this.thresholdImage();
     }
 
     calculatePercentile(percentile: number): number {
@@ -160,7 +164,7 @@ export class ImageMap extends Axis {
 
     }
 
-    setImageThreshold(threshold: number) {
+    thresholdImage() {
         var clamped = new Uint8ClampedArray([0]);
 
         //var axisCanvas = this.getAxisCanvas();
@@ -171,7 +175,7 @@ export class ImageMap extends Axis {
 
         for (var y = 0; y < this.numBins; ++y) {
             for (var x = 0; x < this.numBins; ++x) {
-                clamped[0] = this.imageData[y * this.numBins + x] / threshold * 255;
+                clamped[0] = this.imageData[y * this.numBins + x] / this.imageThreshold * 255;
 
                 var pos = (y * this.numBins + x) * 4; // position in buffer based on x and y
                 this.iData.data[pos] = clamped[0];           // some R value [0, 255]
@@ -180,6 +184,8 @@ export class ImageMap extends Axis {
                 this.iData.data[pos + 3] = 255;           // set alpha channel
             }
         }
+
+        this.redraw();
     }
 
     redraw() {
@@ -244,15 +250,23 @@ export class ImageMap extends Axis {
                             callback();
                         }
 
-                        console.log("Max intensity = " + maxIntensity);
+                        if(this.imageThreshold < 0) {
+                            this.setPercentile(0.95);
+                        } else {
+                            this.thresholdImage();
+                        }
+                        //console.log("Max intensity = " + maxIntensity);
 
-                        maxIntensity = this.calculatePercentile(0.95) /// countNotZero * 10
-                        console.log("Max intensity = " + maxIntensity);
+                        //maxIntensity = this.calculatePercentile(0.95) /// countNotZero * 10
+                        //console.log("Max intensity = " + maxIntensity);
 
 
                         this.numPointsLabel.innerText = "Number of datapoints (in view): " + numPoints;
 
-                        self.setImageThreshold(maxIntensity);
+                        //self.setImageThreshold(maxIntensity);
+
+                        
+
 
 
                         this.updateViewLimits(startX, endX, startY, endY);
