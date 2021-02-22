@@ -21,6 +21,8 @@ export class VoronoiPlot extends Axis {
     displayVoronoiEdges: boolean;
     displayVoronoiPoints: boolean;
 
+    generateVoronoiOnServer: boolean = true
+
     boxesToDraw: Array<number[]>;
 
     //axis: Axis;
@@ -77,11 +79,15 @@ export class VoronoiPlot extends Axis {
         clearTimeout(this.timeoutFunction);
 
         this.timeoutFunction = setTimeout(() => {
-            if(this.sourceChrom != sourceChrom || this.targetChrom != targetChrom || minX < this.minLoadedX || maxX > this.maxLoadedX || minY < this.minLoadedY || maxY > this.maxLoadedY) {
-                this.loadDataForVoronoi(sourceChrom, targetChrom, minX, maxX, minY, maxY);
+            if(this.generateVoronoiOnServer) {
+                this.getVoronoiFromServer(sourceChrom, targetChrom, minX, maxX, minY, maxY);
             } else {
-                //this.loadDataForVoronoi(sourceChrom, targetChrom, minX, maxX, minY, maxY);
-                this.updateView(minX, maxX, minY, maxY)
+                if(this.sourceChrom != sourceChrom || this.targetChrom != targetChrom || minX < this.minLoadedX || maxX > this.maxLoadedX || minY < this.minLoadedY || maxY > this.maxLoadedY) {
+                    this.loadDataForVoronoi(sourceChrom, targetChrom, minX, maxX, minY, maxY);
+                } else {
+                    this.loadDataForVoronoi(sourceChrom, targetChrom, minX, maxX, minY, maxY);
+                    //this.updateView(minX, maxX, minY, maxY)
+                }
             }
         }, 50);
 
@@ -89,6 +95,96 @@ export class VoronoiPlot extends Axis {
 
     sourceChrom: Chromosome = new Chromosome("", 0)
     targetChrom: Chromosome = new Chromosome("", 0)
+
+    getVoronoiFromServer(sourceChrom: Chromosome, targetChrom: Chromosome, minX: number, maxX: number, minY: number, maxY: number) {
+        this.sourceChrom = sourceChrom
+        this.targetChrom = targetChrom
+        this.minLoadedX = minX;
+        this.maxLoadedX = maxX;
+        this.minLoadedY = minY;
+        this.maxLoadedY = maxY;
+
+        var self = this;
+
+        fetch('./voronoi?pixelsX=' + this.axisWidth + '&pixelsY=' + this.axisHeight + '&sourceChrom=' + sourceChrom.name + '&targetChrom=' + targetChrom.name + '&xStart=' + minX + '&xEnd=' + maxX + '&yStart=' + minY + '&yEnd=' + maxY)
+            .then((response) => {
+                if (response.status !== 200) {
+                    console.log('Looks like there was a problem. Status Code: ' +
+                        response.status);
+                    return;
+                }
+
+                response.json().then(data => {
+                    self.updateDataLimits(minX, maxX, minY, maxY);
+                    this.minViewX = minX;
+                    this.maxViewX = maxX;
+                    this.minViewY = minY;
+                    this.maxViewY = maxY;
+
+
+                    let polygons = data['Polygons']
+                    let voronoiCanvasCTX = <CanvasRenderingContext2D> this.voronoiCanvas.getContext("2d");
+                    voronoiCanvasCTX.clearRect(0, 0, this.voronoiCanvas.width, this.voronoiCanvas.height);
+
+                    voronoiCanvasCTX.fillStyle = 'rgb(0, 0, 0)'
+
+                    // Draw the polygons that are too small to be drawn with detail (between 1 and 2 pixels width/height)
+                    if(data['Points']) {
+                        for(let i = 0; i < data['Points'].length; i++) {
+                            voronoiCanvasCTX.fillRect(data['Points'][i]['X'], data['Points'][i]['Y'], 1, 1);
+                        }
+                    }
+                    if(data['TwoPoints']) {
+                        for(let i = 0; i < data['TwoPoints'].length; i++) {
+                            voronoiCanvasCTX.fillRect(data['TwoPoints'][i]['MinX'], data['TwoPoints'][i]['MinY'], data['TwoPoints'][i]['MaxX']-data['TwoPoints'][i]['MinX'], data['TwoPoints'][i]['MaxY']-data['TwoPoints'][i]['MinY']);
+                        }
+                    }
+
+                    let colours = 200;
+                    var scale = d3.scaleQuantize()
+                    .range(d3.range(colours))
+                    .domain([Math.log(1), Math.log(5e3)]);
+
+                    var colorScale = d3.scaleLinear<string>()
+                    .range(["saddlebrown", "lightgreen", "steelblue"])
+                    .domain([0, 2*colours / 3, colours]);
+
+                    let axisCanvas = this.getAxisCanvas();
+
+                    for(let i = 0; i < polygons.length; i++) {
+                        let points = polygons[i]['Points']
+                        voronoiCanvasCTX.fillStyle = colorScale(scale(Math.log(polygons[i]['Area'])));
+
+                        voronoiCanvasCTX.beginPath();
+                        voronoiCanvasCTX.moveTo(points[0], points[1])
+                        for(let j = 2; j < points.length; j+=2) {
+                            voronoiCanvasCTX.lineTo(points[j], points[j+1])
+                        }
+
+                        //voronoiCanvasCTX.moveTo(((points[0]['X'] - minX) / (maxX - minX)) * axisCanvas.width, ((points[0]['Y'] - minY) / (maxY - minY)) * axisCanvas.height)
+                        //for(let j = 1; j < points.length; j++) {
+                        //    voronoiCanvasCTX.lineTo(((points[j]['X'] - minX) / (maxX - minX)) * axisCanvas.width, ((points[j]['Y'] - minY) / (maxY - minY)) * axisCanvas.height)
+                        //}
+
+                        //voronoiCanvasCTX.lineTo(((points[0]['X'] - minX) / (maxX - minX)) * axisCanvas.width, ((points[0]['Y'] - minY) / (maxY - minY)) * axisCanvas.height)
+                        voronoiCanvasCTX.closePath();
+                        //this.voronoi.renderCell(i, voronoiCanvasCTX);
+                        //console.log('rgb(100, 100, ' + Math.round(255*(area / maxArea))  + ')');            
+                        voronoiCanvasCTX.fill();
+                        voronoiCanvasCTX.stroke();
+                    }
+
+                    voronoiCanvasCTX.fillStyle = 'rgb(0, 0, 0)'
+                    if(this.displayVoronoiPoints) {
+                        for(let i = 0; i < polygons.length; i++) {
+                            voronoiCanvasCTX.fillRect(polygons[i]['DataPoint'][0], polygons[i]['DataPoint'][1], 2, 2);
+                        }
+                    }
+
+                    self.redraw()
+                });
+            });
+    }
 
     loadDataForVoronoi(sourceChrom: Chromosome, targetChrom: Chromosome, minX: number, maxX: number, minY: number, maxY: number) {
         this.sourceChrom = sourceChrom

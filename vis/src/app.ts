@@ -401,6 +401,8 @@ fetch('./details')
                                 console.log(document.getElementById('voronoi-canvas-div'))
                                 document.getElementById('voronoi-canvas-div')?.appendChild(voronoiGUI.domElement);
 
+                                voronoiGUI.add(voronoiMap, 'generateVoronoiOnServer').name("Server Voronoi")
+
                                 voronoiGUI.add(voronoiMap, 'displayVoronoiEdges').name('Display edges').onChange((value) => {
                                     voronoiMap.drawVoronoi();
                                     voronoiMap.redraw();

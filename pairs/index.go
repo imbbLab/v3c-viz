@@ -3,6 +3,7 @@ package pairs
 import (
 	"bufio"
 	"sort"
+	"sync"
 
 	"github.com/biogo/hts/bgzf"
 )
@@ -47,6 +48,8 @@ type BGZFIndex struct {
 
 	ChromPairCounts map[string]uint64
 	ChromPairChunks map[string][]*ChromPairChunk
+
+	mu sync.Mutex
 }
 
 func (index BGZFIndex) ChromPairList() []string {
@@ -121,6 +124,8 @@ func (index BGZFIndex) Query(query Query, entryFunction func(entry *Entry)) erro
 
 	//fmt.Printf("About to process chunks %v\n", chunks)
 
+	index.mu.Lock()
+
 	for chunkIndex, chunk := range chunks {
 		//fmt.Printf("About to process chunk %v\n", chunk)
 		if chunkIndex > 0 {
@@ -177,6 +182,8 @@ func (index BGZFIndex) Query(query Query, entryFunction func(entry *Entry)) erro
 			}
 		}
 	}
+
+	index.mu.Unlock()
 
 	return err
 }

@@ -263,6 +263,8 @@ func ParseBGZF(filename string) (File, error) {
 		return nil, err
 	}
 
+	pairsFile.index.mu.Lock()
+
 	pairsFile.bgzfReader, err = bgzf.NewReader(pairsFile.file, 0)
 	if err != nil {
 		return nil, err
@@ -390,6 +392,7 @@ func ParseBGZF(filename string) (File, error) {
 	pairsFile.index.ChromPairEnd[lastEntry] = pairsFile.bgzfReader.LastChunk()
 	pairsFile.index.ChromPairCounts[lastEntry] = totalLineCount
 
+	pairsFile.index.mu.Unlock()
 	fmt.Println("Finished creating index")
 
 	//a, err := pairsFile.Index.Search(bReader, PairsQuery{SourceChrom: "chr2L", SourceStart: 12000000, SourceEnd: 15000000, TargetChrom: "chr2L", TargetStart: 10000000, TargetEnd: 15000000})
