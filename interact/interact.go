@@ -9,7 +9,7 @@ import (
 )
 
 type InteractFile struct {
-	Interactions []Interaction
+	Interactions map[string][]Interaction
 }
 
 type Interaction struct {
@@ -31,6 +31,10 @@ type Interaction struct {
 	TargetEnd    uint64
 	TargetName   string
 	TargetStrand string
+}
+
+func (interaction Interaction) ChromPairName() string {
+	return interaction.SourceChrom + "-" + interaction.TargetChrom
 }
 
 func Parse(filename string) (*InteractFile, error) {
@@ -58,6 +62,7 @@ func Parse(filename string) (*InteractFile, error) {
 	reader.Comma = '\t'
 
 	var interactFile InteractFile
+	interactFile.Interactions = make(map[string][]Interaction)
 
 	for {
 		row, err := reader.Read()
@@ -112,7 +117,7 @@ func Parse(filename string) (*InteractFile, error) {
 		interaction.TargetName = row[16]
 		interaction.TargetStrand = row[17]
 
-		interactFile.Interactions = append(interactFile.Interactions, interaction)
+		interactFile.Interactions[interaction.ChromPairName()] = append(interactFile.Interactions[interaction.ChromPairName()], interaction)
 	}
 
 	return &interactFile, nil

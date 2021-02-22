@@ -80,8 +80,8 @@ export class VoronoiPlot extends Axis {
             if(minX < this.minLoadedX || maxX > this.maxLoadedX || minY < this.minLoadedY || maxY > this.maxLoadedY) {
                 this.loadDataForVoronoi(sourceChrom, targetChrom, minX, maxX, minY, maxY);
             } else {
-                this.loadDataForVoronoi(sourceChrom, targetChrom, minX, maxX, minY, maxY);
-                //this.updateView(minX, maxX, minY, maxY)
+                //this.loadDataForVoronoi(sourceChrom, targetChrom, minX, maxX, minY, maxY);
+                this.updateView(minX, maxX, minY, maxY)
             }
         }, 50);
 
@@ -109,7 +109,7 @@ export class VoronoiPlot extends Axis {
                 }
 
                 // For testing drawing of voronoi
-                response.json().then(data => {
+                /*response.json().then(data => {
                     self.updateDataLimits(minX, maxX, minY, maxY);
                     this.minViewX = minX;
                     this.maxViewX = maxX;
@@ -154,7 +154,7 @@ export class VoronoiPlot extends Axis {
 
                     self.redraw()
                 });
-                return
+                return*/
 
                 // Examine the text in the response
                 response.arrayBuffer().then((byteBuffer) => {

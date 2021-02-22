@@ -276,6 +276,51 @@ func GetPoints(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	var pointData []uint32
+	for _, point := range points {
+		pointData = append(pointData, uint32(point.SourcePosition), uint32(point.TargetPosition))
+	}
+
+	w.Header().Set("Content-Type", "application/octet-stream")
+	w.Write(uint32ToByte(pointData))
+}
+
+func GetVoronoi(w http.ResponseWriter, r *http.Request) {
+	query := r.URL.Query()
+
+	sourceChrom := query.Get("sourceChrom")
+	targetChrom := query.Get("targetChrom")
+
+	minX, err := strconv.Atoi(query.Get("xStart"))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	minY, err := strconv.Atoi(query.Get("yStart"))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	maxX, err := strconv.Atoi(query.Get("xEnd"))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	maxY, err := strconv.Atoi(query.Get("yEnd"))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	points, err := pairsFile.Index().Search(pairs.Query{SourceChrom: sourceChrom, SourceStart: uint64(minX), SourceEnd: uint64(maxX), TargetChrom: targetChrom, TargetStart: uint64(minY), TargetEnd: uint64(maxY)})
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
 	var dPoints []delaunay.Point
 
 	var pointData []uint32
@@ -302,10 +347,6 @@ func GetPoints(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Write(bytes)
-	return
-
-	w.Header().Set("Content-Type", "application/octet-stream")
-	w.Write(uint32ToByte(pointData))
 }
 
 type Polygon struct {
@@ -650,6 +691,7 @@ func startServer(listener net.Listener) {
 
 	router.HandleFunc("/details", GetDetails)
 	router.HandleFunc("/points", GetPoints)
+	router.HandleFunc("/voronoi", GetVoronoi)
 	router.HandleFunc("/interact", GetInteract)
 	router.HandleFunc("/densityImage", GetDensityImage)
 	//router.HandleFunc("/", ListProjects).Methods("GET")
