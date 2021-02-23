@@ -117,6 +117,8 @@ func calculateVoronoi(triangulation *delaunay.Triangulation) *Voronoi {
 		}
 	}
 
+	clipArea := Polygon{Points: []delaunay.Point{{X: 0, Y: 0}, {X: 1, Y: 0}, {X: 1, Y: 1}, {X: 0, Y: 1}}}
+
 	var voronoi Voronoi
 	voronoi.Polygons = make([]Polygon, 0, len(triangulation.Points))
 
@@ -128,9 +130,13 @@ func calculateVoronoi(triangulation *delaunay.Triangulation) *Voronoi {
 		polygon.DataPoint = triangulation.Points[p]
 		polygon.Points = make([]delaunay.Point, 0, len(edges))
 
+		// TODO: Can test for out of bounds points and then only clip polygons which need it
 		for i := 0; i < len(edges); i++ {
 			polygon.Points = append(polygon.Points, triangleCenter(triangulation, triangleOfEdge(edges[i])))
 		}
+
+		// Clip the polygon to the view
+		polygon = SutherlandHodgman(polygon, clipArea)
 
 		/*if len(polygon.Points) <= 3 {
 			fmt.Println(edges)
@@ -140,8 +146,10 @@ func calculateVoronoi(triangulation *delaunay.Triangulation) *Voronoi {
 			fmt.Println("-----")
 		}*/
 
-		polygon.calculateArea()
-		voronoi.Polygons = append(voronoi.Polygons, polygon)
+		if len(polygon.Points) > 0 {
+			polygon.calculateArea()
+			voronoi.Polygons = append(voronoi.Polygons, polygon)
+		}
 	}
 
 	fmt.Println(triangulation.ConvexHull)
