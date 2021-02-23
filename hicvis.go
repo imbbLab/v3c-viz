@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"math"
 	"net"
 	"net/http"
 	"os"
@@ -25,6 +24,7 @@ import (
 
 	"github.com/imbbLab/hicvis/interact"
 	"github.com/imbbLab/hicvis/pairs"
+	"github.com/imbbLab/hicvis/voronoi"
 
 	"github.com/fogleman/delaunay"
 )
@@ -343,10 +343,11 @@ func GetVoronoi(w http.ResponseWriter, r *http.Request) {
 	//dPoints = append(dPoints, delaunay.Point{X: float64(2 * pairsFile.Chromsizes()[sourceChrom].Length), Y: -float64(pairsFile.Chromsizes()[targetChrom].Length)})
 	//dPoints = append(dPoints, delaunay.Point{X: float64(2 * pairsFile.Chromsizes()[sourceChrom].Length), Y: float64(2 * pairsFile.Chromsizes()[targetChrom].Length)})
 	//dPoints = append(dPoints, delaunay.Point{X: -float64(pairsFile.Chromsizes()[sourceChrom].Length), Y: float64(2 * pairsFile.Chromsizes()[targetChrom].Length)})
-	dPoints = append(dPoints, delaunay.Point{X: -float64(pairsFile.Chromsizes()[sourceChrom].Length), Y: float64(maxY+minY) / 2})
-	dPoints = append(dPoints, delaunay.Point{X: float64(2 * pairsFile.Chromsizes()[sourceChrom].Length), Y: float64(maxY+minY) / 2})
-	dPoints = append(dPoints, delaunay.Point{X: float64(maxX+minX) / 2, Y: -float64(pairsFile.Chromsizes()[targetChrom].Length)})
-	dPoints = append(dPoints, delaunay.Point{X: float64(maxX+minX) / 2, Y: float64(2 * pairsFile.Chromsizes()[targetChrom].Length)})
+
+	//dPoints = append(dPoints, delaunay.Point{X: -float64(pairsFile.Chromsizes()[sourceChrom].Length), Y: float64(maxY+minY) / 2})
+	//dPoints = append(dPoints, delaunay.Point{X: float64(2 * pairsFile.Chromsizes()[sourceChrom].Length), Y: float64(maxY+minY) / 2})
+	//dPoints = append(dPoints, delaunay.Point{X: float64(maxX+minX) / 2, Y: -float64(pairsFile.Chromsizes()[targetChrom].Length)})
+	//dPoints = append(dPoints, delaunay.Point{X: float64(maxX+minX) / 2, Y: float64(2 * pairsFile.Chromsizes()[targetChrom].Length)})
 
 	for _, point := range points {
 		if sourceChrom == point.SourceChrom && targetChrom == point.TargetChrom {
@@ -361,82 +362,24 @@ func GetVoronoi(w http.ResponseWriter, r *http.Request) {
 	fmt.Printf("Starting vornoi calculation with %d points\n", len(dPoints))
 
 	// Apply normalisation?
-	for index := range dPoints {
-		dPoints[index] = viewNormalisation(dPoints[index], minX, maxX, minY, maxY)
-		//dPoints[index] = chromNormalisation(dPoints[index], pairsFile.Chromsizes()[sourceChrom], pairsFile.Chromsizes()[targetChrom])
-	}
+	/*	for index := range dPoints {
+			dPoints[index] = voronoi.pointNormalisation(dPoints[index], minX, maxX, minY, maxY)
+			//dPoints[index] = chromNormalisation(dPoints[index], pairsFile.Chromsizes()[sourceChrom], pairsFile.Chromsizes()[targetChrom])
+		}
 
-	// Perform Delaunay triangulation
-	triangulation, err := delaunay.Triangulate(dPoints)
-	voronoi := calculateVoronoi(triangulation)
+		// Perform Delaunay triangulation
+		triangulation, err := delaunay.Triangulate(dPoints)
+		voronoi := calculateVoronoi(triangulation)*/
+	//vor, err := voronoi.FromPoints(dPoints, voronoi.Rect(0, 0, float64(pairsFile.Chromsizes()[sourceChrom].Length), float64(pairsFile.Chromsizes()[targetChrom].Length)))
+	vor, err := voronoi.FromPoints(dPoints, voronoi.Rect(float64(minX), float64(minY), float64(maxX), float64(maxY)))
 	elapsed := time.Since(start)
 	//fmt.Println(triangulation)
 	fmt.Printf("Finishing voronoi calculation: %s\n", elapsed)
 
-	var result int16VoronoiResult
+	result := voronoi.ConvertToint16(vor, minX, maxX, minY, maxY, numPixelsX, numPixelsY)
 
-	//xDim := float64(maxX - minX)
-	//yDim := float64(maxY - minY)
-	for _, polygon := range voronoi.Polygons {
-		//startX := math.Round((polygon.Points[0].X - float64(minX)) / xDim * 700)
-		//startY := math.Round((polygon.Points[0].Y - float64(minY)) / yDim * 700)
-
-		minPolyX := polygon.Points[0].X
-		maxPolyX := polygon.Points[0].X
-		minPolyY := polygon.Points[0].Y
-		maxPolyY := polygon.Points[0].Y
-
-		//singlePixel := true
-		//doublePixel := true
-
-		for i := 0; i < len(polygon.Points); i++ {
-			x := polygon.Points[i].X
-			y := polygon.Points[i].Y
-
-			if minPolyX > x {
-				minPolyX = x
-			}
-			if maxPolyX < x {
-				maxPolyX = x
-			}
-
-			if minPolyY > y {
-				minPolyY = y
-			}
-			if maxPolyY < y {
-				maxPolyY = y
-			}
-			/*singlePixel = singlePixel && startX == math.Round((polygon.Points[i].X-float64(minX))/xDim*700) &&
-				startY == math.Round((polygon.Points[i].Y-float64(minY))/yDim*700)
-
-			doublePixel = doublePixel && math.Abs(startX-math.Round((polygon.Points[i].X-float64(minX))/xDim*700)) < 2 &&
-				math.Abs(startY-math.Round((polygon.Points[i].Y-float64(minY))/yDim*700)) < 2*/
-
-		}
-
-		// Normalise to pixels in view
-		//minPolyX = (minPolyX - float64(minX)) / xDim * float64(numPixelsX)
-		//maxPolyX = (maxPolyX - float64(minX)) / xDim * float64(numPixelsX)
-		//minPolyY = (minPolyY - float64(minY)) / yDim * float64(numPixelsY)
-		//maxPolyY = (maxPolyY - float64(minY)) / yDim * float64(numPixelsY)
-		minPolyX = minPolyX * float64(numPixelsX)
-		maxPolyX = maxPolyX * float64(numPixelsX)
-		minPolyY = minPolyY * float64(numPixelsY)
-		maxPolyY = maxPolyY * float64(numPixelsY)
-
-		// TODO: Remove duplicates in .Points and .TwoPoints
-
-		if math.Round(minPolyX) == math.Round(maxPolyX) && math.Round(minPolyY) == math.Round(maxPolyY) {
-			result.Points = append(result.Points, int16Point{X: int16(math.Round(minPolyX)), Y: int16(math.Round(minPolyY))})
-		} else if maxPolyX-minPolyX < 2 && maxPolyY-minPolyY < 2 {
-			result.TwoPoints = append(result.TwoPoints, int16TwoPoint{MinX: int16(math.Floor(minPolyX)), MaxX: int16(math.Ceil(maxPolyX)),
-				MinY: int16(math.Floor(minPolyY)), MaxY: int16(math.Ceil(maxPolyY))})
-		} else { // if minPolyX > 0 || minPolyY > 0 || maxPolyX <= float64(numPixelsX) || maxPolyY <= float64(numPixelsY) {
-			result.Polygons = append(result.Polygons, polygonToint16(polygon, minX, maxX, minY, maxY, numPixelsX, numPixelsY))
-		}
-	}
 	elapsed = time.Since(start)
-	fmt.Printf("[%s] Originally had %d polygons, but now have %d\n", elapsed, len(voronoi.Polygons), len(result.Polygons))
+	fmt.Printf("[%s] Originally had %d polygons, but now have %d\n", elapsed, len(vor.Polygons), len(result.Polygons))
 
 	bytes, err := json.Marshal(result) //voronoi) //
 	if err != nil {
@@ -445,275 +388,6 @@ func GetVoronoi(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Write(bytes)
-}
-
-//noNormlisation := func(point delaunay.Point) delaunay.Point {
-//	return point
-//}
-
-func chromNormalisation(point delaunay.Point, sourceChrom pairs.Chromsize, targetChrom pairs.Chromsize) delaunay.Point {
-	return delaunay.Point{X: point.X / float64(sourceChrom.Length), Y: point.Y / float64(targetChrom.Length)}
-}
-
-func viewNormalisation(point delaunay.Point, minX, maxX, minY, maxY int) delaunay.Point {
-	return delaunay.Point{X: (point.X - float64(minX)) / float64(maxX-minX), Y: (point.Y - float64(minY)) / float64(maxY-minY)}
-}
-
-func polygonToint16(polygon Polygon, minX, maxX, minY, maxY int, pixelsX, pixelsY int) int16Polygon {
-	var newPoly int16Polygon
-
-	xDim := float64(maxX - minX)
-	yDim := float64(maxY - minY)
-
-	maxValue := float64(math.MaxInt16)
-
-	for _, point := range polygon.Points {
-		//x := math.Round((point.X - float64(minX)) / xDim * float64(pixelsX))
-		//y := math.Round((point.Y - float64(minY)) / yDim * float64(pixelsY))
-		x := point.X * float64(pixelsX)
-		y := point.Y * float64(pixelsY)
-
-		// Compress the value into int16 - as the number of pixels shouldn't be close to the max value, this shouldn't affect the voronoi result
-		for x < -maxValue || y < -maxValue {
-			x /= 2
-			y /= 2
-		}
-		for x > maxValue || y > maxValue {
-			x /= 2
-			y /= 2
-		}
-
-		newPoly.DataPoint = []int16{int16(math.Round((polygon.DataPoint.X - float64(minX)) / xDim * float64(pixelsX))), int16(math.Round((polygon.DataPoint.Y - float64(minY)) / yDim * float64(pixelsY)))}
-		newPoly.Points = append(newPoly.Points, int16(x), int16(y)) //int16Point{X: int16(x), Y: int16(y)})
-		newPoly.Area = math.Round(polygon.Area * float64(pixelsX*pixelsY))
-	}
-
-	return newPoly
-}
-
-type int16Point struct {
-	X int16
-	Y int16
-}
-
-type int16TwoPoint struct {
-	MinX int16
-	MaxX int16
-	MinY int16
-	MaxY int16
-}
-
-type int16Polygon struct {
-	DataPoint []int16
-	Points    []int16 //int16Point
-	Area      float64
-}
-
-type int16VoronoiResult struct {
-	Polygons []int16Polygon
-
-	Points    []int16Point
-	TwoPoints []int16TwoPoint
-}
-
-type Polygon struct {
-	DataPoint delaunay.Point
-	Points    []delaunay.Point
-	Area      float64
-}
-
-func (polygon *Polygon) calculateArea() {
-	polygon.Area = 0
-	j := len(polygon.Points) - 1
-
-	for i := 0; i < len(polygon.Points); i++ {
-		//area += (polygon[j][0]+polygon[i][0]) * (polygon[j][1]+polygon[i][1]);
-		var crossProduct = polygon.Points[j].X*polygon.Points[i].Y - polygon.Points[j].Y*polygon.Points[i].X
-		polygon.Area += crossProduct
-		j = i //j is previous vertex to i
-	}
-
-	polygon.Area /= 2
-}
-
-type Voronoi struct {
-	Polygons []Polygon
-}
-
-func calculateVoronoi(triangulation *delaunay.Triangulation) *Voronoi {
-	// See https://mapbox.github.io/delaunator/ for information
-
-	/*circumcenters := make([]delaunay.Point, len(triangulation.Triangles)/3)
-	//vectors := make([]float64, len(triangulation.Points)*2)
-
-	fmt.Printf("Delauney: #points = %d, #triangles = %d, #halfedges = %d\n", len(triangulation.Points), len(triangulation.Triangles), len(triangulation.Halfedges))
-
-	pointIndex := 0
-	for i := 0; i < len(triangulation.Triangles); i += 3 {
-		t1 := triangulation.Triangles[i]
-		t2 := triangulation.Triangles[i+1]
-		t3 := triangulation.Triangles[i+2]
-
-		point1 := triangulation.Points[t1]
-		point2 := triangulation.Points[t2]
-		point3 := triangulation.Points[t3]
-
-		dx := point2.X - point1.X
-		dy := point2.Y - point1.Y
-		ex := point3.X - point1.X
-		ey := point3.Y - point1.Y
-		b1 := dx*dx + dy*dy
-		c1 := ex*ex + ey*ey
-		ab := (dx*ey - dy*ex) * 2
-
-		var x, y float64
-
-		// TODO: Not handling degenerate case https://github.com/d3/d3-delaunay/blob/9258fa3fb6bf0e6ab6d56009f2472807f461109f/src/voronoi.js#L107
-		if math.Abs(ab) < 1e-8 {
-			x = (point1.X + point3.X) / 2
-			y = (point1.Y + point3.Y) / 2
-		} else {
-			d := 1 / ab
-			x = point1.X + (ey*b1-dy*c1)*d
-			y = point1.Y + (dx*c1-ex*b1)*d
-		}
-
-		circumcenters[pointIndex] = delaunay.Point{X: x, Y: y}
-		pointIndex++
-	}*/
-
-	indexMap := make(map[int]int)
-	for e := 0; e < len(triangulation.Triangles); e++ {
-		endpoint := triangulation.Triangles[nextHalfEdge(e)]
-
-		if _, ok := indexMap[endpoint]; !ok || triangulation.Halfedges[e] == -1 {
-			indexMap[endpoint] = e
-		}
-	}
-
-	var voronoi Voronoi
-	voronoi.Polygons = make([]Polygon, 0, len(triangulation.Points))
-
-	for p := 0; p < len(triangulation.Points); p++ {
-		incoming := indexMap[p]
-		edges := edgesAroundPoint(triangulation, incoming)
-
-		var polygon Polygon
-		polygon.DataPoint = triangulation.Points[p]
-		polygon.Points = make([]delaunay.Point, 0, len(edges))
-
-		for i := 0; i < len(edges); i++ {
-			polygon.Points = append(polygon.Points, triangleCenter(triangulation, triangleOfEdge(edges[i])))
-		}
-
-		/*if len(polygon.Points) <= 3 {
-			fmt.Println(edges)
-			for i := 0; i < len(edges); i++ {
-				fmt.Println(triangleOfEdge(edges[i]))
-			}
-			fmt.Println("-----")
-		}*/
-
-		polygon.calculateArea()
-		voronoi.Polygons = append(voronoi.Polygons, polygon)
-	}
-
-	fmt.Println(triangulation.ConvexHull)
-	return &voronoi
-
-	/*var voronoi Voronoi
-	voronoi.Polygons = make([]Polygon, len(triangulation.Triangles))
-
-	for i := 0; i < len(triangulation.Triangles); i += 3 {
-		var polygon Polygon
-		polygon.Points = make([]delaunay.Point, 0, 3)
-
-		e0 := i
-		e := e0
-
-		firstTime := true
-		for firstTime || (e != e0 && e != -1) {
-			polygon.Points = append(polygon.Points, circumcenters[e])
-
-			if e%3 == 2 {
-				e -= 2
-			} else {
-				e++
-			}
-
-			e = triangulation.Halfedges[e]
-
-			firstTime = false
-		}
-	}
-
-	return &voronoi*/
-
-	/*t1 := triangulation.Triangles[i]
-	t2 := triangulation.Triangles[i+1]
-	t3 := triangulation.Triangles[i+2]
-
-	point1 := triangulation.Points[t1]
-	point2 := triangulation.Points[t2]
-	point3 := triangulation.Points[t3]
-
-	for
-	fmt.Println(circumcenters[i])
-	fmt.Printf("Indicies: %d %d %d\n", t1, t2, t3)
-	fmt.Println(point1)
-	fmt.Println(point2)
-	fmt.Println(point3)*/
-
-	//points := clip(i)
-}
-
-func edgesAroundPoint(triangulation *delaunay.Triangulation, start int) []int {
-	var result []int
-
-	var outgoing int
-	incoming := start
-	firstTime := true
-	for firstTime || (incoming != -1 && incoming != start) {
-		result = append(result, incoming)
-		outgoing = nextHalfEdge(incoming)
-		incoming = triangulation.Halfedges[outgoing]
-
-		firstTime = false
-	}
-
-	return result
-}
-
-func pointsOfTriangle(triangulation *delaunay.Triangulation, t int) []delaunay.Point {
-	return []delaunay.Point{triangulation.Points[triangulation.Triangles[t*3]], triangulation.Points[triangulation.Triangles[t*3+1]], triangulation.Points[triangulation.Triangles[t*3+2]]}
-}
-
-func circumcenter(a, b, c delaunay.Point) delaunay.Point {
-	ad := a.X*a.X + a.Y*a.Y
-	bd := b.X*b.X + b.Y*b.Y
-	cd := c.X*c.X + c.Y*c.Y
-	D := 2 * (a.X*(b.Y-c.Y) + b.X*(c.Y-a.Y) + c.X*(a.Y-b.Y))
-	return delaunay.Point{
-		X: 1 / D * (ad*(b.Y-c.Y) + bd*(c.Y-a.Y) + cd*(a.Y-b.Y)),
-		Y: 1 / D * (ad*(c.X-b.X) + bd*(a.X-c.X) + cd*(b.X-a.X)),
-	}
-}
-
-func triangleCenter(triangulation *delaunay.Triangulation, t int) delaunay.Point {
-	vertices := pointsOfTriangle(triangulation, t)
-
-	return circumcenter(vertices[0], vertices[1], vertices[2])
-}
-
-func triangleOfEdge(e int) int {
-	return e / 3
-}
-
-func nextHalfEdge(e int) int {
-	if e%3 == 2 {
-		return e - 2
-	}
-	return e + 1
 }
 
 func uint32ToByte(data []uint32) []byte {
