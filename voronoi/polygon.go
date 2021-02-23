@@ -28,6 +28,10 @@ func (polygon *Polygon) Centroid() delaunay.Point {
 	i := 0
 	n := len(polygon.Points)
 
+	if n < 1 {
+		return delaunay.Point{}
+	}
+
 	var a delaunay.Point
 	var c, x, y, k float64
 	b := polygon.Points[n-1]

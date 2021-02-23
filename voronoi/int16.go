@@ -15,6 +15,10 @@ func ConvertToint16(voronoi *Voronoi, minX, maxX, minY, maxY, numPixelsX, numPix
 		//startX := math.Round((polygon.Points[0].X - float64(minX)) / xDim * 700)
 		//startY := math.Round((polygon.Points[0].Y - float64(minY)) / yDim * 700)
 
+		if len(polygon.Points) < 1 {
+			continue
+		}
+
 		minPolyX := polygon.Points[0].X
 		maxPolyX := polygon.Points[0].X
 		minPolyY := polygon.Points[0].Y

@@ -2,6 +2,7 @@ package voronoi
 
 import (
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/fogleman/delaunay"
@@ -66,12 +67,13 @@ func FromPoints(data []delaunay.Point, bounds Rectangle) (*Voronoi, error) {
 	var elapsed time.Duration
 
 	for i := 0; i <= smoothingIterations; i++ {
+		midPoint = time.Now()
 		triangulation, err = delaunay.Triangulate(totalPoints)
 		if err != nil {
 			return nil, err
 		}
 
-		elapsed = time.Since(start)
+		elapsed = time.Since(midPoint)
 		midPoint = time.Now()
 		fmt.Printf("Triangulation: %s\n", elapsed)
 
@@ -82,15 +84,16 @@ func FromPoints(data []delaunay.Point, bounds Rectangle) (*Voronoi, error) {
 
 		if i+1 <= smoothingIterations {
 			totalPoints = nil
+			totalPoints = append(totalPoints, fixedPoint1)
+			totalPoints = append(totalPoints, fixedPoint2)
+			totalPoints = append(totalPoints, fixedPoint3)
+			totalPoints = append(totalPoints, fixedPoint4)
 
 			for _, polygon := range vor.Polygons {
-				totalPoints = append(totalPoints, polygon.Centroid())
+				if len(polygon.Points) > 0 {
+					totalPoints = append(totalPoints, polygon.Centroid())
+				}
 			}
-
-			totalPoints[0] = fixedPoint1
-			totalPoints[1] = fixedPoint2
-			totalPoints[2] = fixedPoint3
-			totalPoints[3] = fixedPoint4
 		}
 
 		elapsed = time.Since(midPoint)
@@ -126,30 +129,45 @@ func calculateVoronoi(triangulation *delaunay.Triangulation) *Voronoi {
 	clipArea := Polygon{Points: []delaunay.Point{{X: 0, Y: 0}, {X: 1, Y: 0}, {X: 1, Y: 1}, {X: 0, Y: 1}}}
 
 	var voronoi Voronoi
-	voronoi.Polygons = make([]Polygon, 0, len(triangulation.Points))
+	voronoi.Polygons = make([]Polygon, len(triangulation.Points))
+
+	var wg sync.WaitGroup
+	wg.Add(len(triangulation.Points))
+
+	var edges []int
 
 	for p := 0; p < len(triangulation.Points); p++ {
 		incoming := indexMap[p]
-		edges := edgesAroundPoint(triangulation, incoming)
+		edges = edgesAroundPoint(triangulation, incoming)
 
-		var polygon Polygon
-		polygon.DataPoint = triangulation.Points[p]
-		polygon.Points = make([]delaunay.Point, 0, len(edges))
+		go func(p int, edges []int) {
+			defer wg.Done()
 
-		// TODO: Can test for out of bounds points and then only clip polygons which need it
-		for i := 0; i < len(edges); i++ {
-			polygon.Points = append(polygon.Points, triangleCenter(triangulation, triangleOfEdge(edges[i])))
-		}
+			var polygon Polygon
+			polygon.DataPoint = triangulation.Points[p]
+			polygon.Points = make([]delaunay.Point, 0, len(edges))
 
-		// Clip the polygon to the view
-		polygon = SutherlandHodgman(polygon, clipArea)
+			// TODO: Can test for out of bounds points and then only clip polygons which need it
+			for i := 0; i < len(edges); i++ {
+				polygon.Points = append(polygon.Points, triangleCenter(triangulation, edges[i]/3)) //triangleOfEdge(edges[i])))
+			}
 
-		if len(polygon.Points) > 0 {
+			// Clip the polygon to the view
+			polygon = SutherlandHodgman(polygon, clipArea)
+
 			polygon.calculateArea()
 			polygon.DataPoint = polygon.Centroid()
-			voronoi.Polygons = append(voronoi.Polygons, polygon)
-		}
+			voronoi.Polygons[p] = polygon
+
+			/*	if len(polygon.Points) > 0 {
+				polygon.calculateArea()
+				polygon.DataPoint = polygon.Centroid()
+				voronoi.Polygons = append(voronoi.Polygons, polygon)
+			}*/
+		}(p, edges)
 	}
+
+	wg.Wait()
 
 	return &voronoi
 }
