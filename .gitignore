@@ -8,7 +8,7 @@ hicvis
 *.png
 
 software/
-static/
+static/js/
 
 my.tree
 

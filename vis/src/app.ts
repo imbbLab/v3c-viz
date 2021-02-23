@@ -335,49 +335,7 @@ fetch('./details')
                                 })
                                 //imageMap.loadDensityImage(200, xStart, xEnd, yStart, yEnd, voronoiMap.loadDataForVoronoi);
 
-                                imageMap.setChromPair(sourceChrom, targetChrom)
-
-                                let overviewNumBins = <HTMLInputElement>document.getElementById("overviewNumBins");
-
-                                overviewNumBins.addEventListener("change", function () {
-                                    //startXFrac = (parseFloat(minXText.value) - minX) / xDataDiff;
-                                    //updatePoints();
-                                    console.log(overviewNumBins.value)
-                                    imageMap.setNumberBins(parseFloat(overviewNumBins.value));
-                                    imageMap.updateView(imageMap.minDataX, imageMap.maxDataX, imageMap.minDataY, imageMap.maxDataY);
-                                });
-
-                                let percentileIntensity = <HTMLInputElement>document.getElementById("percentileIntensity");
-
-                                percentileIntensity.addEventListener("change", function () {
-                                    //startXFrac = (parseFloat(minXText.value) - minX) / xDataDiff;
-                                    //updatePoints();
-                                    console.log(percentileIntensity.value)
-                                    imageMap.setPercentile(parseFloat(percentileIntensity.value));
-                                });
-
-                                let intensityRange = <HTMLInputElement>document.getElementById("intensityRange");
-                                intensityRange.value = "950";
-                                intensityRange.oninput = (event: Event) => {
-                                    imageMap.setPercentile(parseFloat(intensityRange.value) / 1000);
-                                }
-
-                                let displayVoronoiEdges = <HTMLInputElement>document.getElementById('displayVoronoiEdges');
-                                displayVoronoiEdges.onchange = (event: Event) => {
-                                    voronoiMap.setDisplayVoronoiEdges(displayVoronoiEdges.checked);
-                                }
-
-                                let voronoiRepetitions = <HTMLInputElement>document.getElementById("voronoiRepetitions");
-                                voronoiRepetitions.value = "1";
-                                voronoiRepetitions.oninput = (event: Event) => {
-                                    voronoiMap.setSmoothingRepetitions(parseInt(voronoiRepetitions.value));
-                                }
-
-                                let voronoiOmega = <HTMLInputElement>document.getElementById("voronoiOmega");
-                                voronoiOmega.value = "1000";
-                                voronoiOmega.oninput = (event: Event) => {
-                                    voronoiMap.setOmega(parseFloat(voronoiOmega.value) / 1000);
-                                }
+                                imageMap.setChromPair(sourceChrom, targetChrom);
 
                                 (<HTMLDivElement>document.getElementById('gene-browser-right')).classList.add("rotated");//.setAttribute("class", "rotated")
 

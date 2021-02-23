@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>App</title>
+  <meta charset="utf-8"/>
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script> 
+  <link rel="stylesheet" href="igv-1.0.9.css">
+  <style>
+    .igv-root-div {
+      width: 700px;
+    }
+
+    .igv-navbar {
+      width: 650px;
+    }
+
+    .gene-browser {
+      width: 730px;
+    }
+
+    #gene-browser-below {
+      position: absolute;
+      left: 745px;
+      top: 700px;
+    }
+
+    .rotated {
+        -webkit-transform: rotate(270deg);
+        -moz-transform: rotate(270deg);
+        -o-transform: rotate(270deg);
+        -ms-transform: rotate(270deg);
+        transform: rotate(270deg);
+
+        position: absolute;
+        left: 1180px;
+        top: 150px;
+    }
+
+    .options-gui { 
+      position: absolute; 
+      top: 0px; 
+      left: 450px;
+    }
+
+    #image-canvas-div {
+    }
+
+    #voronoi-canvas-div {
+    }
+  </style>
+  <!--<link rel="stylesheet" href="gui.css">-->
+</head>
+<body> 
+  
+  <div>
+    <div>
+      <div style="position:absolute; left:0px; top:0px">
+        <div id="image-canvas-div" class="options-gui"></div>
+        <canvas id="image-canvas" width="700" height="700"></canvas>
+        <div>
+          <label>Source Chromosome: </label><select id="sourceChromSelect"></select>
+        </div>
+        <div>
+          <label>Target Chromosome: </label><select id="targetChromSelect"></select>
+        </div>
+      </div>
+      <div style="position:absolute; left:700px; top:0px">
+        <div id="voronoi-canvas-div" class="options-gui"></div>
+        <canvas id="voronoi-canvas" width="700" height="700"></canvas>
+      </div>
+      <div id="gene-browser-below" class="gene-browser"></div>
+      <div id="gene-browser-right" class="gene-browser"></div>
+
+      <div id='vertline' style="width:1px;background-color:black;position:absolute;"></div>
+      <div id='horline' style="height:1px;background-color:black;position:absolute;"></div>
+    </div>
+    <div>
+    </div>
+  </div>
+  <script src="js/app.bundle.js"></script>
+</body>
+</html>

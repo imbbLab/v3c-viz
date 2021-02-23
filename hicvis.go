@@ -120,7 +120,7 @@ func main() {
 	}
 	defer pairsFile.Close()
 
-	if pairsFile.Genome() == "unknown" && opts.Genome == "" {
+	if (pairsFile.Genome() == "" || pairsFile.Genome() == "unknown") && opts.Genome == "" {
 		fmt.Println("No genome specified in pairs file or as command line argument. Please specify the genome using the -g option.")
 		return
 	}
