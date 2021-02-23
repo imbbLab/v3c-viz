@@ -2,6 +2,7 @@ package pairs
 
 import (
 	"bufio"
+	"fmt"
 	"sort"
 	"sync"
 
@@ -109,7 +110,7 @@ func (index BGZFIndex) getChunksFromQuery(query Query) []*ChromPairChunk {
 	return chunkstoLoad
 }
 
-func (index BGZFIndex) Query(query Query, entryFunction func(entry *Entry)) error {
+func (index *BGZFIndex) Query(query Query, entryFunction func(entry *Entry)) error {
 	var err error
 
 	// Create the reverse query to make searching easier
@@ -121,12 +122,24 @@ func (index BGZFIndex) Query(query Query, entryFunction func(entry *Entry)) erro
 	seekRequired := true
 	var bufReader *bufio.Reader
 	var lineData []byte
+	var entry *Entry
 
 	//fmt.Printf("About to process chunks %v\n", chunks)
 
 	index.mu.Lock()
 
 	for chunkIndex, chunk := range chunks {
+		//defer func() {
+		//	if x := recover(); x != nil {
+		//		// recovering from a panic; x contains whatever was passed to panic()
+		//		log.Printf("run time panic: %v", x)
+		//		log.Printf("%v Start [%v]\n", chunk, index.reader)
+
+		//		// if you just want to log the panic, panic again
+		//		panic(x)
+		//	}
+		//}()
+
 		//fmt.Printf("About to process chunk %v\n", chunk)
 		if chunkIndex > 0 {
 			// Same chunk as before, so skip it
@@ -143,7 +156,7 @@ func (index BGZFIndex) Query(query Query, entryFunction func(entry *Entry)) erro
 		}
 
 		if seekRequired {
-			err := index.reader.Seek(chunk.StartChunk.Begin)
+			err = index.reader.Seek(chunk.StartChunk.Begin)
 			if err != nil {
 				return err
 			}
@@ -171,8 +184,9 @@ func (index BGZFIndex) Query(query Query, entryFunction func(entry *Entry)) erro
 				}
 			}
 
-			entry, err := parseEntry(string(lineData))
+			entry, err = parseEntry(string(lineData))
 			if err != nil {
+				fmt.Printf("Problem parsing entry: %s\n", string(lineData))
 				return err
 			}
 
@@ -188,7 +202,7 @@ func (index BGZFIndex) Query(query Query, entryFunction func(entry *Entry)) erro
 	return err
 }
 
-func (index BGZFIndex) Search(query Query) ([]*Entry, error) {
+func (index *BGZFIndex) Search(query Query) ([]*Entry, error) {
 	var err error
 
 	var pairs []*Entry

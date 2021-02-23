@@ -200,7 +200,7 @@ type bgzfFile struct {
 
 	bgzfReader *bgzf.Reader
 
-	index BGZFIndex
+	index *BGZFIndex
 }
 
 func (file bgzfFile) Index() Index {
@@ -208,7 +208,9 @@ func (file bgzfFile) Index() Index {
 }
 
 func (file bgzfFile) Close() {
+	file.index.mu.Lock()
 	file.bgzfReader.Close()
+	file.index.mu.Unlock()
 
 	file.baseFile.Close()
 }
@@ -262,6 +264,8 @@ func ParseBGZF(filename string) (File, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	pairsFile.index = new(BGZFIndex)
 
 	pairsFile.index.mu.Lock()
 

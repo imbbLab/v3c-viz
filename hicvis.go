@@ -117,6 +117,7 @@ func main() {
 		log.Fatal(err)
 		return
 	}
+	defer pairsFile.Close()
 
 	//fmt.Println(pairsFile.Chromosomes())
 
