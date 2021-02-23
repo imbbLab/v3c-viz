@@ -47,10 +47,15 @@ type File interface {
 	Index() Index
 	Close()
 
+	Genome() string
 	Image(query Query, numBins uint64) ([]uint32, error)
 
 	Chromsizes() map[string]Chromsize
 	Chromosomes() []string
+}
+
+func (file baseFile) Genome() string {
+	return file.GenomeAssembly
 }
 
 func (file baseFile) Chromosomes() []string {

@@ -56,7 +56,8 @@ var numPixelsInOverviewImage uint32 = 200
 
 var opts struct {
 	// Example of a required flag
-	DataFile     string `short:"d" long:"data" description:"Data to load (.pairs)" required:"true"`
+	DataFile string `short:"d" long:"data" description:"Data to load (.pairs)" required:"true"`
+	//Genome       string `short:"g" long:"genome" description:"Genome to load" required:"true"`
 	InteractFile string `short:"i" long:"interact" description:"Interact file to visualise" required:"false"`
 	Port         string `short:"p" long:"port" description:"Port used for the server" default:"5002"`
 }
@@ -185,11 +186,12 @@ func GetDetails(w http.ResponseWriter, r *http.Request) {
 	}
 
 	type details struct {
+		Genome      string
 		Chromosomes []pairs.Chromsize
 		HasInteract bool `json:"hasInteract"`
 	}
 
-	dets, _ := json.Marshal(&details{Chromosomes: orderedChromosomes, HasInteract: interactFile != nil})
+	dets, _ := json.Marshal(&details{Genome: pairsFile.Genome(), Chromosomes: orderedChromosomes, HasInteract: interactFile != nil})
 	w.Write(dets)
 }
 
