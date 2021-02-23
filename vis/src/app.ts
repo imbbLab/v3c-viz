@@ -112,7 +112,7 @@ fetch('./details')
                                 id: details['Genome'],
                                 fastaURL: 'https://s3.amazonaws.com/igv.broadinstitute.org/genomes/seq/' + details['Genome'] + '/' + details['Genome'] + '.fa',
                                 indexURL: 'https://s3.amazonaws.com/igv.broadinstitute.org/genomes/seq/' + details['Genome'] + '/' + details['Genome'] + '.fa.fai',
-                                cytobandURL: "https://s3.amazonaws.com/igv.org.genomes/dm6/cytoBandIdeo.txt.gz"
+                                //cytobandURL: "https://s3.amazonaws.com/igv.org.genomes/dm6/cytoBandIdeo.txt.gz"
                             },
                         
                             //trackDefaults: {
@@ -122,33 +122,33 @@ fetch('./details')
                             //  }
                             //},
                         
-                            tracks: [
-                                {
-                                    "name": "Ensembl Genes",
-                                    "type": "annotation",
-                                    "format": "ensgene",
-                                    "displayMode": "EXPANDED",
-                                    "url": "https://s3.dualstack.us-east-1.amazonaws.com/igv.org.genomes/" + details['Genome'] + "/ensGene.txt.gz",
-                                    "indexURL": "https://s3.dualstack.us-east-1.amazonaws.com/igv.org.genomes/" + details['Genome'] + "/ensGene.txt.gz.tbi",
-                                    "visibilityWindow": 20000000
-                                },
-                                {
-                                    "name": "Repeat Masker",
-                                    "type": "annotation",
-                                    "format": "rmsk",
-                                    "displayMode": "EXPANDED",
-                                    "url": "https://s3.dualstack.us-east-1.amazonaws.com/igv.org.genomes/" + details['Genome'] + "/rmsk.txt.gz",
-                                    "indexURL": "https://s3.dualstack.us-east-1.amazonaws.com/igv.org.genomes/" + details['Genome'] + "/rmsk.txt.gz.tbi",
-                                    "visibilityWindow": 1000000
-                                },
-                                //        {
-                                //          "name": "CpG Islands",
-                                //          "type": "annotation",
-                                //          "format": "cpgIslandExt",
-                                //          "displayMode": "EXPANDED",
-                                //          "url": "https://s3.dualstack.us-east-1.amazonaws.com/igv.org.genomes/dm6/cpgIslandExt.txt.gz"
-                                //        }
-                            ]
+                            // tracks: [
+                            //     {
+                            //         "name": "Ensembl Genes",
+                            //         "type": "annotation",
+                            //         "format": "ensgene",
+                            //         "displayMode": "EXPANDED",
+                            //         "url": "https://s3.dualstack.us-east-1.amazonaws.com/igv.org.genomes/" + details['Genome'] + "/ensGene.txt.gz",
+                            //         "indexURL": "https://s3.dualstack.us-east-1.amazonaws.com/igv.org.genomes/" + details['Genome'] + "/ensGene.txt.gz.tbi",
+                            //         "visibilityWindow": 20000000
+                            //     },
+                            //     {
+                            //         "name": "Repeat Masker",
+                            //         "type": "annotation",
+                            //         "format": "rmsk",
+                            //         "displayMode": "EXPANDED",
+                            //         "url": "https://s3.dualstack.us-east-1.amazonaws.com/igv.org.genomes/" + details['Genome'] + "/rmsk.txt.gz",
+                            //         "indexURL": "https://s3.dualstack.us-east-1.amazonaws.com/igv.org.genomes/" + details['Genome'] + "/rmsk.txt.gz.tbi",
+                            //         "visibilityWindow": 1000000
+                            //     },
+                            //     //        {
+                            //     //          "name": "CpG Islands",
+                            //     //          "type": "annotation",
+                            //     //          "format": "cpgIslandExt",
+                            //     //          "displayMode": "EXPANDED",
+                            //     //          "url": "https://s3.dualstack.us-east-1.amazonaws.com/igv.org.genomes/dm6/cpgIslandExt.txt.gz"
+                            //     //        }
+                            // ]
                         }
 
 
@@ -168,7 +168,7 @@ fetch('./details')
                                 event.stopPropagation();
                             });
                             //trackContainer.off('mouseup');
-
+                            
                             rightBrowser.trackViews.forEach((track) => {
                                 track.viewports.forEach((viewport) => {
                                     //console.log(viewport)
@@ -293,9 +293,23 @@ fetch('./details')
                         promise.then(belowBrowser => {
                             bottomBrowser = belowBrowser;
 
+                            // Example of loading a track
+                            var track:any = [];
+                            track.type = "annotation"
+                            track.format =  "ensgene"
+                            track.url = "https://s3.dualstack.us-east-1.amazonaws.com/igv.org.genomes/" + details['Genome'] + "/ensGene.txt.gz"
+
+                            bottomBrowser.loadTrack(track);
+
                             var promise: Promise<igv.IGVBrowser> = igv.createBrowser(<HTMLDivElement>document.getElementById('gene-browser-right'), options);
                             promise.then(browser => {
                                 rightBrowser = browser;
+                                rightBrowser.loadTrack({
+                                    type: 'wig',
+                                    format: 'bigwig',
+                                    url: 'https://s3.amazonaws.com/igv.broadinstitute.org/data/hg19/encode/wgEncodeBroadHistoneGm12878H3k4me3StdSig.bigWig',
+                                    name: 'Gm12878H3k4me3'
+                                    })
                                 
                                 // Override the events for controlling scrolling
                                 overrideMouse();

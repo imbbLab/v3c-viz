@@ -273,7 +273,7 @@ declare module 'igv' {
     /**
      * URL to a file index, such as a BAM .bai, Tabix .tbi, or Tribble .idx file.
      */
-    indexURL: string;
+    indexURL?: string;
     /**
      * Flag used to indicate if a file is indexed or not. If indexURL is provided this flag is redundant, its main purpose is to indicate that a file is not indexed.
      */
