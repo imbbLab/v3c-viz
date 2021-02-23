@@ -24,6 +24,30 @@ func (polygon *Polygon) calculateArea() {
 	polygon.Area /= 2
 }
 
+func (polygon *Polygon) Centroid() delaunay.Point {
+	i := 0
+	n := len(polygon.Points)
+
+	var a delaunay.Point
+	var c, x, y, k float64
+	b := polygon.Points[n-1]
+
+	for i < n {
+		a = b
+		b = polygon.Points[i]
+		c = a.X*b.Y - b.X*a.Y
+		k += c
+		x += (a.X + b.X) * c
+		y += (a.Y + b.Y) * c
+
+		i++
+	}
+
+	k *= 3
+
+	return delaunay.Point{X: x / k, Y: y / k}
+}
+
 func inside(p, p1, p2 delaunay.Point) bool {
 	return (p2.Y-p1.Y)*p.X+(p1.X-p2.X)*p.Y+(p2.X*p1.Y-p1.X*p2.Y) < 0
 }

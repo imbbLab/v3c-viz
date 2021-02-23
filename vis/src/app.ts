@@ -300,16 +300,16 @@ fetch('./details')
                             track.url = "https://s3.dualstack.us-east-1.amazonaws.com/igv.org.genomes/" + details['Genome'] + "/ensGene.txt.gz"
 
                             bottomBrowser.loadTrack(track);
+                            bottomBrowser.loadTrack({
+                                type: 'wig',
+                                format: 'bigwig',
+                                url: 'https://s3.amazonaws.com/igv.broadinstitute.org/data/hg19/encode/wgEncodeBroadHistoneGm12878H3k4me3StdSig.bigWig',
+                                name: 'Gm12878H3k4me3'
+                                })
 
                             var promise: Promise<igv.IGVBrowser> = igv.createBrowser(<HTMLDivElement>document.getElementById('gene-browser-right'), options);
                             promise.then(browser => {
                                 rightBrowser = browser;
-                                rightBrowser.loadTrack({
-                                    type: 'wig',
-                                    format: 'bigwig',
-                                    url: 'https://s3.amazonaws.com/igv.broadinstitute.org/data/hg19/encode/wgEncodeBroadHistoneGm12878H3k4me3StdSig.bigWig',
-                                    name: 'Gm12878H3k4me3'
-                                    })
                                 
                                 // Override the events for controlling scrolling
                                 overrideMouse();

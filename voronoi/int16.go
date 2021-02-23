@@ -76,9 +76,6 @@ func ConvertToint16(voronoi *Voronoi, minX, maxX, minY, maxY, numPixelsX, numPix
 func polygonToint16(polygon Polygon, minX, maxX, minY, maxY int, pixelsX, pixelsY int) int16Polygon {
 	var newPoly int16Polygon
 
-	xDim := float64(maxX - minX)
-	yDim := float64(maxY - minY)
-
 	maxValue := float64(math.MaxInt16)
 
 	for _, point := range polygon.Points {
@@ -97,7 +94,7 @@ func polygonToint16(polygon Polygon, minX, maxX, minY, maxY int, pixelsX, pixels
 			y /= 2
 		}
 
-		newPoly.DataPoint = []int16{int16(math.Round((polygon.DataPoint.X - float64(minX)) / xDim * float64(pixelsX))), int16(math.Round((polygon.DataPoint.Y - float64(minY)) / yDim * float64(pixelsY)))}
+		newPoly.DataPoint = []int16{int16(math.Round(polygon.DataPoint.X * float64(pixelsX))), int16(math.Round(polygon.DataPoint.Y * float64(pixelsY)))}
 		newPoly.Points = append(newPoly.Points, int16(x), int16(y)) //int16Point{X: int16(x), Y: int16(y)})
 		newPoly.Area = math.Round(polygon.Area * float64(pixelsX*pixelsY))
 	}
