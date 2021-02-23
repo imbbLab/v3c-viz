@@ -175,12 +175,22 @@ func calculateVoronoi(triangulation *delaunay.Triangulation) *Voronoi {
 func edgesAroundPoint(triangulation *delaunay.Triangulation, start int) []int {
 	var result []int
 
+	// On average we expect to have 6 edges
+	result = make([]int, 0, 6)
+
 	var outgoing int
 	incoming := start
 	firstTime := true
 	for firstTime || (incoming != -1 && incoming != start) {
 		result = append(result, incoming)
-		outgoing = nextHalfEdge(incoming)
+
+		//outgoing = nextHalfEdge(incoming)
+		if incoming%3 == 2 {
+			outgoing = incoming - 2
+		} else {
+			outgoing = incoming + 1
+		}
+
 		incoming = triangulation.Halfedges[outgoing]
 
 		firstTime = false
@@ -205,9 +215,23 @@ func circumcenter(a, b, c delaunay.Point) delaunay.Point {
 }
 
 func triangleCenter(triangulation *delaunay.Triangulation, t int) delaunay.Point {
-	vertices := pointsOfTriangle(triangulation, t)
+	// Inlined functions to improve performance but comments indicate original functions
 
-	return circumcenter(vertices[0], vertices[1], vertices[2])
+	//vertices := pointsOfTriangle(triangulation, t)
+	//vertices := []delaunay.Point{triangulation.Points[triangulation.Triangles[t*3]], triangulation.Points[triangulation.Triangles[t*3+1]], triangulation.Points[triangulation.Triangles[t*3+2]]}
+	a := triangulation.Points[triangulation.Triangles[t*3]]
+	b := triangulation.Points[triangulation.Triangles[t*3+1]]
+	c := triangulation.Points[triangulation.Triangles[t*3+2]]
+
+	//return circumcenter(vertices[0], vertices[1], vertices[2])
+	ad := a.X*a.X + a.Y*a.Y
+	bd := b.X*b.X + b.Y*b.Y
+	cd := c.X*c.X + c.Y*c.Y
+	D := 2 * (a.X*(b.Y-c.Y) + b.X*(c.Y-a.Y) + c.X*(a.Y-b.Y))
+	return delaunay.Point{
+		X: 1 / D * (ad*(b.Y-c.Y) + bd*(c.Y-a.Y) + cd*(a.Y-b.Y)),
+		Y: 1 / D * (ad*(c.X-b.X) + bd*(a.X-c.X) + cd*(b.X-a.X)),
+	}
 }
 
 func triangleOfEdge(e int) int {
