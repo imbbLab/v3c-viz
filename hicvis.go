@@ -128,8 +128,11 @@ func main() {
 	//fmt.Println(pairsFile.Chromosomes())
 
 	//a, err := pairsFile.Index().Search(pairs.Query{SourceChrom: "chr2L", SourceStart: 12000000, SourceEnd: 15000000, TargetChrom: "chr2L", TargetStart: 10000000, TargetEnd: 15000000})
-
-	//fmt.Println(len(a))
+	//a, err := performVoronoi(pairs.Query{"chr2R", 17953378, 18042126, "chr3R", 1122462, 4463714}, 1, 700, 700)
+	//if err != nil {
+	//	log.Fatal(err)
+	//}
+	//fmt.Println(len(a.Points))
 
 	//"/home/alan/Documents/Work/Alisa/Data_Dm/All_chr4.pairs"
 
@@ -344,10 +347,27 @@ func GetVoronoi(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	points, err := pairsFile.Index().Search(pairs.Query{SourceChrom: sourceChrom, SourceStart: uint64(minX), SourceEnd: uint64(maxX), TargetChrom: targetChrom, TargetStart: uint64(minY), TargetEnd: uint64(maxY)})
+	result, err := performVoronoi(pairs.Query{SourceChrom: sourceChrom, SourceStart: uint64(minX), SourceEnd: uint64(maxX), TargetChrom: targetChrom, TargetStart: uint64(minY), TargetEnd: uint64(maxY)},
+		smoothingIterations, numPixelsX, numPixelsY)
+
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
+	}
+
+	bytes, err := json.Marshal(result) //voronoi) //
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Write(bytes)
+}
+
+func performVoronoi(query pairs.Query, smoothingIterations int, numPixelsX, numPixelsY int) (*voronoi.Int16VoronoiResult, error) {
+	points, err := pairsFile.Index().Search(query)
+	if err != nil {
+		return nil, err
 	}
 
 	// Normalisation options for voronoi calculation:
@@ -369,10 +389,10 @@ func GetVoronoi(w http.ResponseWriter, r *http.Request) {
 	//dPoints = append(dPoints, delaunay.Point{X: float64(maxX+minX) / 2, Y: float64(2 * pairsFile.Chromsizes()[targetChrom].Length)})
 
 	for _, point := range points {
-		if sourceChrom == point.SourceChrom && targetChrom == point.TargetChrom {
+		if query.SourceChrom == point.SourceChrom && query.TargetChrom == point.TargetChrom {
 			dPoints = append(dPoints, delaunay.Point{X: float64(point.SourcePosition), Y: float64(point.TargetPosition)})
 		}
-		if targetChrom == point.SourceChrom && sourceChrom == point.TargetChrom {
+		if query.TargetChrom == point.SourceChrom && query.SourceChrom == point.TargetChrom {
 			dPoints = append(dPoints, delaunay.Point{X: float64(point.TargetPosition), Y: float64(point.SourcePosition)})
 		}
 	}
@@ -390,23 +410,23 @@ func GetVoronoi(w http.ResponseWriter, r *http.Request) {
 		triangulation, err := delaunay.Triangulate(dPoints)
 		voronoi := calculateVoronoi(triangulation)*/
 	//vor, err := voronoi.FromPoints(dPoints, voronoi.Rect(0, 0, float64(pairsFile.Chromsizes()[sourceChrom].Length), float64(pairsFile.Chromsizes()[targetChrom].Length)))
-	vor, err := voronoi.FromPoints(dPoints, voronoi.Rect(float64(minX), float64(minY), float64(maxX), float64(maxY)), smoothingIterations)
+
+	sourceLength := float64(pairsFile.Chromsizes()[query.SourceChrom].Length)
+	targetLength := float64(pairsFile.Chromsizes()[query.TargetChrom].Length)
+	bounds := voronoi.Rect(float64(query.SourceStart)/sourceLength, float64(query.TargetStart)/targetLength, float64(query.SourceEnd)/sourceLength, float64(query.TargetEnd)/targetLength)
+	normalisation := voronoi.Rect(0, 0, sourceLength, targetLength)
+
+	vor, err := voronoi.FromPoints(dPoints, bounds, normalisation, smoothingIterations)
 	elapsed := time.Since(start)
 	//fmt.Println(triangulation)
 	fmt.Printf("Finishing voronoi calculation: %s\n", elapsed)
 
-	result := voronoi.ConvertToint16(vor, minX, maxX, minY, maxY, numPixelsX, numPixelsY)
+	result := voronoi.ConvertToint16(vor, bounds, normalisation, numPixelsX, numPixelsY)
 
-	elapsed = time.Since(start)
-	fmt.Printf("[%s] Originally had %d polygons, but now have %d\n", elapsed, len(vor.Polygons), len(result.Polygons))
+	//elapsed = time.Since(start)
+	//fmt.Printf("[%s] Originally had %d polygons, but now have %d\n", elapsed, len(vor.Polygons), len(result.Polygons))
 
-	bytes, err := json.Marshal(result) //voronoi) //
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	w.Write(bytes)
+	return result, err
 }
 
 func uint32ToByte(data []uint32) []byte {

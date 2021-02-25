@@ -2,6 +2,7 @@ package voronoi
 
 import (
 	"fmt"
+	"math"
 	"sync"
 	"time"
 
@@ -36,7 +37,7 @@ type Voronoi struct {
 //	return delaunay.Point{X: point.X / float64(sourceChrom.Length), Y: point.Y / float64(targetChrom.Length)}
 //}
 
-func FromPoints(data []delaunay.Point, bounds Rectangle, smoothingIterations int) (*Voronoi, error) {
+func FromPoints(data []delaunay.Point, bounds Rectangle, normalisation Rectangle, smoothingIterations int) (*Voronoi, error) {
 	if len(data) < 1 {
 		return &Voronoi{}, nil
 	}
@@ -57,10 +58,11 @@ func FromPoints(data []delaunay.Point, bounds Rectangle, smoothingIterations int
 	totalPoints = append(totalPoints, fixedPoint3)
 	totalPoints = append(totalPoints, fixedPoint4)
 
-	totalPoints = append(totalPoints, data...)
+	//totalPoints = append(totalPoints, data...)
 
-	for index := range totalPoints {
-		totalPoints[index] = pointNormalisation(totalPoints[index], bounds)
+	for index := range data {
+		//totalPoints[index] = pointNormalisation(totalPoints[index], normalisation)
+		totalPoints = append(totalPoints, pointNormalisation(data[index], normalisation))
 		//dPoints[index] = chromNormalisation(dPoints[index], pairsFile.Chromsizes()[sourceChrom], pairsFile.Chromsizes()[targetChrom])
 	}
 
@@ -70,6 +72,7 @@ func FromPoints(data []delaunay.Point, bounds Rectangle, smoothingIterations int
 
 	for i := 0; i <= smoothingIterations; i++ {
 		midPoint = time.Now()
+		fmt.Println("Starting triangulation...")
 		triangulation, err = delaunay.Triangulate(totalPoints)
 		if err != nil {
 			return nil, err
@@ -79,7 +82,7 @@ func FromPoints(data []delaunay.Point, bounds Rectangle, smoothingIterations int
 		midPoint = time.Now()
 		fmt.Printf("Triangulation: %s\n", elapsed)
 
-		vor = calculateVoronoi(triangulation)
+		vor = calculateVoronoi(triangulation, bounds)
 		elapsed = time.Since(midPoint)
 		midPoint = time.Now()
 		fmt.Printf("Voronoi: %s\n", elapsed)
@@ -93,7 +96,12 @@ func FromPoints(data []delaunay.Point, bounds Rectangle, smoothingIterations int
 
 			for _, polygon := range vor.Polygons {
 				if len(polygon.Points) > 0 {
-					totalPoints = append(totalPoints, polygon.Centroid())
+					centroid := polygon.Centroid()
+					if math.IsNaN(centroid.X) || math.IsNaN(centroid.Y) {
+						fmt.Printf("We have calulated NaN for polygon: %v\n", polygon)
+					} else {
+						totalPoints = append(totalPoints, centroid)
+					}
 				}
 			}
 		}
@@ -116,7 +124,7 @@ func pointNormalisation(point delaunay.Point, bounds Rectangle) delaunay.Point {
 	return delaunay.Point{X: (point.X - bounds.Min.X) / bounds.Width(), Y: (point.Y - bounds.Min.Y) / bounds.Height()}
 }
 
-func calculateVoronoi(triangulation *delaunay.Triangulation) *Voronoi {
+func calculateVoronoi(triangulation *delaunay.Triangulation, bounds Rectangle) *Voronoi {
 	// See https://mapbox.github.io/delaunator/ for information
 
 	indexMap := make(map[int]int)
@@ -128,7 +136,7 @@ func calculateVoronoi(triangulation *delaunay.Triangulation) *Voronoi {
 		}
 	}
 
-	clipArea := Polygon{Points: []delaunay.Point{{X: 0, Y: 0}, {X: 1, Y: 0}, {X: 1, Y: 1}, {X: 0, Y: 1}}}
+	clipArea := Polygon{Points: []delaunay.Point{{X: bounds.Min.X, Y: bounds.Min.Y}, {X: bounds.Max.X, Y: bounds.Min.Y}, {X: bounds.Max.X, Y: bounds.Max.Y}, {X: bounds.Min.X, Y: bounds.Max.Y}}}
 
 	var voronoi Voronoi
 	voronoi.Polygons = make([]Polygon, len(triangulation.Points))

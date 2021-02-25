@@ -143,7 +143,9 @@ export class VoronoiPlot extends Axis {
                     let colours = 200;
                     var scale = d3.scaleQuantize()
                     .range(d3.range(colours))
-                    .domain([Math.log(1), Math.log(5e3)]);
+                    //.domain([Math.log(1), Math.log(5e3)]);
+                    //.domain([Math.log(1e6), Math.log(1e10)]);
+                    .domain([Math.log(5e2), Math.log(1e6)]);
 
                     var colorScale = d3.scaleLinear<string>()
                     .range(["saddlebrown", "lightgreen", "steelblue"])
@@ -153,7 +155,7 @@ export class VoronoiPlot extends Axis {
 
                     for(let i = 0; i < polygons.length; i++) {
                         let points = polygons[i]['Points']
-                        voronoiCanvasCTX.fillStyle = colorScale(scale(Math.log(polygons[i]['Area'])));
+                        voronoiCanvasCTX.fillStyle = colorScale(scale(Math.log(Math.sqrt(polygons[i]['Area']))));
 
                         voronoiCanvasCTX.beginPath();
                         voronoiCanvasCTX.moveTo(points[0], points[1])
