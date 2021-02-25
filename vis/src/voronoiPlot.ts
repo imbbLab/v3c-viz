@@ -66,6 +66,15 @@ export class VoronoiPlot extends Axis {
         //this.imageDiv.appendChild(this.numPointsLabel);
     }
 
+    setDimensions(width: number, height: number) {
+        super.setDimensions(width, height);
+        
+        if(this.voronoiCanvas) {
+            this.voronoiCanvas.width = this.axisWidth;
+            this.voronoiCanvas.height = this.axisWidth;
+        }
+    }
+
     minLoadedX = -1;
     maxLoadedX = -1;
     minLoadedY = -1;

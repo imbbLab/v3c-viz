@@ -7,7 +7,7 @@
   <link rel="stylesheet" href="igv-1.0.9.css">
   <style>
     .igv-root-div {
-      width: 700px;
+      width: 700px !important
     }
 
     .igv-left-hand-gutter {
@@ -18,8 +18,13 @@
       width: 650px;
     }
 
+    .igv-viewport-container {
+      display: block !important;
+      width: 100% !important
+    }
+
     .gene-browser {
-      width: 730px;
+      /*width: 730px;*/
     }
 
     #gene-browser-below {
@@ -59,9 +64,17 @@
   
   <div>
     <div>
-      <div style="position:absolute; left:0px; top:0px">
-        <div id="image-canvas-div" class="options-gui"></div>
-        <canvas id="image-canvas" width="700" height="700"></canvas>
+      <input type="button" value="Hide" id="hideButton"  style="position:absolute; left:0px; top:0px; z-index: 2;" />
+       <div id="image-canvas-div" class="options-gui" style="position:absolute; left:0px; top:0px">
+          <div id="image-controls" style="position:absolute; left:450px; top:0px"></div>
+          <canvas id="image-canvas" width="700" height="700"></canvas>
+       </div>
+        
+      <div style="position:absolute; left:700px; top:0px" id="voronoi-canvas-div" class="options-gui">
+        <div id="voronoi-controls" style="position:absolute; left:450px; top:0px"></div>
+        <canvas id="voronoi-canvas" width="700" height="700"></canvas>
+      </div>
+      <div id="controls" style="position:absolute; left:0px; top:700px">
         <div>
           <label>Source Chromosome: </label><select id="sourceChromSelect"></select>
         </div>
@@ -69,10 +82,6 @@
           <label>Target Chromosome: </label><select id="targetChromSelect"></select>
         </div>
         <input type="file" id="file-selector" accept=".bed">
-      </div>
-      <div style="position:absolute; left:700px; top:0px">
-        <div id="voronoi-canvas-div" class="options-gui"></div>
-        <canvas id="voronoi-canvas" width="700" height="700"></canvas>
       </div>
       <div id="gene-browser-below" class="gene-browser"></div>
       <div id="gene-browser-right" class="gene-browser"></div>

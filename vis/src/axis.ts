@@ -19,8 +19,8 @@ export abstract class Axis {
     minViewY = 0;
     maxViewY = 1;
 
-    axisOffsetX = 50;
-    axisOffsetY = 50;
+    axisOffsetX = 30;
+    axisOffsetY = 30;
 
     numTicks = 5;
     tickDecimalPlaces = 2;
@@ -36,21 +36,17 @@ export abstract class Axis {
     // Contacts
     interactions: Interaction[]
 
-    axisWidth;
-    axisHeight;
+    axisWidth = 500;
+    axisHeight = 500;
 
     mouseDown = false;
     lastMousePos: Coordinate = { x: 0, y: 0 };
 
     constructor(canvas: HTMLCanvasElement) {
         this.canvas = canvas;
-
-        this.axisWidth = this.canvas.width - this.axisOffsetX * 2;
-        this.axisHeight = this.canvas.height - this.axisOffsetY * 2;
-
         this.axisCanvas = document.createElement("canvas");
-        this.axisCanvas.width = this.axisWidth;
-        this.axisCanvas.height = this.axisHeight;
+
+        this.setDimensions(this.canvas.width, this.canvas.height)
 
         this.interactions = [];
 
@@ -175,6 +171,18 @@ export abstract class Axis {
             //updatePoints()
         });
     }
+
+    setDimensions(width: number, height: number) {
+        this.canvas.width = width;
+        this.canvas.height = height;
+
+        this.axisWidth = this.canvas.width - this.axisOffsetX * 1.5;
+        this.axisHeight = this.canvas.height - this.axisOffsetY * 1.5;
+
+        this.axisCanvas.width = this.axisWidth;
+        this.axisCanvas.height = this.axisHeight;
+    }
+
 
     abstract updateView(minX: number, maxX: number, minY: number, maxY: number): void;
 
@@ -360,13 +368,23 @@ export abstract class Axis {
             let xPos = this.axisOffsetX + (this.axisWidth * curTickPct);
             let yPos = this.canvas.height - this.axisOffsetY;
 
+            
+
             var xPosition = this.minViewX + xDiff * curTickPct;
 
             ctx.beginPath();
             ctx.moveTo(xPos, yPos);
             ctx.lineTo(xPos, yPos + 10);
             ctx.stroke();
-            ctx.fillText("" + xPosition.toFixed(this.tickDecimalPlaces), xPos, yPos + 25);
+
+            // TODO: Ideally would check the number of digits to display
+            if (i == 0 && xPosition > 100) {
+                ctx.fillText("" + xPosition.toFixed(this.tickDecimalPlaces), xPos + this.axisOffsetX/2, yPos + this.axisOffsetY/2);
+            } else if(i == this.numTicks-1 && xPosition > 100) {
+                ctx.fillText("" + xPosition.toFixed(this.tickDecimalPlaces), xPos - this.axisOffsetX/2, yPos + this.axisOffsetY/2);
+            } else {
+                ctx.fillText("" + xPosition.toFixed(this.tickDecimalPlaces), xPos, yPos + this.axisOffsetY/2);
+            }
         }
 
         // Draw y-axis ticks
@@ -386,7 +404,15 @@ export abstract class Axis {
             ctx.moveTo(0, 0);
             ctx.lineTo(0, -10);
             ctx.stroke();
-            ctx.fillText("" + yPosition.toFixed(this.tickDecimalPlaces), 0, -35);
+
+            // TODO: Ideally would check the number of digits to display
+            if (i == 0 && yPosition > 100) {
+                ctx.fillText("" + yPosition.toFixed(this.tickDecimalPlaces), this.axisOffsetX/2, -this.axisOffsetY/2-10);
+            } else if(i == this.numTicks-1 && yPosition > 100) {
+                ctx.fillText("" + yPosition.toFixed(this.tickDecimalPlaces), -this.axisOffsetX/2, -this.axisOffsetY/2-10);
+            } else {
+                ctx.fillText("" + yPosition.toFixed(this.tickDecimalPlaces), 0, -this.axisOffsetY/2-10);
+            }
 
             ctx.restore();
         }

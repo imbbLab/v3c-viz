@@ -221,7 +221,7 @@ declare module 'igv' {
     vpMouseDown: IGVMouseEvent
 
     loadInProgress(): boolean;
-    loadTrack(config: ITrack): void;
+    loadTrack(config: ITrack): Promise<ITrack>;
 
     fireEvent(event: string): void
     updateLocusSearchWidget(referenceFrameList: ReferenceFrame[]): void

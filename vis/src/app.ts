@@ -45,6 +45,113 @@ var targetChrom: Chromosome;
 var bottomBrowser: igv.IGVBrowser; 
 var rightBrowser: igv.IGVBrowser;
 
+var displayImageMap = true;
+var igvHeight = 230;
+var viewWidth = 400;
+
+let hideButton = <HTMLInputElement>document.getElementById('hideButton');
+hideButton.addEventListener('click', (event) => {
+    displayImageMap = !displayImageMap;
+
+    if(!displayImageMap) {
+        hideButton.value = 'Show'
+    } else {
+        hideButton.value = 'Hide'
+    }
+
+    reposition();
+});
+
+function reposition() {
+    // TODO: Only reposition maximum once every 50 ms as this requires loading data (voronoi)
+
+    let imageCanvasDiv = <HTMLDivElement>document.getElementById('image-canvas-div');
+    let voronoiCanvasDiv = <HTMLDivElement>document.getElementById('voronoi-canvas-div');
+    let geneBrowserBelow = <HTMLDivElement>document.getElementById('gene-browser-below');
+    let geneBrowserRight = <HTMLDivElement>document.getElementById('gene-browser-right');
+    let numDisplayedViews = 1
+
+    if(displayImageMap) {
+        imageCanvasDiv.style.display = 'block'
+        numDisplayedViews += 1
+    } else {
+        imageCanvasDiv.style.display = 'none'
+    }
+
+    let maxWidth = window.innerWidth;
+    let maxHeight = window.innerHeight;
+
+    maxWidth -= igvHeight;
+    maxHeight -= igvHeight;
+
+    viewWidth = Math.min(maxHeight, maxWidth / 2);
+
+    imageMap.setDimensions(viewWidth, viewWidth)
+    imageMap.redraw();
+
+    geneBrowserBelow.style.top = viewWidth + "px";
+    geneBrowserBelow.style.left = (imageMap.axisOffsetX - 10) + (viewWidth*(numDisplayedViews-1)) + "px";
+    geneBrowserBelow.style.width = imageMap.axisWidth + "px"
+    geneBrowserRight.style.top = (viewWidth - (imageMap.axisOffsetX - 10)) + "px";
+    geneBrowserRight.style.left = (viewWidth*numDisplayedViews) + "px";
+
+    voronoiCanvasDiv.style.left = (viewWidth*(numDisplayedViews-1)) + "px";
+    voronoiMap.setDimensions(viewWidth, viewWidth)
+    voronoiMap.redraw();
+
+
+    let hideButton = <HTMLInputElement>document.getElementById('hideButton');
+    hideButton.style.top = viewWidth + "px";
+
+    let controls = <HTMLDivElement>document.getElementById('controls');
+    controls.style.top = (viewWidth + 50) + "px";
+
+    let voronoiControls = <HTMLDivElement>document.getElementById('voronoi-controls');
+    voronoiControls.style.left =  Math.max(voronoiMap.axisOffsetX, viewWidth-250) + "px";
+    let imageControls = <HTMLDivElement>document.getElementById('image-controls');
+    imageControls.style.left =  Math.max(imageMap.axisOffsetX, viewWidth-250) + "px";
+   
+
+    let geneBrowsers = <HTMLCollectionOf<HTMLDivElement>>document.getElementsByClassName('gene-browser');
+    for(let geneBrowser of geneBrowsers) {
+        //geneBrowser.style.width = (imageMap.axisWidth) + "px";
+    }
+
+    let igvRootDivs = <HTMLCollectionOf<HTMLDivElement>>document.getElementsByClassName('igv-root-div');
+    for(let rootDiv of igvRootDivs) {
+        rootDiv.style.width = (imageMap.axisWidth) + "px";
+    }
+
+    let viewports = <HTMLCollectionOf<HTMLDivElement>>document.getElementsByClassName('igv-viewport');
+    for(let viewport of viewports) {
+        viewport.style.width = (imageMap.axisWidth) + "px";
+    }
+    
+    resizeTracks();
+
+    let navBars = <HTMLCollectionOf<HTMLDivElement>>document.getElementsByClassName('igv-navbar');
+    for(let navBar of navBars) {
+        navBar.style.width = (viewWidth-25) + "px";
+    }
+
+    let zoomWidgets = <HTMLCollectionOf<HTMLDivElement>>document.getElementsByClassName('igv-zoom-widget-900')
+    for(let zoomWidget of zoomWidgets) {
+        zoomWidget.style.marginRight = 5 + "px";
+    }
+
+}
+
+function resizeTracks() {
+    let tracks = <HTMLCollectionOf<HTMLDivElement>>document.getElementsByClassName('igv-track');
+    for(let track of tracks) {
+        track.style.width = (imageMap.axisWidth) + "px";
+    }
+}
+
+window.addEventListener('resize', (event) => {
+    reposition();
+})
+
 // First get the details of the chromosome from the server
 fetch('./details')
             .then(
@@ -310,12 +417,16 @@ fetch('./details')
                                                     format: 'bed',
                                                     url: <string>readEvent.target.result,
                                                     name: fileSelector.files[0].name
+                                                }).then(track => {
+                                                    resizeTracks()
                                                 })
                                                 rightBrowser.loadTrack({
                                                     type: 'annotation',
                                                     format: 'bed',
                                                     url: <string>readEvent.target.result,
                                                     name: fileSelector.files[0].name
+                                                }).then(track => {
+                                                    resizeTracks()
                                                 })
                                             }
                                             console.log(event)
@@ -369,7 +480,7 @@ fetch('./details')
                                 // Set up the options boxes
                                 const imageGUI = new dat.GUI({ name: "Image Options", autoPlace: false });
                                 //imageGUI.domElement.className = 'dgui main';
-                                document.getElementById('image-canvas-div')?.appendChild(imageGUI.domElement);
+                                document.getElementById('image-controls')?.appendChild(imageGUI.domElement);
                                 //document.getElementById('image-canvas-div')?.insertBefore(imageGUI.domElement, document.getElementById('image-canvas'));
                                 imageGUI.add(imageMap, 'numBins').name('Number of bins').onChange((value) => {
                                     imageMap.setNumberBins(parseInt(value));
@@ -384,7 +495,7 @@ fetch('./details')
                                 // Set up the options for voronoi
                                 const voronoiGUI = new dat.GUI({ name: "Voronoi Options", autoPlace: false });
                                 console.log(document.getElementById('voronoi-canvas-div'))
-                                document.getElementById('voronoi-canvas-div')?.appendChild(voronoiGUI.domElement);
+                                document.getElementById('voronoi-controls')?.appendChild(voronoiGUI.domElement);
 
                                 voronoiGUI.add(voronoiMap, 'generateVoronoiOnServer').name("Server Voronoi")
 
@@ -407,6 +518,9 @@ fetch('./details')
                                 })
 
                                 voronoiMap.addContactMenu(voronoiGUI);
+
+                                // Reposition the interface
+                                reposition();
 
                                 if(details['hasInteract']) {
                                     fetch('./interact').then((response) => {
