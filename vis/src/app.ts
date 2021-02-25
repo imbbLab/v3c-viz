@@ -84,7 +84,7 @@ function reposition() {
     maxWidth -= igvHeight;
     maxHeight -= igvHeight;
 
-    viewWidth = Math.min(maxHeight, maxWidth / 2);
+    viewWidth = Math.min(maxHeight, maxWidth / numDisplayedViews);
 
     imageMap.setDimensions(viewWidth, viewWidth)
     imageMap.redraw();

@@ -176,8 +176,8 @@ export abstract class Axis {
         this.canvas.width = width;
         this.canvas.height = height;
 
-        this.axisWidth = this.canvas.width - this.axisOffsetX * 1.5;
-        this.axisHeight = this.canvas.height - this.axisOffsetY * 1.5;
+        this.axisWidth = this.canvas.width - this.axisOffsetX * 1.7;
+        this.axisHeight = this.canvas.height - this.axisOffsetY * 1.7;
 
         this.axisCanvas.width = this.axisWidth;
         this.axisCanvas.height = this.axisHeight;
