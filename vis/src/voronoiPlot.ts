@@ -74,14 +74,18 @@ export class VoronoiPlot extends Axis {
             let dataURL = this.voronoiCanvas.toDataURL()
             this.voronoiCanvas.width = this.axisWidth;
             this.voronoiCanvas.height = this.axisWidth;
-
+            
             var img = new Image;
             img.src = dataURL;
+            
+            img.onload = () => {
+                // Redraw the image on the newly resized canvas
+                var voronoiCanvasCTX = <CanvasRenderingContext2D>this.voronoiCanvas.getContext('2d');
+                voronoiCanvasCTX.imageSmoothingEnabled = false;
+                voronoiCanvasCTX.drawImage(img, 0, 0, this.voronoiCanvas.width, this.voronoiCanvas.height);
 
-            // Redraw the image on the newly resized canvas
-            var voronoiCanvasCTX = <CanvasRenderingContext2D>this.voronoiCanvas.getContext('2d');
-            voronoiCanvasCTX.imageSmoothingEnabled = false;
-            voronoiCanvasCTX.drawImage(img, 0, 0, this.voronoiCanvas.width, this.voronoiCanvas.height);
+                this.redraw();
+            }
         }
     }
 
