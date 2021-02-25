@@ -314,6 +314,12 @@ func GetVoronoi(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	smoothingIterations, err := strconv.Atoi(query.Get("smoothingIterations"))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
 	minX, err := strconv.Atoi(query.Get("xStart"))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -384,7 +390,7 @@ func GetVoronoi(w http.ResponseWriter, r *http.Request) {
 		triangulation, err := delaunay.Triangulate(dPoints)
 		voronoi := calculateVoronoi(triangulation)*/
 	//vor, err := voronoi.FromPoints(dPoints, voronoi.Rect(0, 0, float64(pairsFile.Chromsizes()[sourceChrom].Length), float64(pairsFile.Chromsizes()[targetChrom].Length)))
-	vor, err := voronoi.FromPoints(dPoints, voronoi.Rect(float64(minX), float64(minY), float64(maxX), float64(maxY)))
+	vor, err := voronoi.FromPoints(dPoints, voronoi.Rect(float64(minX), float64(minY), float64(maxX), float64(maxY)), smoothingIterations)
 	elapsed := time.Since(start)
 	//fmt.Println(triangulation)
 	fmt.Printf("Finishing voronoi calculation: %s\n", elapsed)

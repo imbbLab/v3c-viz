@@ -36,7 +36,11 @@ type Voronoi struct {
 //	return delaunay.Point{X: point.X / float64(sourceChrom.Length), Y: point.Y / float64(targetChrom.Length)}
 //}
 
-func FromPoints(data []delaunay.Point, bounds Rectangle) (*Voronoi, error) {
+func FromPoints(data []delaunay.Point, bounds Rectangle, smoothingIterations int) (*Voronoi, error) {
+	if len(data) < 1 {
+		return &Voronoi{}, nil
+	}
+
 	var err error
 	var totalPoints []delaunay.Point
 	var triangulation *delaunay.Triangulation
@@ -59,8 +63,6 @@ func FromPoints(data []delaunay.Point, bounds Rectangle) (*Voronoi, error) {
 		totalPoints[index] = pointNormalisation(totalPoints[index], bounds)
 		//dPoints[index] = chromNormalisation(dPoints[index], pairsFile.Chromsizes()[sourceChrom], pairsFile.Chromsizes()[targetChrom])
 	}
-
-	smoothingIterations := 1
 
 	start := time.Now()
 	midPoint := start

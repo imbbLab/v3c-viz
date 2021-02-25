@@ -293,24 +293,37 @@ fetch('./details')
                         promise.then(belowBrowser => {
                             bottomBrowser = belowBrowser;
 
-                            // Example of loading a track
-                            var track:any = [];
-                            track.type = "annotation"
-                            track.format =  "ensgene"
-                            track.url = "https://s3.dualstack.us-east-1.amazonaws.com/igv.org.genomes/" + details['Genome'] + "/ensGene.txt.gz"
-
-                            bottomBrowser.loadTrack(track);
-                            bottomBrowser.loadTrack({
-                                type: 'wig',
-                                format: 'bigwig',
-                                url: 'https://s3.amazonaws.com/igv.broadinstitute.org/data/hg19/encode/wgEncodeBroadHistoneGm12878H3k4me3StdSig.bigWig',
-                                name: 'Gm12878H3k4me3'
-                                })
-
                             var promise: Promise<igv.IGVBrowser> = igv.createBrowser(<HTMLDivElement>document.getElementById('gene-browser-right'), options);
                             promise.then(browser => {
                                 rightBrowser = browser;
                                 
+                                let fileSelector = <HTMLInputElement>document.getElementById('file-selector')
+                                fileSelector.addEventListener('change', (event) => {
+                                    console.log(event)
+                                    console.log(fileSelector.files)
+                                    if (fileSelector.files) {
+                                        const reader = new FileReader();
+                                        reader.addEventListener('load', (readEvent) => {
+                                            if(fileSelector.files && readEvent.target) {
+                                                bottomBrowser.loadTrack({
+                                                    type: 'annotation',
+                                                    format: 'bed',
+                                                    url: <string>readEvent.target.result,
+                                                    name: fileSelector.files[0].name
+                                                })
+                                                rightBrowser.loadTrack({
+                                                    type: 'annotation',
+                                                    format: 'bed',
+                                                    url: <string>readEvent.target.result,
+                                                    name: fileSelector.files[0].name
+                                                })
+                                            }
+                                            console.log(event)
+                                        })
+                                        reader.readAsDataURL(fileSelector.files[0])
+                                    }
+                                });
+
                                 // Override the events for controlling scrolling
                                 overrideMouse();
 

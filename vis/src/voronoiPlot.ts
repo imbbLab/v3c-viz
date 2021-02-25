@@ -44,7 +44,7 @@ export class VoronoiPlot extends Axis {
 
         this.smoothingRepetitions = 1;
         this.omega = 1;
-        this.points = new Uint32Array();
+        this.points = new Uint32Array(0);
         this.normPoints = new Array<number[]>();
         this.boxesToDraw = new Array<number[]>();
 
@@ -106,7 +106,7 @@ export class VoronoiPlot extends Axis {
 
         var self = this;
 
-        fetch('./voronoi?pixelsX=' + this.axisWidth + '&pixelsY=' + this.axisHeight + '&sourceChrom=' + sourceChrom.name + '&targetChrom=' + targetChrom.name + '&xStart=' + minX + '&xEnd=' + maxX + '&yStart=' + minY + '&yEnd=' + maxY)
+        fetch('./voronoi?pixelsX=' + this.axisWidth + '&pixelsY=' + this.axisHeight + '&smoothingIterations=' + this.smoothingRepetitions + '&sourceChrom=' + sourceChrom.name + '&targetChrom=' + targetChrom.name + '&xStart=' + minX + '&xEnd=' + maxX + '&yStart=' + minY + '&yEnd=' + maxY)
             .then((response) => {
                 if (response.status !== 200) {
                     console.log('Looks like there was a problem. Status Code: ' +
