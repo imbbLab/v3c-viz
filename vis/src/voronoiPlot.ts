@@ -1,5 +1,5 @@
 import { Axis } from './axis'
-import { Chromosome } from './chromosome'
+import { Locus, Chromosome } from './chromosome'
 import { Delaunay, Voronoi } from "d3-delaunay";
 import * as igv from 'igv';
 import * as d3 from 'd3';
@@ -56,8 +56,8 @@ export class VoronoiPlot extends Axis {
 
         // Buffer canvas for voronoi to improve interactivity 
         this.voronoiCanvas = document.createElement("canvas");
-        this.voronoiCanvas.width = this.axisWidth;
-        this.voronoiCanvas.height = this.axisHeight;
+        this.voronoiCanvas.width = 1024; //this.axisWidth;
+        this.voronoiCanvas.height = 1024; //this.axisHeight;
 
         this.voronoi = Delaunay.from([]).voronoi();
 
@@ -96,6 +96,9 @@ export class VoronoiPlot extends Axis {
     sourceChrom: Chromosome = new Chromosome("", 0)
     targetChrom: Chromosome = new Chromosome("", 0)
 
+    voronoiDrawnWidth = 0
+    voronoiDrawnHeight = 0
+
     getVoronoiFromServer(sourceChrom: Chromosome, targetChrom: Chromosome, minX: number, maxX: number, minY: number, maxY: number) {
         this.sourceChrom = sourceChrom
         this.targetChrom = targetChrom
@@ -106,7 +109,10 @@ export class VoronoiPlot extends Axis {
 
         var self = this;
 
-        fetch('./voronoi?pixelsX=' + this.voronoiCanvas.width + '&pixelsY=' + this.voronoiCanvas.height + '&smoothingIterations=' + this.smoothingRepetitions + '&sourceChrom=' + sourceChrom.name + '&targetChrom=' + targetChrom.name + '&xStart=' + minX + '&xEnd=' + maxX + '&yStart=' + minY + '&yEnd=' + maxY)
+        this.voronoiDrawnWidth = Math.min(this.axisWidth, this.voronoiCanvas.width)
+        this.voronoiDrawnHeight = Math.min(this.axisHeight, this.voronoiCanvas.height)
+
+        fetch('./voronoi?pixelsX=' + this.voronoiDrawnWidth + '&pixelsY=' + this.voronoiDrawnHeight + '&smoothingIterations=' + this.smoothingRepetitions + '&sourceChrom=' + sourceChrom.name + '&targetChrom=' + targetChrom.name + '&xStart=' + minX + '&xEnd=' + maxX + '&yStart=' + minY + '&yEnd=' + maxY)
             .then((response) => {
                 if (response.status !== 200) {
                     console.log('Looks like there was a problem. Status Code: ' +
@@ -499,7 +505,7 @@ export class VoronoiPlot extends Axis {
         var axisCanvasCTX = <CanvasRenderingContext2D>axisCanvas.getContext('2d');
         axisCanvasCTX.clearRect(0, 0, this.axisCanvas.width, this.axisCanvas.height);
         axisCanvasCTX.imageSmoothingEnabled = false;
-        axisCanvasCTX.drawImage(this.voronoiCanvas, 0, 0, this.voronoiCanvas.width, this.voronoiCanvas.height,
+        axisCanvasCTX.drawImage(this.voronoiCanvas, 0, 0, this.voronoiDrawnWidth, this.voronoiDrawnHeight,
             0, 0, this.axisCanvas.width, this.axisCanvas.height);
 
         this.drawContacts();
