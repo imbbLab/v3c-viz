@@ -399,10 +399,15 @@ fetch('./details')
                         var promise: Promise<igv.IGVBrowser> = igv.createBrowser(<HTMLDivElement>document.getElementById('gene-browser-below'), options);
                         promise.then(belowBrowser => {
                             bottomBrowser = belowBrowser;
+                            // Override the method for updating search widget when resizing
+                            bottomBrowser.updateLocusSearchWidget = function(referenceFrameList: igv.ReferenceFrame[]): void {
+                            }
 
                             var promise: Promise<igv.IGVBrowser> = igv.createBrowser(<HTMLDivElement>document.getElementById('gene-browser-right'), options);
                             promise.then(browser => {
                                 rightBrowser = browser;
+                                rightBrowser.updateLocusSearchWidget = function(referenceFrameList: igv.ReferenceFrame[]): void {
+                                }
                                 
                                 let fileSelector = <HTMLInputElement>document.getElementById('file-selector')
                                 fileSelector.addEventListener('change', (event) => {

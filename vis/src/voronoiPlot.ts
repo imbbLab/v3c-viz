@@ -66,29 +66,6 @@ export class VoronoiPlot extends Axis {
         //this.imageDiv.appendChild(this.numPointsLabel);
     }
 
-    setDimensions(width: number, height: number) {
-        super.setDimensions(width, height);
-        
-        if(this.voronoiCanvas) {
-            // Copy the voronoi canvas to enable redrawing when resizing
-            let dataURL = this.voronoiCanvas.toDataURL()
-            this.voronoiCanvas.width = this.axisWidth;
-            this.voronoiCanvas.height = this.axisWidth;
-            
-            var img = new Image;
-            img.src = dataURL;
-            
-            img.onload = () => {
-                // Redraw the image on the newly resized canvas
-                var voronoiCanvasCTX = <CanvasRenderingContext2D>this.voronoiCanvas.getContext('2d');
-                voronoiCanvasCTX.imageSmoothingEnabled = false;
-                voronoiCanvasCTX.drawImage(img, 0, 0, this.voronoiCanvas.width, this.voronoiCanvas.height);
-
-                this.redraw();
-            }
-        }
-    }
-
     minLoadedX = -1;
     maxLoadedX = -1;
     minLoadedY = -1;
@@ -129,7 +106,7 @@ export class VoronoiPlot extends Axis {
 
         var self = this;
 
-        fetch('./voronoi?pixelsX=' + this.axisWidth + '&pixelsY=' + this.axisHeight + '&smoothingIterations=' + this.smoothingRepetitions + '&sourceChrom=' + sourceChrom.name + '&targetChrom=' + targetChrom.name + '&xStart=' + minX + '&xEnd=' + maxX + '&yStart=' + minY + '&yEnd=' + maxY)
+        fetch('./voronoi?pixelsX=' + this.voronoiCanvas.width + '&pixelsY=' + this.voronoiCanvas.height + '&smoothingIterations=' + this.smoothingRepetitions + '&sourceChrom=' + sourceChrom.name + '&targetChrom=' + targetChrom.name + '&xStart=' + minX + '&xEnd=' + maxX + '&yStart=' + minY + '&yEnd=' + maxY)
             .then((response) => {
                 if (response.status !== 200) {
                     console.log('Looks like there was a problem. Status Code: ' +
@@ -522,7 +499,8 @@ export class VoronoiPlot extends Axis {
         var axisCanvasCTX = <CanvasRenderingContext2D>axisCanvas.getContext('2d');
         axisCanvasCTX.clearRect(0, 0, this.axisCanvas.width, this.axisCanvas.height);
         axisCanvasCTX.imageSmoothingEnabled = false;
-        axisCanvasCTX.drawImage(this.voronoiCanvas, 0, 0, axisCanvas.width, axisCanvas.height);
+        axisCanvasCTX.drawImage(this.voronoiCanvas, 0, 0, this.voronoiCanvas.width, this.voronoiCanvas.height,
+            0, 0, this.axisCanvas.width, this.axisCanvas.height);
 
         this.drawContacts();
 
