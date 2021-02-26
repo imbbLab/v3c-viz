@@ -1,3 +1,4 @@
+import { callbackify } from "util";
 import {Chromosome, Interaction} from "./chromosome"
 
 export interface Coordinate {
@@ -5,7 +6,28 @@ export interface Coordinate {
     y: number;
 }
 
+export class Rectangle {
+    min: Coordinate
+    max: Coordinate
+
+    constructor(min: Coordinate, max: Coordinate) {
+        this.min = min;
+        this.max = max;
+    }
+}
+
+/*export class RegionSelectEvent {
+    region: Rectangle
+
+    constructor(region: Rectangle) {
+        this.region = region
+    }
+}*/
+
+
 export abstract class Axis {
+    regionSelectEventListeners: {(region: Rectangle):void}[] = []
+
     canvas: HTMLCanvasElement;
     axisCanvas: HTMLCanvasElement;
 
@@ -125,7 +147,7 @@ export abstract class Axis {
         });
 
         this.canvas.addEventListener('dblclick', () => {
-            this.updateView(this.minDataX, this.maxDataX, this.minDataY, this.maxDataY);
+            //this.updateView(this.minDataX, this.maxDataX, this.minDataY, this.maxDataY);
         });
 
         //Mousedown
@@ -154,7 +176,12 @@ export abstract class Axis {
                 let minY = Math.min(startAxisPos.y, endAxisPos.y) * yDiff + self.minViewY;
                 let maxY = Math.max(startAxisPos.y, endAxisPos.y) * yDiff + self.minViewY;
 
-                self.updateView(minX, maxX, minY, maxY)
+                let region: Rectangle = {min: {x: minX, y: minY}, max: {x:maxX, y:maxY}}
+
+                for(let callback of self.regionSelectEventListeners) {
+                    callback(region)
+                }
+                //self.updateView(minX, maxX, minY, maxY)
             }
 
             //startXFrac += minX * xDiff;
@@ -172,6 +199,10 @@ export abstract class Axis {
         });
     }
 
+    addRegionSelectEventListener(callback: {(region: Rectangle):void}) {
+        this.regionSelectEventListeners.push(callback);
+    }
+
     setDimensions(width: number, height: number) {
         this.canvas.width = width;
         this.canvas.height = height;
@@ -184,7 +215,7 @@ export abstract class Axis {
     }
 
 
-    abstract updateView(minX: number, maxX: number, minY: number, maxY: number): void;
+//    abstract updateView(minX: number, maxX: number, minY: number, maxY: number): void;
 
     protected drawContacts() {
         var axisCanvas = this.getAxisCanvas();
@@ -268,7 +299,7 @@ export abstract class Axis {
         this.minDataY = 0
         this.maxDataY = targetChrom.length
 
-        this.updateView(0, sourceChrom.length, 0, targetChrom.length)
+//        this.updateView(0, sourceChrom.length, 0, targetChrom.length)
     }
     
 

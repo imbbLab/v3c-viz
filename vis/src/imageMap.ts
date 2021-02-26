@@ -116,7 +116,7 @@ export class ImageMap extends Axis {
         this.imageThreshold = -1;
     }
 
-    updateView(minX: number, maxX: number, minY: number, maxY: number) {
+    /*updateView(minX: number, maxX: number, minY: number, maxY: number) {
         if(minX < 0) {
             minX = 0;
         }
@@ -128,7 +128,7 @@ export class ImageMap extends Axis {
             this.onImageLoad(Math.round(minX), Math.round(maxX), Math.round(minY), Math.round(maxY));
             //this.voronoiPlot.requestView(Math.round(minX), Math.round(maxX), Math.round(minY), Math.round(maxY));
         });
-    }
+    }*/
 
     lockImage() {
         this.isImageLocked = true;
@@ -141,7 +141,7 @@ export class ImageMap extends Axis {
     setPercentile(percentile: number) {
         this.percentile = percentile;
 
-       let imageThreshold = this.calculatePercentile(this.percentile);
+        let imageThreshold = this.calculatePercentile(this.percentile);
         this.setImageThreshold(imageThreshold);
     }
     
@@ -205,7 +205,13 @@ export class ImageMap extends Axis {
         });
     }
 
-    loadDensityImage(startX: number, endX: number, startY: number, endY: number, callback: Function) {
+    requestView(sourceChrom: Chromosome, targetChrom: Chromosome, minX: number, maxX: number, minY: number, maxY: number) {
+        this.setChromPair(sourceChrom, targetChrom)
+
+        this.loadDensityImage(sourceChrom, targetChrom, minX, maxX, minY, maxY)
+    }
+
+    loadDensityImage(sourceChrom: Chromosome, targetChrom: Chromosome, startX: number, endX: number, startY: number, endY: number) {
         this.lockImage();
 
         var self = this;
@@ -244,15 +250,16 @@ export class ImageMap extends Axis {
 
                         console.log("Found number of points = " + numPoints)
 
-                        if (numPoints < this.voronoiPlot.maxNumberPointsToLoad) {
+                        /*if (numPoints < this.voronoiPlot.maxNumberPointsToLoad) {
                             callback();
-                        }
+                        }*/
 
-                        if(this.imageThreshold < 0) {
+                        this.setPercentile(this.percentile);
+                        /*if(this.imageThreshold < 0) {
                             this.setPercentile(0.95);
                         } else {
                             this.thresholdImage();
-                        }
+                        }*/
                         //console.log("Max intensity = " + maxIntensity);
 
                         //maxIntensity = this.calculatePercentile(0.95) /// countNotZero * 10

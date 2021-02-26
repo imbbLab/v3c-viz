@@ -8,8 +8,9 @@ import * as dat from 'dat.gui';
 //import 'jquery-ui-dist/jquery-ui';
 import * as igv from 'igv';
 import * as igvutils from 'igv-utils';
-import { Chromosome, Interaction } from "./chromosome";
+import { Locus, Chromosome, Interaction } from "./chromosome";
 import { copyFileSync } from "fs";
+import { Rectangle } from "./axis";
 
 //import igv = require('igv');
 //import { browser } from "igv_wrapper";
@@ -146,6 +147,52 @@ function resizeTracks() {
     for(let track of tracks) {
         track.style.width = (imageMap.axisWidth) + "px";
     }
+}
+
+
+interface ViewRequest {
+    dimension: "x" | "y"
+    locus: Locus
+
+//    callback?: Function
+}
+
+var xRequest: ViewRequest | null
+var yRequest: ViewRequest | null
+var timeoutFunction: any;
+
+function requestViewUpdate(request: ViewRequest) {
+    if(request.dimension == "x") {
+        xRequest = request;
+
+//        if(xRequest.callback) {
+//            xRequest.callback();
+//        }
+    } else if(request.dimension == "y") {
+        yRequest = request;
+
+//        if(yRequest.callback) {
+//            yRequest.callback();
+//        }
+    }
+
+    clearTimeout(timeoutFunction);
+
+    timeoutFunction = setTimeout(() => {
+        // Update view if no new requests in last 50 ms
+
+        console.log(xRequest);
+        console.log(yRequest);
+
+        if(xRequest && yRequest) {
+            imageMap.requestView(<Chromosome>chromosomes.get(xRequest.locus.chr), <Chromosome>chromosomes.get(yRequest.locus.chr), 
+                parseInt(xRequest.locus.start), parseInt(xRequest.locus.initialEnd), parseInt(yRequest.locus.start), parseInt(yRequest.locus.initialEnd))
+            voronoiMap.requestView(<Chromosome>chromosomes.get(xRequest.locus.chr), <Chromosome>chromosomes.get(yRequest.locus.chr), 
+                parseInt(xRequest.locus.start), parseInt(xRequest.locus.initialEnd), parseInt(yRequest.locus.start), parseInt(yRequest.locus.initialEnd))
+        }
+
+        clearTimeout(timeoutFunction);
+    }, 50);
 }
 
 window.addEventListener('resize', (event) => {
@@ -400,14 +447,27 @@ fetch('./details')
                         promise.then(belowBrowser => {
                             bottomBrowser = belowBrowser;
                             // Override the method for updating search widget when resizing
+                            bottomBrowser._updateLocusSearchWidget = bottomBrowser.updateLocusSearchWidget;
                             bottomBrowser.updateLocusSearchWidget = function(referenceFrameList: igv.ReferenceFrame[]): void {
+                                bottomBrowser._updateLocusSearchWidget(referenceFrameList);
+
+                                requestViewUpdate({dimension: "x", locus: referenceFrameList[0]}) //, callback: () =>{console.log(referenceFrameList); 
+                                
                             }
 
                             var promise: Promise<igv.IGVBrowser> = igv.createBrowser(<HTMLDivElement>document.getElementById('gene-browser-right'), options);
                             promise.then(browser => {
                                 rightBrowser = browser;
+                                rightBrowser._updateLocusSearchWidget = rightBrowser.updateLocusSearchWidget;
                                 rightBrowser.updateLocusSearchWidget = function(referenceFrameList: igv.ReferenceFrame[]): void {
+                                    rightBrowser._updateLocusSearchWidget(referenceFrameList)
+
+                                    requestViewUpdate({dimension: "y", locus: referenceFrameList[0]})
                                 }
+
+
+                                belowBrowser.search(sourceChrom.name + ":1-" + sourceChrom.length);
+                                rightBrowser.search(targetChrom.name + ":1-" + targetChrom.length);
                                 
                                 let fileSelector = <HTMLInputElement>document.getElementById('file-selector')
                                 fileSelector.addEventListener('change', (event) => {
@@ -443,18 +503,18 @@ fetch('./details')
                                 // Override the events for controlling scrolling
                                 overrideMouse();
 
-                                var HASH_PREFIX = "#/locus/";
+                                //var HASH_PREFIX = "#/locus/";
                                 //console.log(belowBrowser);
-                                belowBrowser.on('locuschange', function (referenceFrame: igv.ReferenceFrame) {
+                                //belowBrowser.on('locuschange', function (referenceFrame: igv.ReferenceFrame) {
                                     //console.log(referenceFrame)
                                     //window.location.replace(HASH_PREFIX + referenceFrame.label);
 
                                     //console.log(parseInt(referenceFrame.start.replace(',', '')))
-                                    voronoiMap.requestView(sourceChrom, targetChrom, parseInt(referenceFrame.start.replace(/,/g, '')), parseInt(referenceFrame.end.replace(/,/g, '')), voronoiMap.minViewY, voronoiMap.maxViewY)
-                                });
-                                rightBrowser.on('locuschange', (referenceFrame: igv.ReferenceFrame) => {
-                                    voronoiMap.requestView(sourceChrom, targetChrom, voronoiMap.minViewX, voronoiMap.maxViewX, parseInt(referenceFrame.start.replace(/,/g, '')), parseInt(referenceFrame.end.replace(/,/g, '')))
-                                });
+                                //    voronoiMap.requestView(sourceChrom, targetChrom, parseInt(referenceFrame.start.replace(/,/g, '')), parseInt(referenceFrame.end.replace(/,/g, '')), voronoiMap.minViewY, voronoiMap.maxViewY)
+                                //});
+                                //rightBrowser.on('locuschange', (referenceFrame: igv.ReferenceFrame) => {
+                                //    voronoiMap.requestView(sourceChrom, targetChrom, voronoiMap.minViewX, voronoiMap.maxViewX, parseInt(referenceFrame.start.replace(/,/g, '')), parseInt(referenceFrame.end.replace(/,/g, '')))
+                                //});
 
 
                                 /**/
@@ -469,13 +529,26 @@ fetch('./details')
                                 voronoiMap = new VoronoiPlot(belowBrowser, rightBrowser);
                                 imageMap = new ImageMap(numBins, voronoiMap);
 
-                                imageMap.setOnImageLoad((minX, maxX, minY, maxY) => {
-                                    belowBrowser.search(sourceChrom.name + ":" + minX + "-" + maxX).then(() => {
-                                        rightBrowser.search(targetChrom.name + ":" + minY + "-" + maxY).then(() => {
-                                            voronoiMap.requestView(sourceChrom, targetChrom, minX, maxX, minY, maxY);
-                                        })
-                                    })
+                                voronoiMap.addRegionSelectEventListener((region: Rectangle) => {
+                                    belowBrowser.search(sourceChrom.name + ":" + region.min.x + "-" + region.max.x);
+                                    rightBrowser.search(targetChrom.name + ":" + region.min.y + "-" + region.max.y);
                                 })
+                                imageMap.addRegionSelectEventListener((region: Rectangle) => {
+                                    belowBrowser.search(sourceChrom.name + ":" + region.min.x + "-" + region.max.x);
+                                    rightBrowser.search(targetChrom.name + ":" + region.min.y + "-" + region.max.y);
+                                })
+
+                                /*imageMap.setOnImageLoad((minX, maxX, minY, maxY) => {
+                                    belowBrowser.search(sourceChrom.name + ":" + minX + "-" + maxX);
+                                    rightBrowser.search(targetChrom.name + ":" + minY + "-" + maxY);
+                                    //requestViewUpdate({dimension: "x", locus: {chr: sourceChrom.name, start: ""+minX, end: ""+maxX}})
+                                    //requestViewUpdate({dimension: "y", locus: {chr: targetChrom.name, start: ""+minY, end: ""+maxY}})
+                                    //belowBrowser.search(sourceChrom.name + ":" + minX + "-" + maxX).then(() => {
+                                    //    rightBrowser.search(targetChrom.name + ":" + minY + "-" + maxY).then(() => {
+                                    //        voronoiMap.requestView(sourceChrom, targetChrom, minX, maxX, minY, maxY);
+                                    //    })
+                                    //})
+                                })*/
                                 //imageMap.loadDensityImage(200, xStart, xEnd, yStart, yEnd, voronoiMap.loadDataForVoronoi);
 
                                 imageMap.setChromPair(sourceChrom, targetChrom);

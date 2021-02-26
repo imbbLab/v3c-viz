@@ -6,6 +6,8 @@ declare module 'igv' {
         end: string;
         label: string;
 
+        initialEnd: string
+
         shiftPixels(x: number, y: number): boolean
     }
 
@@ -207,6 +209,7 @@ declare module 'igv' {
 
   }
 
+
   export interface IGVBrowser {
     $root: JQuery
 
@@ -225,6 +228,7 @@ declare module 'igv' {
 
     fireEvent(event: string): void
     updateLocusSearchWidget(referenceFrameList: ReferenceFrame[]): void
+    _updateLocusSearchWidget(referenceFrameList: ReferenceFrame[]): void
     updateViews(): void
 
     mouseDownOnViewport(event: JQuery.MouseDownEvent, viewport: Viewport): void
