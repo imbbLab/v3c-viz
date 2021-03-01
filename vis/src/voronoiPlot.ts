@@ -124,10 +124,12 @@ export class VoronoiPlot extends Axis {
     }
 
     async updateFromJSON(data: any) {
-        let polygons = data['Polygons']
         let voronoiCanvasCTX = <CanvasRenderingContext2D>this.voronoiCanvas.getContext("2d");
         voronoiCanvasCTX.clearRect(0, 0, this.voronoiCanvas.width, this.voronoiCanvas.height);
 
+
+
+        
         voronoiCanvasCTX.fillStyle = 'rgb(0, 0, 0)'
 
         // Draw the polygons that are too small to be drawn with detail (between 1 and 2 pixels width/height)
@@ -142,46 +144,50 @@ export class VoronoiPlot extends Axis {
             }
         }
 
-        let colours = 200;
-        var scale = d3.scaleQuantize()
-            .range(d3.range(colours))
-            //.domain([Math.log(1), Math.log(5e3)]);
-            //.domain([Math.log(1e6), Math.log(1e10)]);
-            .domain([Math.log(5e2), Math.log(1e6)]);
+        let polygons = data['Polygons']
 
-        var colorScale = d3.scaleLinear<string>()
-            .range(["saddlebrown", "lightgreen", "steelblue"])
-            .domain([0, 2 * colours / 3, colours]);
+        if(polygons) {
+            let colours = 200;
+            var scale = d3.scaleQuantize()
+                .range(d3.range(colours))
+                //.domain([Math.log(1), Math.log(5e3)]);
+                //.domain([Math.log(1e6), Math.log(1e10)]);
+                .domain([Math.log(5e2), Math.log(1e6)]);
 
-        let axisCanvas = this.getAxisCanvas();
+            var colorScale = d3.scaleLinear<string>()
+                .range(["saddlebrown", "lightgreen", "steelblue"])
+                .domain([0, 2 * colours / 3, colours]);
 
-        for (let i = 0; i < polygons.length; i++) {
-            let points = polygons[i]['Points']
-            voronoiCanvasCTX.fillStyle = colorScale(scale(Math.log(Math.sqrt(polygons[i]['Area']))));
+            let axisCanvas = this.getAxisCanvas();
 
-            voronoiCanvasCTX.beginPath();
-            voronoiCanvasCTX.moveTo(points[0], points[1])
-            for (let j = 2; j < points.length; j += 2) {
-                voronoiCanvasCTX.lineTo(points[j], points[j + 1])
+            for (let i = 0; i < polygons.length; i++) {
+                let points = polygons[i]['Points']
+                voronoiCanvasCTX.fillStyle = colorScale(scale(Math.log(Math.sqrt(polygons[i]['Area']))));
+
+                voronoiCanvasCTX.beginPath();
+                voronoiCanvasCTX.moveTo(points[0], points[1])
+                for (let j = 2; j < points.length; j += 2) {
+                    voronoiCanvasCTX.lineTo(points[j], points[j + 1])
+                }
+
+                //voronoiCanvasCTX.moveTo(((points[0]['X'] - minX) / (maxX - minX)) * axisCanvas.width, ((points[0]['Y'] - minY) / (maxY - minY)) * axisCanvas.height)
+                //for(let j = 1; j < points.length; j++) {
+                //    voronoiCanvasCTX.lineTo(((points[j]['X'] - minX) / (maxX - minX)) * axisCanvas.width, ((points[j]['Y'] - minY) / (maxY - minY)) * axisCanvas.height)
+                //}
+
+                //voronoiCanvasCTX.lineTo(((points[0]['X'] - minX) / (maxX - minX)) * axisCanvas.width, ((points[0]['Y'] - minY) / (maxY - minY)) * axisCanvas.height)
+                voronoiCanvasCTX.closePath();
+                //this.voronoi.renderCell(i, voronoiCanvasCTX);
+                //console.log('rgb(100, 100, ' + Math.round(255*(area / maxArea))  + ')');            
+                voronoiCanvasCTX.fill();
+                voronoiCanvasCTX.stroke();
             }
 
-            //voronoiCanvasCTX.moveTo(((points[0]['X'] - minX) / (maxX - minX)) * axisCanvas.width, ((points[0]['Y'] - minY) / (maxY - minY)) * axisCanvas.height)
-            //for(let j = 1; j < points.length; j++) {
-            //    voronoiCanvasCTX.lineTo(((points[j]['X'] - minX) / (maxX - minX)) * axisCanvas.width, ((points[j]['Y'] - minY) / (maxY - minY)) * axisCanvas.height)
-            //}
-
-            //voronoiCanvasCTX.lineTo(((points[0]['X'] - minX) / (maxX - minX)) * axisCanvas.width, ((points[0]['Y'] - minY) / (maxY - minY)) * axisCanvas.height)
-            voronoiCanvasCTX.closePath();
-            //this.voronoi.renderCell(i, voronoiCanvasCTX);
-            //console.log('rgb(100, 100, ' + Math.round(255*(area / maxArea))  + ')');            
-            voronoiCanvasCTX.fill();
-            voronoiCanvasCTX.stroke();
-        }
-
-        voronoiCanvasCTX.fillStyle = 'rgb(0, 0, 0)'
-        if (this.displayVoronoiPoints) {
-            for (let i = 0; i < polygons.length; i++) {
-                voronoiCanvasCTX.fillRect(polygons[i]['DataPoint'][0], polygons[i]['DataPoint'][1], 2, 2);
+            voronoiCanvasCTX.fillStyle = 'rgb(0, 0, 0)'
+            if (this.displayVoronoiPoints) {
+                for (let i = 0; i < polygons.length; i++) {
+                    voronoiCanvasCTX.fillRect(polygons[i]['DataPoint'][0], polygons[i]['DataPoint'][1], 2, 2);
+                }
             }
         }
 

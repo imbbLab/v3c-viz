@@ -537,15 +537,14 @@ fetch('./details')
                                     }
     
                                     response.text().then((location: string) => {
-                                        console.log(location);
-
                                         const extension = filename.split('.').pop();
+                                        console.log(extension);
                                         var format: string = 'unknown'
                                         var type: 'annotation' | 'wig' | 'alignment' | 'variant' | 'seg' = 'annotation'
                                         if (extension?.localeCompare("bed") == 0) {
                                             type = 'annotation';
                                             format = 'bed';
-                                        } else {
+                                        } else if (extension?.localeCompare("bw") == 0) {
                                             type = 'wig';
                                             format = 'bigwig';
                                         }
