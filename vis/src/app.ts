@@ -11,6 +11,9 @@ import * as igvutils from 'igv-utils';
 import { Locus, Chromosome, Interaction } from "./chromosome";
 import { Rectangle } from "./axis";
 
+
+import * as d3 from 'd3';
+
 //import igv = require('igv');
 //import { browser } from "igv_wrapper";
 //import * as igv from 'igv_wrapper';
@@ -224,9 +227,108 @@ function requestViewUpdate(request: ViewRequest) {
                         }
 
                         response.json().then(data => {
+
+                            // Update the colour
+
+                            let polygons = data['Voronoi']['Polygons']
+                            if(polygons) {
+                                let colourCanvas = <HTMLCanvasElement>document.getElementById('voronoi-colour');
+                                colourCanvas.width = imageMap.canvas.width;
+                                let colourCanvasCTX = <CanvasRenderingContext2D>colourCanvas.getContext("2d");
+                                let histogramY = colourCanvas.height - 10
+                                let numBins = colourCanvas.width
+                                let areaBins = new Uint32Array(numBins);
+
+                                let minArea = -1;
+                                let maxArea = -1;
+
+                                for (let i = 0; i < polygons.length; i++) {
+                                    let area = Math.log(polygons[i]['Area'])
+
+                                    if(minArea == -1 || area < minArea) {
+                                        minArea = area
+                                    }
+                                    if(maxArea == -1 || area > maxArea) {
+                                        maxArea = area
+                                    }
+                                }
+
+                                let binWidth = (maxArea - minArea) / (numBins-1)
+                                let maxBin = 0
+
+                                for (let i = 0; i < polygons.length; i++) {
+                                    let areaBin = Math.round((Math.log(polygons[i]['Area']) - minArea) / binWidth)
+                                    areaBins[areaBin]++
+
+                                    if(areaBins[areaBin] > maxBin) {
+                                        maxBin = areaBins[areaBin]
+                                    }
+                                }
+                                
+                                voronoiMap.scale = d3.scaleQuantize()
+                                    .range(d3.range(voronoiMap.colours))
+                                    .domain([minArea, maxArea]);
+                                
+                                for(let i = 0; i < numBins; i++) {
+                                    colourCanvasCTX.strokeStyle = 'rgb(0, 0, 0)'
+                                    colourCanvasCTX.beginPath();
+                                    colourCanvasCTX.moveTo(i, histogramY);
+                                    colourCanvasCTX.lineTo(i, histogramY - (areaBins[i] / maxBin * colourCanvas.height))
+                                    colourCanvasCTX.stroke();
+
+                                    colourCanvasCTX.strokeStyle = voronoiMap.colourScale(voronoiMap.scale(binWidth * i + minArea))
+                                    colourCanvasCTX.beginPath();
+                                    colourCanvasCTX.moveTo(i, colourCanvas.height);
+                                    colourCanvasCTX.lineTo(i, histogramY)
+                                    colourCanvasCTX.stroke();
+                                }
+
+                                //Mousedown
+                                let processMin = true;
+                                colourCanvas.oncontextmenu = function(e) { e.preventDefault(); e.stopPropagation(); }
+                                colourCanvas.addEventListener('mousedown', function (event: MouseEvent) {
+                                    let colourCanvas = <HTMLCanvasElement>document.getElementById('voronoi-colour');
+                                    let colourCanvasCTX = <CanvasRenderingContext2D>colourCanvas.getContext("2d");
+                                    colourCanvasCTX.clearRect(0, 0, colourCanvas.width, colourCanvas.height)
+
+                                    var rect = colourCanvas.getBoundingClientRect();
+                                    let x = event.clientX - rect.left
+                                    let y = event.clientY - rect.top
+
+                                    let [minScale, maxScale] = voronoiMap.scale.domain();
+                                    
+                                    if(event.button == 0) {
+                                        voronoiMap.scale.domain([binWidth * x + minArea, maxScale]);
+                                    } else {
+                                        voronoiMap.scale.domain([minScale, binWidth * x + minArea]);
+                                    } 
+
+                                    for(let i = 0; i < numBins; i++) {
+                                        colourCanvasCTX.strokeStyle = 'rgb(0, 0, 0)'
+                                        colourCanvasCTX.beginPath();
+                                        colourCanvasCTX.moveTo(i, histogramY);
+                                        colourCanvasCTX.lineTo(i, histogramY - (areaBins[i] / maxBin * colourCanvas.height))
+                                        colourCanvasCTX.stroke();
+    
+                                        colourCanvasCTX.strokeStyle = voronoiMap.colourScale(voronoiMap.scale(binWidth * i + minArea))
+                                        colourCanvasCTX.beginPath();
+                                        colourCanvasCTX.moveTo(i, colourCanvas.height);
+                                        colourCanvasCTX.lineTo(i, histogramY)
+                                        colourCanvasCTX.stroke();
+                                    }
+
+                                    processMin = !processMin;
+
+                                    voronoiMap.redrawVoronoi();
+                                });
+                            }
+
+
+
                             let buf = Buffer.from(Uint8Array.from(atob(data['Image']), c => c.charCodeAt(0)));
                             imageMap.updateFromArray(new Uint32Array(buf.buffer, buf.byteOffset, buf.byteLength / Uint32Array.BYTES_PER_ELEMENT))
                             voronoiMap.updateFromJSON(data['Voronoi'])
+                                
                         })
                     });
 

@@ -13,6 +13,9 @@ mkdir -p bin/linux
 mkdir -p bin/darwin
 mkdir -p dist
 
+# Clean up static
+rm -R static/temp
+
 # Linux
 go build -o bin/linux/$PROJECT
 rm -f dist/$PROJECT-linux.zip
