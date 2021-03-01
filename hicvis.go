@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"encoding/base64"
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
@@ -15,6 +16,7 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/jessevdk/go-flags"
@@ -347,8 +349,15 @@ func GetVoronoi(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	result, err := performVoronoi(pairs.Query{SourceChrom: sourceChrom, SourceStart: uint64(minX), SourceEnd: uint64(maxX), TargetChrom: targetChrom, TargetStart: uint64(minY), TargetEnd: uint64(maxY)},
-		smoothingIterations, numPixelsX, numPixelsY)
+	pairsQuery := pairs.Query{SourceChrom: sourceChrom, SourceStart: uint64(minX), SourceEnd: uint64(maxX), TargetChrom: targetChrom, TargetStart: uint64(minY), TargetEnd: uint64(maxY)}
+
+	points, err := pairsFile.Index().Search(pairsQuery)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	result, err := performVoronoi(points, pairsQuery, smoothingIterations, numPixelsX, numPixelsY)
 
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -364,11 +373,7 @@ func GetVoronoi(w http.ResponseWriter, r *http.Request) {
 	w.Write(bytes)
 }
 
-func performVoronoi(query pairs.Query, smoothingIterations int, numPixelsX, numPixelsY int) (*voronoi.Int16VoronoiResult, error) {
-	points, err := pairsFile.Index().Search(query)
-	if err != nil {
-		return nil, err
-	}
+func performVoronoi(points []*pairs.Entry, query pairs.Query, smoothingIterations int, numPixelsX, numPixelsY int) (*voronoi.Int16VoronoiResult, error) {
 
 	// Normalisation options for voronoi calculation:
 	// 1) No normalisation
@@ -469,6 +474,125 @@ func GetInteract(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Write(bytes)
+}
+
+func GetVoronoiAndImage(w http.ResponseWriter, r *http.Request) {
+	query := r.URL.Query()
+
+	sourceChrom := query.Get("sourceChrom")
+	targetChrom := query.Get("targetChrom")
+
+	numBins, err := strconv.Atoi(query.Get("numBins"))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	numPixelsX, err := strconv.Atoi(query.Get("pixelsX"))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	numPixelsY, err := strconv.Atoi(query.Get("pixelsY"))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	smoothingIterations, err := strconv.Atoi(query.Get("smoothingIterations"))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	minX, err := strconv.Atoi(query.Get("xStart"))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	minY, err := strconv.Atoi(query.Get("yStart"))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	maxX, err := strconv.Atoi(query.Get("xEnd"))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	maxY, err := strconv.Atoi(query.Get("yEnd"))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	pairsQuery := pairs.Query{SourceChrom: sourceChrom, SourceStart: uint64(minX), SourceEnd: uint64(maxX), TargetChrom: targetChrom, TargetStart: uint64(minY), TargetEnd: uint64(maxY)}
+
+	points, err := pairsFile.Index().Search(pairsQuery)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	var image []uint32
+	var result *voronoi.Int16VoronoiResult
+
+	buf := new(bytes.Buffer)
+
+	errs := make(chan error)
+	var wg sync.WaitGroup
+	wg.Add(2)
+
+	go func() {
+		defer wg.Done()
+		image = pairs.EntriesToImage(points, pairsQuery, uint64(numBins))
+		err = binary.Write(buf, binary.BigEndian, image)
+		if err != nil {
+			errs <- err
+		}
+		//		if err != nil {
+		//			http.Error(w, err.Error(), http.StatusInternalServerError)
+		//			return
+		//		}
+	}()
+
+	//fmt.Printf("Image is %d long and buffer is %d\n", len(image), len(buf.Bytes()))
+
+	go func() {
+		defer wg.Done()
+		result, err = performVoronoi(points, pairsQuery, smoothingIterations, numPixelsX, numPixelsY)
+		if err != nil {
+			errs <- err
+		}
+		//if err != nil {
+		//	http.Error(w, err.Error(), http.StatusInternalServerError)
+		//	return
+		//}
+	}()
+
+	wg.Wait()
+
+	select {
+	case err := <-errs:
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	default:
+		bytes, err := json.Marshal(struct {
+			Voronoi *voronoi.Int16VoronoiResult
+			Image   string
+		}{Voronoi: result,
+			Image: base64.StdEncoding.EncodeToString(buf.Bytes())}) //voronoi) //
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		w.Write(bytes)
+	}
+
 }
 
 func GetDensityImage(w http.ResponseWriter, r *http.Request) {
@@ -584,6 +708,7 @@ func startServer(listener net.Listener) {
 	router.HandleFunc("/details", GetDetails)
 	router.HandleFunc("/points", GetPoints)
 	router.HandleFunc("/voronoi", GetVoronoi)
+	router.HandleFunc("/voronoiandimage", GetVoronoiAndImage)
 	router.HandleFunc("/interact", GetInteract)
 	router.HandleFunc("/densityImage", GetDensityImage)
 	//router.HandleFunc("/", ListProjects).Methods("GET")

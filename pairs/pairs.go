@@ -260,6 +260,45 @@ func (file bgzfFile) Image(query Query, numBins uint64) ([]uint32, error) {
 	return imageData, err
 }
 
+func EntriesToImage(entries []*Entry, query Query, numBins uint64) []uint32 {
+	imageData := make([]uint32, numBins*numBins)
+
+	binSizeX := ((query.SourceEnd - query.SourceStart) / numBins) + 1
+	binSizeY := ((query.TargetEnd - query.TargetStart) / numBins) + 1
+
+	sameChrom := query.SourceChrom == query.TargetChrom
+
+	var xPos, yPos uint64
+
+	for _, entry := range entries {
+		if entry.SourceChrom != query.SourceChrom {
+			xPos = (entry.TargetPosition - query.SourceStart) / binSizeX
+			yPos = (entry.SourcePosition - query.TargetStart) / binSizeY
+		} else {
+			xPos = (entry.SourcePosition - query.SourceStart) / binSizeX
+			yPos = (entry.TargetPosition - query.TargetStart) / binSizeY
+		}
+
+		if xPos >= 0 && yPos >= 0 && xPos < numBins && yPos < numBins {
+			imageIndex := int(yPos)*int(numBins) + int(xPos)
+			imageData[imageIndex]++
+		}
+
+		// Check if reverse is within view, as we only store diagonal
+		if sameChrom {
+			xPos = (entry.TargetPosition - query.SourceStart) / binSizeX
+			yPos = (entry.SourcePosition - query.TargetStart) / binSizeY
+
+			if xPos >= 0 && yPos >= 0 && xPos < numBins && yPos < numBins {
+				imageIndex := int(yPos)*int(numBins) + int(xPos)
+				imageData[imageIndex]++
+			}
+		}
+	}
+
+	return imageData
+}
+
 func ParseBGZF(filename string) (File, error) {
 
 	var err error

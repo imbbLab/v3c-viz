@@ -52,7 +52,7 @@ export class ImageMap extends Axis {
         this.imageData = new Uint32Array();
         this.buffer = new Uint8ClampedArray();
 
-        
+
 
         var axisCanvasCTX = <CanvasRenderingContext2D>this.getAxisCanvas().getContext('2d');
         this.iData = axisCanvasCTX.createImageData(this.numBins, this.numBins);
@@ -144,7 +144,7 @@ export class ImageMap extends Axis {
         let imageThreshold = this.calculatePercentile(this.percentile);
         this.setImageThreshold(imageThreshold);
     }
-    
+
     setImageThreshold(threshold: number) {
         this.imageThreshold = threshold;
         this.thresholdImage();
@@ -211,6 +211,53 @@ export class ImageMap extends Axis {
         this.loadDensityImage(sourceChrom, targetChrom, minX, maxX, minY, maxY)
     }
 
+    async updateFromArray(imageData: Uint32Array) {
+        this.imageData = imageData;
+
+        let maxIntensity = 0;
+        let countNotZero = 0;
+
+        var numPoints = 0;
+
+        this.imageData.forEach(value => {
+            numPoints += value;
+
+            if (value > maxIntensity) {
+                maxIntensity = value;
+            }
+            if (value > 0) {
+                countNotZero += 1;
+            }
+        })
+
+        /*if (numPoints < this.voronoiPlot.maxNumberPointsToLoad) {
+            callback();
+        }*/
+
+        this.setPercentile(this.percentile);
+        /*if(this.imageThreshold < 0) {
+            this.setPercentile(0.95);
+        } else {
+            this.thresholdImage();
+        }*/
+        //console.log("Max intensity = " + maxIntensity);
+
+        //maxIntensity = this.calculatePercentile(0.95) /// countNotZero * 10
+        //console.log("Max intensity = " + maxIntensity);
+
+        //self.setImageThreshold(maxIntensity);
+
+
+
+
+
+        //this.updateViewLimits(startX, endX, startY, endY);
+        this.redraw();
+
+
+        this.unlockImage();
+    }
+
     loadDensityImage(sourceChrom: Chromosome, targetChrom: Chromosome, startX: number, endX: number, startY: number, endY: number) {
         this.lockImage();
 
@@ -228,57 +275,11 @@ export class ImageMap extends Axis {
 
                     // Examine the text in the response
                     response.arrayBuffer().then((byteBuffer) => {
-                        this.imageData = new Uint32Array(byteBuffer);
+                        self.updateFromArray(new Uint32Array(byteBuffer));
                         //console.log(this.imageData);
 
 
-                        let maxIntensity = 0;
-                        let countNotZero = 0;
 
-                        var numPoints = 0;
-
-                        this.imageData.forEach(value => {
-                            numPoints += value;
-
-                            if (value > maxIntensity) {
-                                maxIntensity = value;
-                            }
-                            if (value > 0) {
-                                countNotZero += 1;
-                            }
-                        })
-
-                        console.log("Found number of points = " + numPoints)
-
-                        /*if (numPoints < this.voronoiPlot.maxNumberPointsToLoad) {
-                            callback();
-                        }*/
-
-                        this.setPercentile(this.percentile);
-                        /*if(this.imageThreshold < 0) {
-                            this.setPercentile(0.95);
-                        } else {
-                            this.thresholdImage();
-                        }*/
-                        //console.log("Max intensity = " + maxIntensity);
-
-                        //maxIntensity = this.calculatePercentile(0.95) /// countNotZero * 10
-                        //console.log("Max intensity = " + maxIntensity);
-
-
-                        this.numPointsLabel.innerText = "Number of datapoints (in view): " + numPoints;
-
-                        //self.setImageThreshold(maxIntensity);
-
-                        
-
-
-
-                        this.updateViewLimits(startX, endX, startY, endY);
-                        this.redraw();
-
-
-                        self.unlockImage();
                     });
                 }
             )

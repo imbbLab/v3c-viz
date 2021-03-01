@@ -340,7 +340,7 @@ export abstract class Axis {
         this.maxDataY = maxY;
     }
 
-    protected updateViewLimits(minX: number, maxX: number, minY: number, maxY: number) {
+    updateViewLimits(minX: number, maxX: number, minY: number, maxY: number) {
         this.minViewX = minX;
         this.maxViewX = maxX;
         this.minViewY = minY;

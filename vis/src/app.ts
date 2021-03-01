@@ -180,9 +180,6 @@ function requestViewUpdate(request: ViewRequest) {
     timeoutFunction = setTimeout(() => {
         // Update view if no new requests in last 50 ms
 
-        console.log(xRequest);
-        console.log(yRequest);
-
         if(xRequest && yRequest) {
             let newSourceChrom = <Chromosome>chromosomes.get(xRequest.locus.chr)
             let newTargetChrom = <Chromosome>chromosomes.get(yRequest.locus.chr)
@@ -200,11 +197,32 @@ function requestViewUpdate(request: ViewRequest) {
                 
                 startY = 0
                 endY = newTargetChrom.length
-                targetChrom = newTargetChrom
+                targetChrom = newTargetChrom      
             }
 
-            imageMap.requestView(sourceChrom, targetChrom, startX, endX, startY, endY)
-            voronoiMap.requestView(sourceChrom, targetChrom, startX, endX, startY, endY)
+            voronoiMap.setChromPair(sourceChrom, targetChrom);  
+            voronoiMap.updateViewLimits(startX, endX, startY, endY);
+            imageMap.setChromPair(sourceChrom, targetChrom);  
+            imageMap.updateViewLimits(startX, endX, startY, endY);
+
+            fetch('./voronoiandimage?pixelsX=' + voronoiMap.getVoronoiDrawWidth() + '&pixelsY=' + voronoiMap.getVoronoiDrawHeight() + '&smoothingIterations=' + voronoiMap.smoothingRepetitions + '&numBins=' + imageMap.numBins + '&sourceChrom=' + sourceChrom.name + '&targetChrom=' + targetChrom.name + '&xStart=' + startX + '&xEnd=' + endX + '&yStart=' + startY + '&yEnd=' + endY)
+            .then(
+                (response) => {
+                    if (response.status !== 200) {
+                        console.log('Looks like there was a problem. Status Code: ' +
+                            response.status);
+                        return;
+                    }
+
+                    response.json().then(data => {
+                        let buf = Buffer.from(Uint8Array.from(atob(data['Image']), c => c.charCodeAt(0)));
+                        imageMap.updateFromArray(new Uint32Array(buf.buffer, buf.byteOffset, buf.byteLength / Uint32Array.BYTES_PER_ELEMENT))          
+                        voronoiMap.updateFromJSON(data['Voronoi'])
+                    })
+                });
+
+            //imageMap.requestView(sourceChrom, targetChrom, startX, endX, startY, endY)
+            //voronoiMap.requestView(sourceChrom, targetChrom, startX, endX, startY, endY)
         }
 
         clearTimeout(timeoutFunction);
