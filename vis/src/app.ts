@@ -205,6 +205,15 @@ function requestViewUpdate(request: ViewRequest) {
             imageMap.setChromPair(sourceChrom, targetChrom);  
             imageMap.updateViewLimits(startX, endX, startY, endY);
 
+            let interactionSet = interactions.get(sourceChrom.name+"-"+targetChrom.name)
+            if(interactionSet) {
+                imageMap.setInteractions(interactionSet);
+                voronoiMap.setInteractions(interactionSet);
+            } else {
+                imageMap.setInteractions([])
+                voronoiMap.setInteractions([]);
+            }
+
             fetch('./voronoiandimage?pixelsX=' + voronoiMap.getVoronoiDrawWidth() + '&pixelsY=' + voronoiMap.getVoronoiDrawHeight() + '&smoothingIterations=' + voronoiMap.smoothingRepetitions + '&numBins=' + imageMap.numBins + '&sourceChrom=' + sourceChrom.name + '&targetChrom=' + targetChrom.name + '&xStart=' + startX + '&xEnd=' + endX + '&yStart=' + startY + '&yEnd=' + endY)
             .then(
                 (response) => {
