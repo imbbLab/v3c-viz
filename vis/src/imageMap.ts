@@ -103,11 +103,11 @@ export class ImageMap extends Axis {
         this.callback = callback;
     }
 
-    onImageLoad: (minX: number, maxX: number, minY: number, maxY: number) => void = () => {};
+    //onImageLoad: (minX: number, maxX: number, minY: number, maxY: number) => void = () => {};
 
-    setOnImageLoad(onImageLoad: (minX: number, maxX: number, minY: number, maxY: number) => void) {
-        this.onImageLoad = onImageLoad;
-    }
+    //setOnImageLoad(onImageLoad: (minX: number, maxX: number, minY: number, maxY: number) => void) {
+    //    this.onImageLoad = onImageLoad;
+    //}
 
     setChromPair(sourceChrom: Chromosome, targetChrom: Chromosome) {
         super.setChromPair(sourceChrom, targetChrom);

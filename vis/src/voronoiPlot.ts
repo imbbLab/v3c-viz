@@ -93,15 +93,16 @@ export class VoronoiPlot extends Axis {
 
     }
 
-    sourceChrom: Chromosome = new Chromosome("", 0)
-    targetChrom: Chromosome = new Chromosome("", 0)
+    //sourceChrom: Chromosome = new Chromosome("", 0)
+    //targetChrom: Chromosome = new Chromosome("", 0)
 
     voronoiDrawnWidth = 0
     voronoiDrawnHeight = 0
 
     getVoronoiFromServer(sourceChrom: Chromosome, targetChrom: Chromosome, minX: number, maxX: number, minY: number, maxY: number) {
-        this.sourceChrom = sourceChrom
-        this.targetChrom = targetChrom
+        this.setChromPair(sourceChrom, targetChrom)
+        //this.sourceChrom = sourceChrom
+        //this.targetChrom = targetChrom
         this.minLoadedX = minX;
         this.maxLoadedX = maxX;
         this.minLoadedY = minY;

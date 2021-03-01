@@ -26,6 +26,7 @@ export class Rectangle {
 
 
 export abstract class Axis {
+    doubleClickEventListeners: {():void}[] = []
     regionSelectEventListeners: {(region: Rectangle):void}[] = []
 
     canvas: HTMLCanvasElement;
@@ -147,6 +148,9 @@ export abstract class Axis {
         });
 
         this.canvas.addEventListener('dblclick', () => {
+            for(let callback of this.doubleClickEventListeners) {
+                callback();
+            }
             //this.updateView(this.minDataX, this.maxDataX, this.minDataY, this.maxDataY);
         });
 
@@ -197,6 +201,10 @@ export abstract class Axis {
 
             //updatePoints()
         });
+    }
+
+    addDoubleClickEventListener(callback: {():void}) {
+        this.doubleClickEventListeners.push(callback);
     }
 
     addRegionSelectEventListener(callback: {(region: Rectangle):void}) {

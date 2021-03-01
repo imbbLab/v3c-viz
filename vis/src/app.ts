@@ -9,7 +9,6 @@ import * as dat from 'dat.gui';
 import * as igv from 'igv';
 import * as igvutils from 'igv-utils';
 import { Locus, Chromosome, Interaction } from "./chromosome";
-import { copyFileSync } from "fs";
 import { Rectangle } from "./axis";
 
 //import igv = require('igv');
@@ -185,10 +184,27 @@ function requestViewUpdate(request: ViewRequest) {
         console.log(yRequest);
 
         if(xRequest && yRequest) {
-            imageMap.requestView(<Chromosome>chromosomes.get(xRequest.locus.chr), <Chromosome>chromosomes.get(yRequest.locus.chr), 
-                parseInt(xRequest.locus.start), parseInt(xRequest.locus.initialEnd), parseInt(yRequest.locus.start), parseInt(yRequest.locus.initialEnd))
-            voronoiMap.requestView(<Chromosome>chromosomes.get(xRequest.locus.chr), <Chromosome>chromosomes.get(yRequest.locus.chr), 
-                parseInt(xRequest.locus.start), parseInt(xRequest.locus.initialEnd), parseInt(yRequest.locus.start), parseInt(yRequest.locus.initialEnd))
+            let newSourceChrom = <Chromosome>chromosomes.get(xRequest.locus.chr)
+            let newTargetChrom = <Chromosome>chromosomes.get(yRequest.locus.chr)
+
+            let startX = parseInt(xRequest.locus.start)
+            let endX = parseInt(xRequest.locus.initialEnd)
+
+            let startY = parseInt(yRequest.locus.start)
+            let endY = parseInt(yRequest.locus.initialEnd)
+
+            if(sourceChrom != newSourceChrom || targetChrom != newTargetChrom) {
+                startX = 0
+                endX = newSourceChrom.length
+                sourceChrom = newSourceChrom
+                
+                startY = 0
+                endY = newTargetChrom.length
+                targetChrom = newTargetChrom
+            }
+
+            imageMap.requestView(sourceChrom, targetChrom, startX, endX, startY, endY)
+            voronoiMap.requestView(sourceChrom, targetChrom, startX, endX, startY, endY)
         }
 
         clearTimeout(timeoutFunction);
@@ -212,23 +228,23 @@ fetch('./details')
                     response.json().then(details => {
                         console.log(details);
 
-                        var sourceChromSelect = <HTMLSelectElement>document.getElementById('sourceChromSelect');
-                        var targetChromSelect = <HTMLSelectElement>document.getElementById('targetChromSelect');
+                        //var sourceChromSelect = <HTMLSelectElement>document.getElementById('sourceChromSelect');
+                        //var targetChromSelect = <HTMLSelectElement>document.getElementById('targetChromSelect');
                         // Clear all options 
-                        var i, L = sourceChromSelect.options.length - 1;
-                        for(i = L; i >= 0; i--) {
-                            sourceChromSelect.remove(i);
-                            targetChromSelect.remove(i);
-                        }
+                        //var i, L = sourceChromSelect.options.length - 1;
+                        //for(i = L; i >= 0; i--) {
+                        //    sourceChromSelect.remove(i);
+                        //    targetChromSelect.remove(i);
+                        //}
 
                         var chromosomeDetails = details['Chromosomes'];
                         chromosomeDetails.forEach((chromosome: any) => {
-                            sourceChromSelect.options.add(new Option(chromosome['Name'], chromosome['Name']));
-                            targetChromSelect.options.add(new Option(chromosome['Name'], chromosome['Name']));
+                            //sourceChromSelect.options.add(new Option(chromosome['Name'], chromosome['Name']));
+                            //targetChromSelect.options.add(new Option(chromosome['Name'], chromosome['Name']));
 
                             chromosomes.set(chromosome['Name'], Chromosome.fromJSON(chromosome))
                         });
-                        sourceChromSelect.addEventListener("change", (event) => {
+                        /*sourceChromSelect.addEventListener("change", (event) => {
                             sourceChrom = <Chromosome>chromosomes.get(sourceChromSelect.value);
 
                             imageMap.setChromPair(sourceChrom, targetChrom)
@@ -249,7 +265,7 @@ fetch('./details')
                             } else {
                                 imageMap.setInteractions([])
                             }
-                        })
+                        })*/
 
 
                         sourceChrom = <Chromosome>chromosomes.get(details['Chromosomes'][0]['Name']) 
@@ -530,12 +546,20 @@ fetch('./details')
                                 imageMap = new ImageMap(numBins, voronoiMap);
 
                                 voronoiMap.addRegionSelectEventListener((region: Rectangle) => {
-                                    belowBrowser.search(sourceChrom.name + ":" + region.min.x + "-" + region.max.x);
-                                    rightBrowser.search(targetChrom.name + ":" + region.min.y + "-" + region.max.y);
+                                    belowBrowser.search(voronoiMap.sourceChrom.name + ":" + region.min.x + "-" + region.max.x);
+                                    rightBrowser.search(voronoiMap.targetChrom.name + ":" + region.min.y + "-" + region.max.y);
+                                })
+                                voronoiMap.addDoubleClickEventListener(() => {
+                                    belowBrowser.search(voronoiMap.sourceChrom.name + ":1-" + voronoiMap.sourceChrom.length);
+                                    rightBrowser.search(voronoiMap.targetChrom.name + ":1-" + voronoiMap.targetChrom.length);
                                 })
                                 imageMap.addRegionSelectEventListener((region: Rectangle) => {
-                                    belowBrowser.search(sourceChrom.name + ":" + region.min.x + "-" + region.max.x);
-                                    rightBrowser.search(targetChrom.name + ":" + region.min.y + "-" + region.max.y);
+                                    belowBrowser.search(imageMap.sourceChrom.name + ":" + region.min.x + "-" + region.max.x);
+                                    rightBrowser.search(imageMap.targetChrom.name + ":" + region.min.y + "-" + region.max.y);
+                                })
+                                imageMap.addDoubleClickEventListener(() => {
+                                    belowBrowser.search(voronoiMap.sourceChrom.name + ":1-" + voronoiMap.sourceChrom.length);
+                                    rightBrowser.search(voronoiMap.targetChrom.name + ":1-" + voronoiMap.targetChrom.length);
                                 })
 
                                 /*imageMap.setOnImageLoad((minX, maxX, minY, maxY) => {
