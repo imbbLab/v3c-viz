@@ -16,3 +16,5 @@ oldstuff.txt
 
 vis/node_modules/
 vis/package-lock.json
+
+static/temp/
