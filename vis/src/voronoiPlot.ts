@@ -19,6 +19,7 @@ export class VoronoiPlot extends Axis {
     rightBrowser: igv.IGVBrowser
 
     displayVoronoiEdges: boolean;
+    displayCentroid: boolean = false;
     displayVoronoiPoints: boolean;
 
     generateVoronoiOnServer: boolean = true
@@ -153,6 +154,13 @@ export class VoronoiPlot extends Axis {
         voronoiCanvasCTX.clearRect(0, 0, this.voronoiCanvas.width, this.voronoiCanvas.height);
 
         // Draw the polygons that are too small to be drawn with detail (between 1 and 2 pixels width/height)
+        // If displaying edges, then display them with the same colour as the edges, otherwise same as the smallest value on colour scale
+        if(this.displayVoronoiEdges || this.displayCentroid) {
+            voronoiCanvasCTX.fillStyle = 'rgb(0, 0, 0)'
+        } else {
+            voronoiCanvasCTX.fillStyle = this.colourScale(0);
+        }
+
         if (this.singlePoints) {
             for (let i = 0; i < this.singlePoints.length; i++) {
                 voronoiCanvasCTX.fillRect(this.singlePoints[i]['X'], this.singlePoints[i]['Y'], 1, 1);
@@ -188,13 +196,19 @@ export class VoronoiPlot extends Axis {
                 //this.voronoi.renderCell(i, voronoiCanvasCTX);
                 //console.log('rgb(100, 100, ' + Math.round(255*(area / maxArea))  + ')');            
                 voronoiCanvasCTX.fill();
-                voronoiCanvasCTX.stroke();
+
+                if(this.displayVoronoiEdges) {
+                    voronoiCanvasCTX.stroke();
+                }
             }
 
             voronoiCanvasCTX.fillStyle = 'rgb(0, 0, 0)'
-            if (this.displayVoronoiPoints) {
-                for (let i = 0; i < this.polygons.length; i++) {
-                    voronoiCanvasCTX.fillRect(this.polygons[i]['DataPoint'][0], this.polygons[i]['DataPoint'][1], 2, 2);
+
+            if(this.displayCentroid) {
+                if (this.displayVoronoiPoints) {
+                    for (let i = 0; i < this.polygons.length; i++) {
+                        voronoiCanvasCTX.fillRect(this.polygons[i]['DataPoint'][0], this.polygons[i]['DataPoint'][1], 2, 2);
+                    }
                 }
             }
         }

@@ -780,8 +780,12 @@ fetch('./details')
                         voronoiGUI.add(voronoiMap, 'generateVoronoiOnServer').name("Server Voronoi")
 
                         voronoiGUI.add(voronoiMap, 'displayVoronoiEdges').name('Display edges').onChange((value) => {
-                            voronoiMap.drawVoronoi();
-                            voronoiMap.redraw();
+                            //voronoiMap.drawVoronoi();
+                            //voronoiMap.redraw();
+                            voronoiMap.redrawVoronoi();
+                        })
+                        voronoiGUI.add(voronoiMap, 'displayCentroid').name('Display centroid').onChange((value) => {
+                            voronoiMap.redrawVoronoi();
                         })
 
                         const smoothingMenu = voronoiGUI.addFolder('Smoothing');
