@@ -193,6 +193,13 @@ function requestViewUpdate(request: ViewRequest) {
             let startY = parseInt(yRequest.locus.start)
             let endY = parseInt(yRequest.locus.initialEnd)
 
+            if(startX < 0) {
+                startX = 0;
+            }
+            if(startY < 0) {
+                startY = 0;
+            }
+
             if (sourceChrom != newSourceChrom || targetChrom != newTargetChrom) {
                 startX = 0
                 endX = newSourceChrom.length
@@ -611,8 +618,8 @@ fetch('./details')
                         }
 
 
-                        belowBrowser.search(sourceChrom.name + ":1-" + sourceChrom.length);
-                        rightBrowser.search(targetChrom.name + ":1-" + targetChrom.length);
+                        belowBrowser.search(sourceChrom.name + ":0-" + sourceChrom.length);
+                        rightBrowser.search(targetChrom.name + ":0-" + targetChrom.length);
 
                         let fileSelector = <HTMLInputElement>document.getElementById('file-selector')
                         fileSelector.addEventListener('change', (event) => {
@@ -721,16 +728,16 @@ fetch('./details')
                             rightBrowser.search(voronoiMap.targetChrom.name + ":" + region.min.y + "-" + region.max.y);
                         })
                         voronoiMap.addDoubleClickEventListener(() => {
-                            belowBrowser.search(voronoiMap.sourceChrom.name + ":1-" + voronoiMap.sourceChrom.length);
-                            rightBrowser.search(voronoiMap.targetChrom.name + ":1-" + voronoiMap.targetChrom.length);
+                            belowBrowser.search(voronoiMap.sourceChrom.name + ":0-" + voronoiMap.sourceChrom.length);
+                            rightBrowser.search(voronoiMap.targetChrom.name + ":0-" + voronoiMap.targetChrom.length);
                         })
                         imageMap.addRegionSelectEventListener((region: Rectangle) => {
                             belowBrowser.search(imageMap.sourceChrom.name + ":" + region.min.x + "-" + region.max.x);
                             rightBrowser.search(imageMap.targetChrom.name + ":" + region.min.y + "-" + region.max.y);
                         })
                         imageMap.addDoubleClickEventListener(() => {
-                            belowBrowser.search(voronoiMap.sourceChrom.name + ":1-" + voronoiMap.sourceChrom.length);
-                            rightBrowser.search(voronoiMap.targetChrom.name + ":1-" + voronoiMap.targetChrom.length);
+                            belowBrowser.search(voronoiMap.sourceChrom.name + ":0-" + voronoiMap.sourceChrom.length);
+                            rightBrowser.search(voronoiMap.targetChrom.name + ":0-" + voronoiMap.targetChrom.length);
                         })
 
                         /*imageMap.setOnImageLoad((minX, maxX, minY, maxY) => {

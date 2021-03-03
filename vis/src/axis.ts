@@ -180,6 +180,13 @@ export abstract class Axis {
                 let minY = Math.min(startAxisPos.y, endAxisPos.y) * yDiff + self.minViewY;
                 let maxY = Math.max(startAxisPos.y, endAxisPos.y) * yDiff + self.minViewY;
 
+                if(minX < self.minViewX) {
+                    minX = self.minViewX
+                }
+                if(minY < self.minViewY) {
+                    minY = self.minViewY
+                }
+
                 let region: Rectangle = {min: {x: minX, y: minY}, max: {x:maxX, y:maxY}}
 
                 for(let callback of self.regionSelectEventListeners) {
