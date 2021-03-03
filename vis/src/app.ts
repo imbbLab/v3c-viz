@@ -777,7 +777,7 @@ fetch('./details')
                         console.log(document.getElementById('voronoi-canvas-div'))
                         document.getElementById('voronoi-controls')?.appendChild(voronoiGUI.domElement);
 
-                        voronoiGUI.add(voronoiMap, 'generateVoronoiOnServer').name("Server Voronoi")
+                        //voronoiGUI.add(voronoiMap, 'generateVoronoiOnServer').name("Server Voronoi")
 
                         voronoiGUI.add(voronoiMap, 'displayVoronoiEdges').name('Display edges').onChange((value) => {
                             //voronoiMap.drawVoronoi();
@@ -790,16 +790,18 @@ fetch('./details')
 
                         const smoothingMenu = voronoiGUI.addFolder('Smoothing');
                         smoothingMenu.add(voronoiMap, 'smoothingRepetitions', 0, 10, 1).name('Repetitions').onChange((value) => {
-                            voronoiMap.calculateVoronoi();
+                            requestViewUpdate({ dimension: "x", locus: bottomBrowser.referenceFrameList[0] })
+                            requestViewUpdate({ dimension: "y", locus: rightBrowser.referenceFrameList[0] })
+                            /*voronoiMap.calculateVoronoi();
                             voronoiMap.drawVoronoi();
-                            voronoiMap.redraw();
+                            voronoiMap.redraw();*/
                         })
 
-                        smoothingMenu.add(voronoiMap, 'omega', 0, 2).name('Omega').onChange((value) => {
+                        /*smoothingMenu.add(voronoiMap, 'omega', 0, 2).name('Omega').onChange((value) => {
                             voronoiMap.calculateVoronoi();
                             voronoiMap.drawVoronoi();
                             voronoiMap.redraw();
-                        })
+                        })*/
 
                         voronoiMap.addContactMenu(voronoiGUI);
 

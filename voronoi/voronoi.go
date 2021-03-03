@@ -1,6 +1,7 @@
 package voronoi
 
 import (
+	"errors"
 	"fmt"
 	"math"
 	"sync"
@@ -37,15 +38,13 @@ type Voronoi struct {
 //	return delaunay.Point{X: point.X / float64(sourceChrom.Length), Y: point.Y / float64(targetChrom.Length)}
 //}
 
-func FromPoints(data []delaunay.Point, bounds Rectangle, normalisation Rectangle, smoothingIterations int) (*Voronoi, error) {
+func FromPoints(data []delaunay.Point, bounds Rectangle, normalisation Rectangle, smoothingIterations int) (vor *Voronoi, err error) {
 	if len(data) < 1 {
 		return &Voronoi{}, nil
 	}
 
-	var err error
 	var totalPoints []delaunay.Point
 	var triangulation *delaunay.Triangulation
-	var vor *Voronoi
 
 	fixedPoint1 := delaunay.Point{X: bounds.Min.X - bounds.Width(), Y: bounds.Min.Y + bounds.Height()/2}
 	fixedPoint2 := delaunay.Point{X: bounds.Max.X + bounds.Width(), Y: bounds.Min.Y + bounds.Height()/2}
@@ -71,6 +70,16 @@ func FromPoints(data []delaunay.Point, bounds Rectangle, normalisation Rectangle
 	var elapsed time.Duration
 
 	for i := 0; i <= smoothingIterations; i++ {
+		defer func() {
+			if r := recover(); r != nil {
+
+				fmt.Printf("Paniced when processing the points %v\n", totalPoints)
+				fmt.Println(r)
+
+				vor = nil
+				err = errors.New("error when performing voronoi")
+			}
+		}()
 		midPoint = time.Now()
 		fmt.Println("Starting triangulation...")
 		triangulation, err = delaunay.Triangulate(totalPoints)
