@@ -70,11 +70,12 @@ func (index BGZFIndex) getChunksFromQuery(query Query) []*ChromPairChunk {
 	chromPairName := query.SourceChrom + "-" + query.TargetChrom
 	if chromPairs, ok := index.ChromPairChunks[chromPairName]; ok {
 		for index, pair := range chromPairs {
-			if query.SourceStart < pair.EndEntry.SourcePosition {
+			//if (query.SourceStart < pair.EndEntry.SourcePosition) && (pair.StartEntry.SourcePosition < query.SourceEnd) &&
+			//	(query.TargetStart < pair.EndEntry.TargetPosition) && (pair.StartEntry.TargetPosition < query.TargetEnd) {
+			if (query.SourceStart < pair.MaxX) && (pair.MinX < query.SourceEnd) &&
+				(query.TargetStart < pair.MaxY) && (pair.MinY < query.TargetEnd) {
+
 				chunkstoLoad = append(chunkstoLoad, chromPairs[index])
-			}
-			if query.SourceEnd > pair.StartEntry.SourcePosition {
-				break
 			}
 		}
 	}
@@ -83,11 +84,9 @@ func (index BGZFIndex) getChunksFromQuery(query Query) []*ChromPairChunk {
 	chromPairName = query.TargetChrom + "-" + query.SourceChrom
 	if chromPairs, ok := index.ChromPairChunks[chromPairName]; ok {
 		for index, pair := range chromPairs {
-			if query.TargetStart < pair.EndEntry.SourcePosition {
+			if (query.TargetStart < pair.MaxX) && (pair.MaxX < query.TargetEnd) &&
+				(query.SourceStart < pair.MaxY) && (pair.MinY < query.SourceEnd) {
 				chunkstoLoad = append(chunkstoLoad, chromPairs[index])
-			}
-			if query.TargetEnd > pair.StartEntry.SourcePosition {
-				break
 			}
 			/*if query.TargetStart >= pair.StartEntry.SourcePosition && query.TargetStart <= pair.EndEntry.SourcePosition {
 				withinBounds = true

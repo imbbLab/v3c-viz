@@ -60,10 +60,11 @@ var numPixelsInOverviewImage uint32 = 200
 
 var opts struct {
 	// Example of a required flag
-	DataFile     string `short:"d" long:"data" description:"Data to load (.pairs)" required:"true"`
-	Genome       string `short:"g" long:"genome" description:"Genome to load" required:"false"`
-	InteractFile string `short:"i" long:"interact" description:"Interact file to visualise" required:"false"`
-	Port         string `short:"p" long:"port" description:"Port used for the server" default:"5002"`
+	DataFile             string `short:"d" long:"data" description:"Data to load (.pairs)" required:"true"`
+	Genome               string `short:"g" long:"genome" description:"Genome to load" required:"false"`
+	InteractFile         string `short:"i" long:"interact" description:"Interact file to visualise" required:"false"`
+	MaximumVoronoiPoints int    `long:"maxpoints" description:"Maximum points to calculate voronoi" default:"100000"`
+	Port                 string `short:"p" long:"port" description:"Port used for the server" default:"5002"`
 }
 
 // open opens the specified URL in the default browser of the user.
@@ -130,6 +131,18 @@ func main() {
 	}
 
 	//fmt.Println(pairsFile.Chromosomes())
+
+	// a, err := pairsFile.Index().Search(pairs.Query{SourceChrom: "chr3R", SourceStart: 3000000, SourceEnd: 3500000, TargetChrom: "chr3R", TargetStart: 3000000, TargetEnd: 3500000})
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+	// fmt.Println(len(a))
+
+	// a, err = pairsFile.Index().Search(pairs.Query{SourceChrom: "chr2R", SourceStart: 1, SourceEnd: 35069853, TargetChrom: "chr3R", TargetStart: 1, TargetEnd: 35069853})
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+	// fmt.Println(len(a))
 
 	//a, err := pairsFile.Index().Search(pairs.Query{SourceChrom: "chr2L", SourceStart: 12000000, SourceEnd: 15000000, TargetChrom: "chr2L", TargetStart: 10000000, TargetEnd: 15000000})
 	//a, err := performVoronoi(pairs.Query{"chr2R", 17953378, 18042126, "chr3R", 1122462, 4463714}, 1, 700, 700)
@@ -565,9 +578,12 @@ func GetVoronoiAndImage(w http.ResponseWriter, r *http.Request) {
 
 	go func() {
 		defer wg.Done()
-		result, err = performVoronoi(points, pairsQuery, smoothingIterations, numPixelsX, numPixelsY)
-		if err != nil {
-			errs <- err
+
+		if len(points) < opts.MaximumVoronoiPoints {
+			result, err = performVoronoi(points, pairsQuery, smoothingIterations, numPixelsX, numPixelsY)
+			if err != nil {
+				errs <- err
+			}
 		}
 		//if err != nil {
 		//	http.Error(w, err.Error(), http.StatusInternalServerError)

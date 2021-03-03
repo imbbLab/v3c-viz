@@ -39,8 +39,13 @@ type ChromPairChunk struct {
 	ChromPairName string
 	NumberLines   int
 
-	StartEntry *Entry
-	EndEntry   *Entry
+	//	StartEntry *Entry
+	//	EndEntry   *Entry
+
+	MinX uint64
+	MaxX uint64
+	MinY uint64
+	MaxY uint64
 }
 
 type File interface {
@@ -359,9 +364,13 @@ func ParseBGZF(filename string) (File, error) {
 	curChromPairChunk := &ChromPairChunk{}
 	pairsFile.index.ChromPairChunks[firstEntry.ChromPairName()] = append(pairsFile.index.ChromPairChunks[firstEntry.ChromPairName()], curChromPairChunk)
 	curChromPairChunk.StartChunk = pairsFile.bgzfReader.LastChunk()
-	curChromPairChunk.StartEntry = firstEntry
+	//curChromPairChunk.StartEntry = firstEntry
+	curChromPairChunk.MinX = firstEntry.SourcePosition
+	curChromPairChunk.MaxX = firstEntry.SourcePosition
 	curChromPairChunk.EndChunk = pairsFile.bgzfReader.LastChunk()
-	curChromPairChunk.EndEntry = firstEntry
+	//curChromPairChunk.EndEntry = firstEntry
+	curChromPairChunk.MinY = firstEntry.TargetPosition
+	curChromPairChunk.MaxY = firstEntry.TargetPosition
 
 	//binSizeX := (pairsFile.chromsizes[firstEntry.SourceChrom].Length / numBins) + 1
 	//binSizeY := (pairsFile.chromsizes[firstEntry.TargetChrom].Length / numBins) + 1
@@ -390,6 +399,12 @@ func ParseBGZF(filename string) (File, error) {
 			return nil, err
 		}
 
+		/*if curEntry.SourceChrom == "chr3R" && curEntry.SourcePosition > 19843050 && curEntry.TargetPosition <= 20585520 {
+			fmt.Println(curEntry)
+			fmt.Println(curChromPairChunk)
+			fmt.Println(pairsFile.index.ChromPairChunks[curEntry.ChromPairName()])
+		}*/
+
 		// Check if the new line is describing a different source and target chromosome
 		if lastEntry != curEntry.ChromPairName() {
 			lineCount = 0
@@ -409,10 +424,15 @@ func ParseBGZF(filename string) (File, error) {
 		if lineCount == 0 {
 			curChromPairChunk = &ChromPairChunk{}
 			pairsFile.index.ChromPairChunks[curEntry.ChromPairName()] = append(pairsFile.index.ChromPairChunks[curEntry.ChromPairName()], curChromPairChunk)
+
 			curChromPairChunk.StartChunk = pairsFile.bgzfReader.LastChunk()
-			curChromPairChunk.StartEntry = curEntry
+			//curChromPairChunk.StartEntry = curEntry
+			curChromPairChunk.MinX = curEntry.SourcePosition
+			curChromPairChunk.MaxX = curEntry.SourcePosition
 			curChromPairChunk.EndChunk = pairsFile.bgzfReader.LastChunk()
-			curChromPairChunk.EndEntry = curEntry
+			//curChromPairChunk.EndEntry = curEntry
+			curChromPairChunk.MinY = curEntry.TargetPosition
+			curChromPairChunk.MaxY = curEntry.TargetPosition
 		}
 
 		// Update the line count
@@ -422,7 +442,20 @@ func ParseBGZF(filename string) (File, error) {
 		// Update the latest 'end' chunk found and the current line count
 		curChromPairChunk.NumberLines = lineCount
 		curChromPairChunk.EndChunk = pairsFile.bgzfReader.LastChunk()
-		curChromPairChunk.EndEntry = curEntry
+
+		if curChromPairChunk.MinX > curEntry.SourcePosition {
+			curChromPairChunk.MinX = curEntry.SourcePosition
+		}
+		if curChromPairChunk.MaxX < curEntry.SourcePosition {
+			curChromPairChunk.MaxX = curEntry.SourcePosition
+		}
+		if curChromPairChunk.MinY > curEntry.TargetPosition {
+			curChromPairChunk.MinY = curEntry.TargetPosition
+		}
+		if curChromPairChunk.MaxY < curEntry.TargetPosition {
+			curChromPairChunk.MaxY = curEntry.TargetPosition
+		}
+		//curChromPairChunk.EndEntry = curEntry
 
 		//imageIndex = int(curEntry.TargetPosition/binSizeY)*int(numBins) + int(curEntry.SourcePosition/binSizeX)
 		//imageData[imageIndex]++
