@@ -84,7 +84,7 @@ type baseFile struct {
 }
 
 func (file baseFile) Close() {
-	file.Close()
+	file.file.Close()
 }
 
 func (file *baseFile) parseHeader(reader *bufio.Reader) (*Entry, error) {
