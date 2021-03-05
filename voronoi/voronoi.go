@@ -172,8 +172,11 @@ func calculateVoronoi(triangulation *delaunay.Triangulation, bounds Rectangle) *
 			}
 
 			// Clip the polygon to the view
-			polygon = SutherlandHodgman(polygon, clipArea)
 
+			//polygon.calculateArea()
+			//area := polygon.Area
+			polygon = SutherlandHodgman(polygon, clipArea)
+			//polygon.Area = area
 			polygon.calculateArea()
 			polygon.DataPoint = polygon.Centroid()
 			voronoi.Polygons[p] = polygon

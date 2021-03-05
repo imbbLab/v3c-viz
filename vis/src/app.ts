@@ -8,11 +8,12 @@ import * as dat from 'dat.gui';
 //import 'jquery-ui-dist/jquery-ui';
 import * as igv from 'igv';
 import * as igvutils from 'igv-utils';
-import { Locus, Chromosome, Interaction } from "./chromosome";
+import { Locus, Chromosome, Interaction, getChromosomeFromMap } from "./chromosome";
 import { Rectangle } from "./axis";
 
 
 import * as d3 from 'd3';
+import { area } from "d3";
 
 //import igv = require('igv');
 //import { browser } from "igv_wrapper";
@@ -163,14 +164,54 @@ var xRequest: ViewRequest | null
 var yRequest: ViewRequest | null
 var timeoutFunction: any;
 
-function getChromosome(name: string): Chromosome {
-    let chromosome = chromosomes.get(name);
+interface MinMax {
+    Min: number
+    Max: number
+}
 
-    if(chromosome) {
-        return chromosome
+function getMinMaxArea(polygons: any, twoPoints: any, points: any): MinMax {
+    var minMax: MinMax = { Min: -1, Max: -1};
+
+    if (polygons) {
+        for (let i = 0; i < polygons.length; i++) {
+            let area = Math.log(polygons[i]['Area'])
+
+            if (minMax.Min == -1 || area < minMax.Min) {
+                minMax.Min = area
+            }
+            if (minMax.Max == -1 || area > minMax.Max) {
+                minMax.Max = area
+            }
+        }
     }
 
-    return <Chromosome>chromosomes.get(name.replace("chr", ""))
+    if (twoPoints) {
+        for (let i = 0; i < twoPoints.length; i++) {
+            let area = Math.log(twoPoints[i]['Area'])
+
+            if (minMax.Min == -1 || area < minMax.Min) {
+                minMax.Min = area
+            }
+            if (minMax.Max == -1 || area > minMax.Max) {
+                minMax.Max = area
+            }
+        }
+    }
+
+    if (points) {
+        for (let i = 0; i < points.length; i++) {
+            let area = Math.log(points[i]['Area'])
+
+            if (minMax.Min == -1 || area < minMax.Min) {
+                minMax.Min = area
+            }
+            if (minMax.Max == -1 || area > minMax.Max) {
+                minMax.Max = area
+            }
+        }
+    }
+
+    return minMax
 }
 
 function requestViewUpdate(request: ViewRequest) {
@@ -194,8 +235,8 @@ function requestViewUpdate(request: ViewRequest) {
         // Update view if no new requests in last 50 ms
 
         if (xRequest && yRequest) {
-            let newSourceChrom = getChromosome(xRequest.locus.chr)
-            let newTargetChrom = getChromosome(yRequest.locus.chr)
+            let newSourceChrom = getChromosomeFromMap(chromosomes, xRequest.locus.chr)
+            let newTargetChrom = getChromosomeFromMap(chromosomes, yRequest.locus.chr)
 
             let startX = parseInt(xRequest.locus.start)
             let endX = parseInt(xRequest.locus.initialEnd)
@@ -203,10 +244,10 @@ function requestViewUpdate(request: ViewRequest) {
             let startY = parseInt(yRequest.locus.start)
             let endY = parseInt(yRequest.locus.initialEnd)
 
-            if(startX < 0) {
+            if (startX < 0) {
                 startX = 0;
             }
-            if(startY < 0) {
+            if (startY < 0) {
                 startY = 0;
             }
 
@@ -224,17 +265,8 @@ function requestViewUpdate(request: ViewRequest) {
             voronoiMap.updateViewLimits(startX, endX, startY, endY);
             imageMap.setChromPair(sourceChrom, targetChrom);
             imageMap.updateViewLimits(startX, endX, startY, endY);
-
-            let interactionSet = interactions.get(sourceChrom.name + "-" + targetChrom.name)
-            if (interactionSet) {
-                imageMap.setInteractions(interactionSet);
-                voronoiMap.setInteractions(interactionSet);
-            } else {
-                imageMap.setInteractions([])
-                voronoiMap.setInteractions([]);
-            }
-
-            fetch('./voronoiandimage?pixelsX=' + voronoiMap.getVoronoiDrawWidth() + '&pixelsY=' + voronoiMap.getVoronoiDrawHeight() + '&smoothingIterations=' + voronoiMap.smoothingRepetitions + '&numBins=' + imageMap.numBins + '&sourceChrom=' + sourceChrom.name + '&targetChrom=' + targetChrom.name + '&xStart=' + startX + '&xEnd=' + endX + '&yStart=' + startY + '&yEnd=' + endY)
+//
+            fetch('./voronoiandimage?pixelsX=' + voronoiMap.getVoronoiDrawWidth()   + '&pixelsY=' + voronoiMap.getVoronoiDrawHeight() + '&smoothingIterations=' + voronoiMap.smoothingRepetitions + '&numBins=' + imageMap.numBins + '&sourceChrom=' + sourceChrom.name + '&targetChrom=' + targetChrom.name + '&xStart=' + startX + '&xEnd=' + endX + '&yStart=' + startY + '&yEnd=' + endY)
                 .then(
                     (response) => {
                         if (response.status !== 200) {
@@ -244,124 +276,145 @@ function requestViewUpdate(request: ViewRequest) {
                         }
 
                         response.json().then(data => {
+                            let interactionSet = interactions.get(sourceChrom.nameWithChr() + "-" + targetChrom.nameWithChr())
+
+                            if (interactionSet) {
+                                imageMap.setInteractions(interactionSet);
+                                voronoiMap.setInteractions(interactionSet);
+                            } else {
+                                imageMap.setInteractions([])
+                                voronoiMap.setInteractions([]);
+                            }
 
                             // Update the colour
 
-                            if(data['Voronoi']) {
+                            if (data['Voronoi']) {
+                                let points = data['Voronoi']['Points']
+                                let twoPoints = data['Voronoi']['TwoPoints']
                                 let polygons = data['Voronoi']['Polygons']
+
+                                let minMaxArea = getMinMaxArea(polygons, twoPoints, points);
+                                //console.log(minMaxArea.Min)
+                                //minMaxArea.Min = Math.log((voronoiMap.maxViewY - voronoiMap.minViewY) * (voronoiMap.maxViewX - voronoiMap.minViewX) / (voronoiMap.axisHeight*voronoiMap.axisWidth))
+                                //console.log(minMaxArea.Min)
+
+                                let colourCanvas = <HTMLCanvasElement>document.getElementById('voronoi-colour');
+                                colourCanvas.width = imageMap.canvas.width;
+                                let colourCanvasCTX = <CanvasRenderingContext2D>colourCanvas.getContext("2d");
+                                let histogramY = colourCanvas.height - 10
+                                let numBins = colourCanvas.width
+                                let areaBins = new Uint32Array(numBins);
+                                for (let i = 0; i < areaBins.length; i++) {
+                                    areaBins[i] = 0
+                                }
+
+                                let binWidth = (minMaxArea.Max - minMaxArea.Min) / (numBins - 1)
+                                let maxBin = 0
+
                                 if(polygons) {
-                                    let colourCanvas = <HTMLCanvasElement>document.getElementById('voronoi-colour');
-                                    colourCanvas.width = imageMap.canvas.width;
-                                    let colourCanvasCTX = <CanvasRenderingContext2D>colourCanvas.getContext("2d");
-                                    let histogramY = colourCanvas.height - 10
-                                    let numBins = colourCanvas.width
-                                    let areaBins = new Uint32Array(numBins);
-
-                                    let minArea = -1;
-                                    let maxArea = -1;
-
                                     for (let i = 0; i < polygons.length; i++) {
-                                        let area = Math.log(polygons[i]['Area'])
-
-                                        if(minArea == -1 || area < minArea) {
-                                            minArea = area
-                                        }
-                                        if(maxArea == -1 || area > maxArea) {
-                                            maxArea = area
-                                        }
-                                    }
-
-                                    let binWidth = (maxArea - minArea) / (numBins-1)
-                                    let maxBin = 0
-
-                                    for (let i = 0; i < polygons.length; i++) {
-                                        let areaBin = Math.round((Math.log(polygons[i]['Area']) - minArea) / binWidth)
+                                        let areaBin = Math.round((Math.log(polygons[i]['Area']) - minMaxArea.Min) / binWidth)
                                         areaBins[areaBin]++
-
-                                        if(areaBins[areaBin] > maxBin) {
-                                            maxBin = areaBins[areaBin]
-                                        }
                                     }
-                                    
-                                    voronoiMap.scale = d3.scaleQuantize()
-                                        .range(d3.range(voronoiMap.colours))
-                                        .domain([minArea, maxArea]);
-                                    
-                                    for(let i = 0; i < numBins; i++) {
+                                }
+                                if(twoPoints) {
+                                    for (let i = 0; i < twoPoints.length; i++) {
+                                        let areaBin = Math.round((Math.log(twoPoints[i]['Area']) - minMaxArea.Min) / binWidth)
+                                        areaBins[areaBin]++
+                                    }
+                                }
+
+                                if(points) {
+                                    for (let i = 0; i < points.length; i++) {
+                                        let areaBin = Math.round((Math.log(points[i]['Area']) - minMaxArea.Min) / binWidth)
+                                        areaBins[areaBin]++
+                                    }
+                                }
+
+                                for(let i = 0; i < areaBins.length; i++) {
+                                    if(areaBins[i] > maxBin) {
+                                        maxBin = areaBins[i]
+                                    }
+                                }
+
+                                voronoiMap.scale = d3.scaleQuantize()
+                                    .range(d3.range(voronoiMap.colours))
+                                    .domain([minMaxArea.Min, minMaxArea.Max ]);
+
+                                for (let i = 0; i < numBins; i++) {
+                                    colourCanvasCTX.strokeStyle = 'rgb(0, 0, 0)'
+                                    colourCanvasCTX.beginPath();
+                                    colourCanvasCTX.moveTo(i, histogramY);
+                                    colourCanvasCTX.lineTo(i, histogramY - (areaBins[i] / maxBin * colourCanvas.height))
+                                    colourCanvasCTX.stroke();
+
+                                    colourCanvasCTX.strokeStyle = voronoiMap.colourScale(voronoiMap.scale(binWidth * i + minMaxArea.Min))
+                                    colourCanvasCTX.beginPath();
+                                    colourCanvasCTX.moveTo(i, colourCanvas.height);
+                                    colourCanvasCTX.lineTo(i, histogramY)
+                                    colourCanvasCTX.stroke();
+                                }
+
+                                //Mousedown
+                                let processMin = true;
+                                colourCanvas.oncontextmenu = function (e) { e.preventDefault(); e.stopPropagation(); }
+                                colourCanvas.addEventListener('mousedown', function (event: MouseEvent) {
+                                    let colourCanvas = <HTMLCanvasElement>document.getElementById('voronoi-colour');
+                                    let colourCanvasCTX = <CanvasRenderingContext2D>colourCanvas.getContext("2d");
+                                    colourCanvasCTX.clearRect(0, 0, colourCanvas.width, colourCanvas.height)
+
+                                    var rect = colourCanvas.getBoundingClientRect();
+                                    let x = event.clientX - rect.left
+                                    let y = event.clientY - rect.top
+
+                                    let [minScale, maxScale] = voronoiMap.scale.domain();
+
+                                    if (event.button == 0) {
+                                        voronoiMap.scale.domain([binWidth * x + minMaxArea.Min, maxScale]);
+                                    } else {
+                                        voronoiMap.scale.domain([minScale, binWidth * x + minMaxArea.Min]);
+                                    }
+
+                                    [minScale, maxScale] = voronoiMap.scale.domain();
+
+                                    for (let i = 0; i < numBins; i++) {
                                         colourCanvasCTX.strokeStyle = 'rgb(0, 0, 0)'
                                         colourCanvasCTX.beginPath();
                                         colourCanvasCTX.moveTo(i, histogramY);
                                         colourCanvasCTX.lineTo(i, histogramY - (areaBins[i] / maxBin * colourCanvas.height))
                                         colourCanvasCTX.stroke();
 
-                                        colourCanvasCTX.strokeStyle = voronoiMap.colourScale(voronoiMap.scale(binWidth * i + minArea))
+                                        colourCanvasCTX.strokeStyle = voronoiMap.colourScale(voronoiMap.scale(binWidth * i + minMaxArea.Min))
                                         colourCanvasCTX.beginPath();
                                         colourCanvasCTX.moveTo(i, colourCanvas.height);
                                         colourCanvasCTX.lineTo(i, histogramY)
                                         colourCanvasCTX.stroke();
                                     }
 
-                                    //Mousedown
-                                    let processMin = true;
-                                    colourCanvas.oncontextmenu = function(e) { e.preventDefault(); e.stopPropagation(); }
-                                    colourCanvas.addEventListener('mousedown', function (event: MouseEvent) {
-                                        let colourCanvas = <HTMLCanvasElement>document.getElementById('voronoi-colour');
-                                        let colourCanvasCTX = <CanvasRenderingContext2D>colourCanvas.getContext("2d");
-                                        colourCanvasCTX.clearRect(0, 0, colourCanvas.width, colourCanvas.height)
-
-                                        var rect = colourCanvas.getBoundingClientRect();
-                                        let x = event.clientX - rect.left
-                                        let y = event.clientY - rect.top
-
-                                        let [minScale, maxScale] = voronoiMap.scale.domain();
-                                        
-                                        if(event.button == 0) {
-                                            voronoiMap.scale.domain([binWidth * x + minArea, maxScale]);
-                                        } else {
-                                            voronoiMap.scale.domain([minScale, binWidth * x + minArea]);
-                                        } 
-
-                                        [minScale, maxScale] = voronoiMap.scale.domain();
-
-                                        for(let i = 0; i < numBins; i++) {
-                                            colourCanvasCTX.strokeStyle = 'rgb(0, 0, 0)'
-                                            colourCanvasCTX.beginPath();
-                                            colourCanvasCTX.moveTo(i, histogramY);
-                                            colourCanvasCTX.lineTo(i, histogramY - (areaBins[i] / maxBin * colourCanvas.height))
-                                            colourCanvasCTX.stroke();
-        
-                                            colourCanvasCTX.strokeStyle = voronoiMap.colourScale(voronoiMap.scale(binWidth * i + minArea))
-                                            colourCanvasCTX.beginPath();
-                                            colourCanvasCTX.moveTo(i, colourCanvas.height);
-                                            colourCanvasCTX.lineTo(i, histogramY)
-                                            colourCanvasCTX.stroke();
-                                        }
-
-                                        processMin = !processMin;
+                                    processMin = !processMin;
 
 
-                                        colourCanvasCTX.strokeStyle = 'rgb(0, 0, 0)'
-                                        let minScaleX = (minScale - minArea) / binWidth
-                                        colourCanvasCTX.beginPath();
-                                        colourCanvasCTX.moveTo(minScaleX, histogramY);
-                                        colourCanvasCTX.lineTo(minScaleX - 5, colourCanvas.height);
-                                        colourCanvasCTX.lineTo(minScaleX + 5, colourCanvas.height);
-                                        colourCanvasCTX.fill();
-                                        let maxScaleX = (maxScale - minArea) / binWidth
-                                        colourCanvasCTX.beginPath();
-                                        colourCanvasCTX.moveTo(maxScaleX, histogramY);
-                                        colourCanvasCTX.lineTo(maxScaleX - 5, colourCanvas.height);
-                                        colourCanvasCTX.lineTo(maxScaleX + 5, colourCanvas.height);
-                                        colourCanvasCTX.fill();
-                                        voronoiMap.redrawVoronoi();
-                                    });
-                                }
-                            } 
+                                    colourCanvasCTX.strokeStyle = 'rgb(0, 0, 0)'
+                                    let minScaleX = (minScale - minMaxArea.Min) / binWidth
+                                    colourCanvasCTX.beginPath();
+                                    colourCanvasCTX.moveTo(minScaleX, histogramY);
+                                    colourCanvasCTX.lineTo(minScaleX - 5, colourCanvas.height);
+                                    colourCanvasCTX.lineTo(minScaleX + 5, colourCanvas.height);
+                                    colourCanvasCTX.fill();
+                                    let maxScaleX = (maxScale - minMaxArea.Min) / binWidth
+                                    colourCanvasCTX.beginPath();
+                                    colourCanvasCTX.moveTo(maxScaleX, histogramY);
+                                    colourCanvasCTX.lineTo(maxScaleX - 5, colourCanvas.height);
+                                    colourCanvasCTX.lineTo(maxScaleX + 5, colourCanvas.height);
+                                    colourCanvasCTX.fill();
+                                    voronoiMap.redrawVoronoi();
+                                });
+                            }
 
                             let buf = Buffer.from(Uint8Array.from(atob(data['Image']), c => c.charCodeAt(0)));
                             imageMap.updateFromArray(new Uint32Array(buf.buffer, buf.byteOffset, buf.byteLength / Uint32Array.BYTES_PER_ELEMENT))
                             voronoiMap.updateFromJSON(data['Voronoi'])
-                                
+
                         })
                     });
 
@@ -430,7 +483,7 @@ fetch('./details')
                 })*/
 
 
-                sourceChrom = getChromosome(details['Chromosomes'][0]['Name'])
+                sourceChrom = getChromosomeFromMap(chromosomes, details['Chromosomes'][0]['Name'])
                 targetChrom = sourceChrom
 
                 const locus = sourceChrom.name + ":0-" + sourceChrom.length; //'chr4:0-1348131'
@@ -670,7 +723,7 @@ fetch('./details')
                                             response.status);
                                         return;
                                     }
-    
+
                                     response.text().then((location: string) => {
                                         const extension = filename.split('.').pop();
                                         console.log(extension);
@@ -684,24 +737,24 @@ fetch('./details')
                                             format = 'bigwig';
                                         }
 
-                                    
+
                                         bottomBrowser.loadTrack({
-                                                type: type,
-                                                format: format,
-                                                url: location,
-                                                name: filename
-                                            }).then(track => {
-                                                resizeTracks()
-                                            })
-                                            rightBrowser.loadTrack({
-                                                type: type,
-                                                format: format,
-                                                //sourceType: "file",
-                                                url: location,
-                                                name: filename
-                                            }).then(track => {
-                                                resizeTracks()
-                                            })
+                                            type: type,
+                                            format: format,
+                                            url: location,
+                                            name: filename
+                                        }).then(track => {
+                                            resizeTracks()
+                                        })
+                                        rightBrowser.loadTrack({
+                                            type: type,
+                                            format: format,
+                                            //sourceType: "file",
+                                            url: location,
+                                            name: filename
+                                        }).then(track => {
+                                            resizeTracks()
+                                        })
                                     });
                                 });
 
@@ -843,7 +896,6 @@ fetch('./details')
                                 }
 
                                 response.json().then(interact => {
-
                                     for (var chromPair in interact['Interactions']) {
                                         var interactionArray: Interaction[] = [];
                                         interact['Interactions'][chromPair].forEach((interaction: any) => {

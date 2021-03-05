@@ -18,6 +18,26 @@ export class Chromosome {
     static fromJSON(json: any): Chromosome {
         return new Chromosome(json['Name'], json['Length'])
     }
+
+
+    nameWithChr(): string {
+        if(!this.name.includes("chr")) {
+            return "chr" + this.name
+        }
+
+        return this.name;
+    }
+}
+
+
+export function getChromosomeFromMap(chromMap: Map<string, Chromosome>, name: string): Chromosome {
+    let chromosome = chromMap.get(name);
+
+    if(chromosome) {
+        return chromosome
+    }
+
+    return <Chromosome>chromMap.get(name.replace("chr", ""))
 }
 
 export class Interaction {
@@ -40,6 +60,7 @@ export class Interaction {
     }
 
     static fromJSON(json: any, chromMap: Map<string, Chromosome>): Interaction {
-        return new Interaction(<Chromosome>chromMap.get(json['SourceChrom']), json['SourceStart'], json['SourceEnd'], <Chromosome>chromMap.get(json['TargetChrom']), json['TargetStart'], json['TargetEnd']);
+        return new Interaction(getChromosomeFromMap(chromMap, json['SourceChrom']), json['SourceStart'], json['SourceEnd'], 
+        getChromosomeFromMap(chromMap, json['TargetChrom']), json['TargetStart'], json['TargetEnd']);
     }
 }

@@ -1,4 +1,4 @@
-import { Axis } from './axis'
+import { Axis, OriginLocation } from './axis'
 import { Chromosome } from './chromosome';
 import { VoronoiPlot } from './voronoiPlot'
 
@@ -194,7 +194,14 @@ export class ImageMap extends Axis {
             var axisCanvas = this.getAxisCanvas();
             var axisCanvasCTX = <CanvasRenderingContext2D>axisCanvas.getContext('2d');
             axisCanvasCTX.imageSmoothingEnabled = false;
+
+            //axisCanvasCTX.save();
+            //if(this.originLocation == OriginLocation.TopLeft) {
+            //    axisCanvasCTX.translate(0, axisCanvas.height);
+            //    axisCanvasCTX.scale(1, -1);
+            //}
             axisCanvasCTX.drawImage(bitmapData, 0, 0, axisCanvas.width, axisCanvas.height);
+            //axisCanvasCTX.restore();
 
             this.drawContacts();
 

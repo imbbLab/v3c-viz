@@ -25,7 +25,20 @@ export class Rectangle {
 }*/
 
 
+export enum OriginLocation {
+    BottomLeft,
+    TopLeft
+}
+
+export enum YAxisLocation {
+    Left,
+    Right
+}
+
 export abstract class Axis {
+    originLocation: OriginLocation = OriginLocation.BottomLeft;
+    yAxisLocation: YAxisLocation = YAxisLocation.Right;
+
     doubleClickEventListeners: {():void}[] = []
     regionSelectEventListeners: {(region: Rectangle):void}[] = []
 
@@ -251,39 +264,54 @@ export abstract class Axis {
         axisCanvasCTX.fillStyle = "#" + this.contactFillColour.toString(16);//"rgba(0, 0, 255, 0.75)";
         for (let i = 0; i < this.interactions.length; i++) {
             var x, y
-            if(this.interactions[i].sourceChrom == this.sourceChrom && this.interactions[i].targetChrom == this.targetChrom) {
+            
+            if((this.interactions[i].sourceChrom == this.sourceChrom && this.interactions[i].targetChrom == this.targetChrom)) {
                 x = this.interactions[i].sourceStart;
                 y = this.interactions[i].targetStart;
-            } else if(this.interactions[i].sourceChrom == this.targetChrom && this.interactions[i].targetChrom == this.sourceChrom)  {
+
+                if (x >= this.minViewX && x <= this.maxDataX && y >= this.minViewY && y <= this.maxViewY) {
+                    x = (x - startX) * xScaleFactor;
+                    y = (y - startY) * yScaleFactor;
+    
+                    let halfWidth = 250 * xScaleFactor;
+                    let halfHeight = 250 * yScaleFactor;
+    
+                    // Make sure it is visible
+                    halfWidth = Math.max(halfWidth, this.contactSize);
+                    halfHeight = Math.max(halfHeight, this.contactSize);
+    
+                    axisCanvasCTX.beginPath();
+                    axisCanvasCTX.rect(x - halfWidth, y - halfHeight, halfWidth * 2, halfHeight * 2);
+                    if (this.contactFill) {
+                        axisCanvasCTX.fill();
+                    }
+                    axisCanvasCTX.stroke();
+                }
+            } 
+            
+            if(this.interactions[i].sourceChrom == this.targetChrom && this.interactions[i].targetChrom == this.sourceChrom)  {
                 y = this.interactions[i].sourceStart;
                 x = this.interactions[i].targetStart;
-            }
 
-            // For some reason the interaction isn't appropriate, so skip it
-            if(!x || !y) {
-                continue;
-            }
-
-            if (x >= this.minViewX && x <= this.maxDataX && y >= this.minViewY && y <= this.maxViewY) {
-                x = (x - startX) * xScaleFactor;
-                y = (y - startY) * yScaleFactor;
-
-                let halfWidth = 250 * xScaleFactor;
-                let halfHeight = 250 * yScaleFactor;
-
-                // Make sure it is visible
-                halfWidth = Math.max(halfWidth, this.contactSize);
-                halfHeight = Math.max(halfHeight, this.contactSize);
-
-                axisCanvasCTX.beginPath();
-                axisCanvasCTX.rect(x - halfWidth, y - halfHeight, halfWidth * 2, halfHeight * 2);
-                if (this.contactFill) {
-                    axisCanvasCTX.fill();
+                if (x >= this.minViewX && x <= this.maxDataX && y >= this.minViewY && y <= this.maxViewY) {
+                    x = (x - startX) * xScaleFactor;
+                    y = (y - startY) * yScaleFactor;
+    
+                    let halfWidth = 250 * xScaleFactor;
+                    let halfHeight = 250 * yScaleFactor;
+    
+                    // Make sure it is visible
+                    halfWidth = Math.max(halfWidth, this.contactSize);
+                    halfHeight = Math.max(halfHeight, this.contactSize);
+    
+                    axisCanvasCTX.beginPath();
+                    axisCanvasCTX.rect(x - halfWidth, y - halfHeight, halfWidth * 2, halfHeight * 2);
+                    if (this.contactFill) {
+                        axisCanvasCTX.fill();
+                    }
+                    axisCanvasCTX.stroke();
                 }
-                axisCanvasCTX.stroke();
-                //this.normPoints[i * 2][0] = ((this.points[i * 2] - startX) / (endX - startX)) * axisCanvas.width;
-                //axisCanvasCTX.
-            }
+            }            
         }
         axisCanvasCTX.restore();
     }
@@ -319,6 +347,10 @@ export abstract class Axis {
     
 
     addContactMenu(gui: dat.GUI) {
+        //gui.add(this, 'originLocation', {"Top Left": OriginLocation.TopLeft, "Bottom Left": OriginLocation.BottomLeft}).name("Origin Location").onChange((value) => {
+        //    this.redraw();
+        //})
+
         const imageContactFolder = gui.addFolder('Contacts');
         imageContactFolder.add(this, 'contactSize', 1, 20).name("Contact size").onChange((value) => {
             this.redraw();
@@ -358,7 +390,13 @@ export abstract class Axis {
 
     getAxisCoord(canvasCoord: Coordinate): Coordinate {
         var mouseX = canvasCoord.x - this.axisOffsetX;
-        var mouseY = (this.canvas.height - this.axisOffsetY) - canvasCoord.y;
+        var mouseY = 0;
+        
+        if(this.originLocation == OriginLocation.BottomLeft) {
+            mouseY = (this.canvas.height - this.axisOffsetY) - canvasCoord.y;
+        } else if(this.originLocation == OriginLocation.TopLeft) {
+            mouseY = canvasCoord.y - (this.canvas.height - this.axisHeight - this.axisOffsetY);
+        }
 
         return {
             x: mouseX / this.axisWidth,
@@ -380,7 +418,9 @@ export abstract class Axis {
         this.drawTicks();
 
         ctx.save();
-        ctx.transform(1, 0, 0, -1, 0, this.canvas.height)
+        if(this.originLocation == OriginLocation.BottomLeft) {
+            ctx.transform(1, 0, 0, -1, 0, this.canvas.height)
+        }
         ctx.drawImage(this.axisCanvas, this.axisOffsetX, this.axisOffsetY);
         ctx.restore();
     }
@@ -439,7 +479,13 @@ export abstract class Axis {
             let xPos = this.axisOffsetX;
             let yPos = this.canvas.height - this.axisOffsetY - (this.axisHeight * curTickPct);
 
-            var yPosition = this.minViewY + yDiff * curTickPct;
+            var yPosition = 0;
+            
+            if(this.originLocation == OriginLocation.BottomLeft) {
+                yPosition = this.minViewY + yDiff * curTickPct;
+            } else if(this.originLocation == OriginLocation.TopLeft) {
+                yPosition = this.maxViewY - yDiff * curTickPct;
+            }
 
             ctx.translate(xPos, yPos);
             ctx.rotate(-Math.PI / 2);
