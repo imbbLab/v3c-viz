@@ -321,6 +321,8 @@ function requestViewUpdate(request: ViewRequest) {
                                             voronoiMap.scale.domain([minScale, binWidth * x + minArea]);
                                         } 
 
+                                        [minScale, maxScale] = voronoiMap.scale.domain();
+
                                         for(let i = 0; i < numBins; i++) {
                                             colourCanvasCTX.strokeStyle = 'rgb(0, 0, 0)'
                                             colourCanvasCTX.beginPath();
@@ -337,12 +339,24 @@ function requestViewUpdate(request: ViewRequest) {
 
                                         processMin = !processMin;
 
+
+                                        colourCanvasCTX.strokeStyle = 'rgb(0, 0, 0)'
+                                        let minScaleX = (minScale - minArea) / binWidth
+                                        colourCanvasCTX.beginPath();
+                                        colourCanvasCTX.moveTo(minScaleX, histogramY);
+                                        colourCanvasCTX.lineTo(minScaleX - 5, colourCanvas.height);
+                                        colourCanvasCTX.lineTo(minScaleX + 5, colourCanvas.height);
+                                        colourCanvasCTX.fill();
+                                        let maxScaleX = (maxScale - minArea) / binWidth
+                                        colourCanvasCTX.beginPath();
+                                        colourCanvasCTX.moveTo(maxScaleX, histogramY);
+                                        colourCanvasCTX.lineTo(maxScaleX - 5, colourCanvas.height);
+                                        colourCanvasCTX.lineTo(maxScaleX + 5, colourCanvas.height);
+                                        colourCanvasCTX.fill();
                                         voronoiMap.redrawVoronoi();
                                     });
                                 }
                             } 
-
-
 
                             let buf = Buffer.from(Uint8Array.from(atob(data['Image']), c => c.charCodeAt(0)));
                             imageMap.updateFromArray(new Uint32Array(buf.buffer, buf.byteOffset, buf.byteLength / Uint32Array.BYTES_PER_ELEMENT))

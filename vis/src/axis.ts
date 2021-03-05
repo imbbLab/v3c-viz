@@ -414,8 +414,6 @@ export abstract class Axis {
             let xPos = this.axisOffsetX + (this.axisWidth * curTickPct);
             let yPos = this.canvas.height - this.axisOffsetY;
 
-            
-
             var xPosition = this.minViewX + xDiff * curTickPct;
 
             ctx.beginPath();
