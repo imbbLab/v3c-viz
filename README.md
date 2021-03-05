@@ -1,5 +1,7 @@
 # hicvis
 
+![Screenshot](/docs/hicvis-screenshot.png?raw=true "Screenshot")
+
 ## Features
 * Visualisation interactively customisable using GUI
 * Optionally load interact file for visualising contacts
