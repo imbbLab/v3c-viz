@@ -575,6 +575,27 @@ func GetVoronoiAndImage(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
+	} else {
+		var points []*pairs.Entry
+
+		for y := 0; y < numBins; y++ {
+			for x := 0; x < numBins; x++ {
+				index := y*numBins + x
+
+				if overviewImage[index] > 0 {
+					points = append(points, &pairs.Entry{SourceChrom: sourceChrom,
+						SourcePosition: uint64((float64(x)/float64(numBins))*float64(maxX-minX)) + uint64(minX),
+						TargetChrom:    targetChrom,
+						TargetPosition: uint64((float64(y)/float64(numBins))*float64(maxY-minY)) + uint64(minY)})
+				}
+			}
+		}
+
+		result, err = performVoronoi(points, pairsQuery, smoothingIterations, numPixelsX, numPixelsY)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
 	}
 
 	bytes, err := json.Marshal(struct {
