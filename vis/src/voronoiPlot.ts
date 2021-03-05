@@ -137,14 +137,15 @@ export class VoronoiPlot extends Axis {
     polygons: any
 
     async updateFromJSON(data: any) {
-        let voronoiCanvasCTX = <CanvasRenderingContext2D>this.voronoiCanvas.getContext("2d");
-        voronoiCanvasCTX.clearRect(0, 0, this.voronoiCanvas.width, this.voronoiCanvas.height);
-        
-        voronoiCanvasCTX.fillStyle = 'rgb(0, 0, 0)'
-        
-        this.singlePoints = data['Points']
-        this.twoPoints = data['TwoPoints']
-        this.polygons = data['Polygons']
+        if(data) {
+            this.singlePoints = data['Points']
+            this.twoPoints = data['TwoPoints']
+            this.polygons = data['Polygons']
+        } else {
+            this.singlePoints = null;
+            this.twoPoints = null;
+            this.polygons = null;
+        }
 
         this.redrawVoronoi();
     }
@@ -173,7 +174,6 @@ export class VoronoiPlot extends Axis {
         }
 
         if(this.polygons && this.colourScale && this.scale) {
-
             let axisCanvas = this.getAxisCanvas();
 
             for (let i = 0; i < this.polygons.length; i++) {

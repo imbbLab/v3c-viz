@@ -163,6 +163,16 @@ var xRequest: ViewRequest | null
 var yRequest: ViewRequest | null
 var timeoutFunction: any;
 
+function getChromosome(name: string): Chromosome {
+    let chromosome = chromosomes.get(name);
+
+    if(chromosome) {
+        return chromosome
+    }
+
+    return <Chromosome>chromosomes.get(name.replace("chr", ""))
+}
+
 function requestViewUpdate(request: ViewRequest) {
     if (request.dimension == "x") {
         xRequest = request;
@@ -184,8 +194,8 @@ function requestViewUpdate(request: ViewRequest) {
         // Update view if no new requests in last 50 ms
 
         if (xRequest && yRequest) {
-            let newSourceChrom = <Chromosome>chromosomes.get(xRequest.locus.chr)
-            let newTargetChrom = <Chromosome>chromosomes.get(yRequest.locus.chr)
+            let newSourceChrom = getChromosome(xRequest.locus.chr)
+            let newTargetChrom = getChromosome(yRequest.locus.chr)
 
             let startX = parseInt(xRequest.locus.start)
             let endX = parseInt(xRequest.locus.initialEnd)
@@ -406,7 +416,7 @@ fetch('./details')
                 })*/
 
 
-                sourceChrom = <Chromosome>chromosomes.get(details['Chromosomes'][0]['Name'])
+                sourceChrom = getChromosome(details['Chromosomes'][0]['Name'])
                 targetChrom = sourceChrom
 
                 const locus = sourceChrom.name + ":0-" + sourceChrom.length; //'chr4:0-1348131'

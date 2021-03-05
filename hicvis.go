@@ -18,7 +18,6 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/jessevdk/go-flags"
@@ -546,70 +545,49 @@ func GetVoronoiAndImage(w http.ResponseWriter, r *http.Request) {
 
 	pairsQuery := pairs.Query{SourceChrom: sourceChrom, SourceStart: uint64(minX), SourceEnd: uint64(maxX), TargetChrom: targetChrom, TargetStart: uint64(minY), TargetEnd: uint64(maxY)}
 
-	points, err := pairsFile.Index().Search(pairsQuery)
+	overviewImage, err := pairsFile.Image(pairsQuery, uint64(numBins))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	buf := new(bytes.Buffer)
+	err = binary.Write(buf, binary.BigEndian, overviewImage)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	var image []uint32
+	sumPoints := 0
+	for _, count := range overviewImage {
+		sumPoints += int(count)
+	}
+
 	var result *voronoi.Int16VoronoiResult
-
-	buf := new(bytes.Buffer)
-
-	errs := make(chan error)
-	var wg sync.WaitGroup
-	wg.Add(2)
-
-	go func() {
-		defer wg.Done()
-		image = pairs.EntriesToImage(points, pairsQuery, uint64(numBins))
-		err = binary.Write(buf, binary.BigEndian, image)
-		if err != nil {
-			errs <- err
-		}
-		//		if err != nil {
-		//			http.Error(w, err.Error(), http.StatusInternalServerError)
-		//			return
-		//		}
-	}()
-
-	//fmt.Printf("Image is %d long and buffer is %d\n", len(image), len(buf.Bytes()))
-
-	go func() {
-		defer wg.Done()
-
-		if len(points) < opts.MaximumVoronoiPoints {
-			result, err = performVoronoi(points, pairsQuery, smoothingIterations, numPixelsX, numPixelsY)
-			if err != nil {
-				errs <- err
-			}
-		}
-		//if err != nil {
-		//	http.Error(w, err.Error(), http.StatusInternalServerError)
-		//	return
-		//}
-	}()
-
-	wg.Wait()
-
-	select {
-	case err := <-errs:
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	default:
-		bytes, err := json.Marshal(struct {
-			Voronoi *voronoi.Int16VoronoiResult
-			Image   string
-		}{Voronoi: result,
-			Image: base64.StdEncoding.EncodeToString(buf.Bytes())}) //voronoi) //
+	if sumPoints < opts.MaximumVoronoiPoints {
+		points, err := pairsFile.Index().Search(pairsQuery)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
-		w.Write(bytes)
+		result, err = performVoronoi(points, pairsQuery, smoothingIterations, numPixelsX, numPixelsY)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
 	}
+
+	bytes, err := json.Marshal(struct {
+		Voronoi *voronoi.Int16VoronoiResult
+		Image   string
+	}{Voronoi: result,
+		Image: base64.StdEncoding.EncodeToString(buf.Bytes())}) //voronoi) //
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Write(bytes)
 
 }
 
