@@ -17,6 +17,8 @@ export class Point {
 export class Polygon {
     points: Point[] = []
     area: number = 0
+    clipped:boolean = false;
+    centroid: Point = new Point(0, 0)
 }
 
 export class Voronoi {
@@ -242,6 +244,7 @@ export class VoronoiPlot extends Axis {
             if(this.displayCentroid) {
                 if (this.displayVoronoiPoints) {
                     for (let i = 0; i < this.voronoi.polygons.length; i++) {
+                        voronoiCanvasCTX.fillRect(this.voronoi.polygons[i].centroid.x-1, this.voronoi.polygons[i].centroid.y-1, 2, 2);
                    //     voronoiCanvasCTX.fillRect(this.polygons[i]['DataPoint'][0], this.polygons[i]['DataPoint'][1], 2, 2);
                     }
                 }

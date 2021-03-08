@@ -621,6 +621,28 @@ func GetVoronoiAndImage(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		if result.Polygons[polyIndex].Clipped {
+			err = binary.Write(voronoiBuffer, binary.BigEndian, uint8(1))
+		} else {
+			err = binary.Write(voronoiBuffer, binary.BigEndian, uint8(0))
+		}
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		cendroid := result.Polygons[polyIndex].Centroid()
+		err = binary.Write(voronoiBuffer, binary.BigEndian, (cendroid.X-float64(minX))/binSizeX)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		err = binary.Write(voronoiBuffer, binary.BigEndian, (cendroid.Y-float64(minY))/binSizeY)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
 		for index := range result.Polygons[polyIndex].Points {
 			result.Polygons[polyIndex].Points[index].X = (result.Polygons[polyIndex].Points[index].X - float64(minX)) / binSizeX
 			result.Polygons[polyIndex].Points[index].Y = (result.Polygons[polyIndex].Points[index].Y - float64(minY)) / binSizeY

@@ -195,6 +195,9 @@ function getMinMaxArea(voronoi: Voronoi): MinMax {
         //if (polygons[i]['Clipped'] || centroid[0] > voronoiMap.getVoronoiDrawWidth() || centroid[1] > voronoiMap.getVoronoiDrawHeight()) {
         //    continue;
         //}
+        if (voronoi.polygons[i].clipped) {
+            continue;
+        }
 
         let area = Math.log(voronoi.polygons[i].area)
 
@@ -221,6 +224,9 @@ function binAreas(voronoi: Voronoi, binWidth: number, numBins: number, minMaxAre
         //if (voronoi.polygons[i]['Clipped'] || centroid[0] > voronoiMap.getVoronoiDrawWidth() || centroid[1] > voronoiMap.getVoronoiDrawHeight()) {
         //    continue;
         //}
+        if (voronoi.polygons[i].clipped) {
+            continue;
+        }
 
         let areaBin = Math.round((Math.log(voronoi.polygons[i].area) - minMaxArea.Min) / binWidth)
         areaBins[areaBin]++
@@ -322,12 +328,18 @@ function requestViewUpdate(request: ViewRequest) {
                             let numPolygons = dataView.getUint32(offset);
                             offset += 4;
                             for (let i = 0; i < numPolygons; i++) {
+                                let polygon = new Polygon();
                                 let numPoints = dataView.getUint32(offset);
                                 offset += 4;
 
-                                let polygon = new Polygon();
                                 polygon.area = dataView.getFloat64(offset);
                                 offset += 8;
+
+                                polygon.clipped = dataView.getUint8(offset) == 1;
+                                offset += 1
+
+                                polygon.centroid = new Point(dataView.getFloat64(offset), dataView.getFloat64(offset + 8))
+                                offset += 16;
 
                                 for (let j = 0; j < numPoints; j++) {
                                     polygon.points.push(new Point(dataView.getFloat64(offset), dataView.getFloat64(offset + 8)))
@@ -336,7 +348,7 @@ function requestViewUpdate(request: ViewRequest) {
 
                                 vor.polygons.push(polygon)
                             }
-
+console.log(vor)
 
                             let minMaxArea = getMinMaxArea(vor);
 
