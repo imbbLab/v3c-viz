@@ -1,8 +1,27 @@
 import { Axis } from './axis'
 import { Locus, Chromosome } from './chromosome'
-import { Delaunay, Voronoi } from "d3-delaunay";
+//import { Delaunay, Voronoi } from "d3-delaunay";
 import * as igv from 'igv';
 import * as d3 from 'd3';
+
+export class Point {
+    x: number
+    y: number
+
+    constructor(x:number, y:number) {
+        this.x = x;
+        this.y = y;
+    }
+}
+
+export class Polygon {
+    points: Point[] = []
+    area: number = 0
+}
+
+export class Voronoi {
+    polygons: Polygon[] = []
+}
 
 export class VoronoiPlot extends Axis {
 
@@ -30,7 +49,8 @@ export class VoronoiPlot extends Axis {
     points: Uint32Array
     normPoints: Array<number[]>
 
-    voronoi: Voronoi<Delaunay.Point>;
+    //voronoi: Voronoi<Delaunay.Point>;
+    voronoi: Voronoi;
     voronoiCanvas: HTMLCanvasElement;
 
     constructor(belowBrowser: igv.IGVBrowser, rightBrowser: igv.IGVBrowser) {
@@ -60,7 +80,7 @@ export class VoronoiPlot extends Axis {
         this.voronoiCanvas.width = 1024; //this.axisWidth;
         this.voronoiCanvas.height = 1024; //this.axisHeight;
 
-        this.voronoi = Delaunay.from([]).voronoi();
+        this.voronoi = new Voronoi(); //Delaunay.from([]).voronoi();
         this.voronoiCanvas.style.position = 'absolute';
         this.voronoiCanvas.style.top = '1000px';
         this.voronoiCanvas.style.left = '1000px'
@@ -72,22 +92,22 @@ export class VoronoiPlot extends Axis {
     }
 
 
-    timeoutFunction: any;
+//     timeoutFunction: any;
 
-    requestView(sourceChrom: Chromosome, targetChrom: Chromosome, minX: number, maxX: number, minY: number, maxY: number) {
-        // If the requested view is out of bounds, then load the data, otherwise, just display it
+//     requestView(sourceChrom: Chromosome, targetChrom: Chromosome, minX: number, maxX: number, minY: number, maxY: number) {
+//         // If the requested view is out of bounds, then load the data, otherwise, just display it
 
-        clearTimeout(this.timeoutFunction);
+//         clearTimeout(this.timeoutFunction);
 
-        this.timeoutFunction = setTimeout(() => {
-            if (this.generateVoronoiOnServer) {
-                this.getVoronoiFromServer(sourceChrom, targetChrom, minX, maxX, minY, maxY);
-            } else {
-                this.loadDataForVoronoi(sourceChrom, targetChrom, minX, maxX, minY, maxY);
-            }
-        }, 50);
+//         this.timeoutFunction = setTimeout(() => {
+// //            if (this.generateVoronoiOnServer) {
+//                 this.getVoronoiFromServer(sourceChrom, targetChrom, minX, maxX, minY, maxY);
+// //            } else {
+// //                this.loadDataForVoronoi(sourceChrom, targetChrom, minX, maxX, minY, maxY);
+//  //           }
+//         }, 50);
 
-    }
+//     }
 
     //sourceChrom: Chromosome = new Chromosome("", 0)
     //targetChrom: Chromosome = new Chromosome("", 0)
@@ -95,30 +115,30 @@ export class VoronoiPlot extends Axis {
     //voronoiDrawnWidth = 0
     //voronoiDrawnHeight = 0
 
-    getVoronoiFromServer(sourceChrom: Chromosome, targetChrom: Chromosome, minX: number, maxX: number, minY: number, maxY: number) {
-        this.setChromPair(sourceChrom, targetChrom)
-        //this.sourceChrom = sourceChrom
-        //this.targetChrom = targetChrom
+    // getVoronoiFromServer(sourceChrom: Chromosome, targetChrom: Chromosome, minX: number, maxX: number, minY: number, maxY: number) {
+    //     this.setChromPair(sourceChrom, targetChrom)
+    //     //this.sourceChrom = sourceChrom
+    //     //this.targetChrom = targetChrom
 
-        var self = this;
+    //     var self = this;
 
 
-        //this.voronoiDrawnWidth = Math.min(this.axisWidth, this.voronoiCanvas.width)
-        //this.voronoiDrawnHeight = Math.min(this.axisHeight, this.voronoiCanvas.height)
+    //     //this.voronoiDrawnWidth = Math.min(this.axisWidth, this.voronoiCanvas.width)
+    //     //this.voronoiDrawnHeight = Math.min(this.axisHeight, this.voronoiCanvas.height)
 
-        fetch('./voronoi?pixelsX=' + this.getVoronoiDrawWidth() + '&pixelsY=' + this.getVoronoiDrawHeight() + '&smoothingIterations=' + this.smoothingRepetitions + '&sourceChrom=' + sourceChrom.name + '&targetChrom=' + targetChrom.name + '&xStart=' + minX + '&xEnd=' + maxX + '&yStart=' + minY + '&yEnd=' + maxY)
-            .then((response) => {
-                if (response.status !== 200) {
-                    console.log('Looks like there was a problem. Status Code: ' +
-                        response.status);
-                    return;
-                }
+    //     fetch('./voronoi?pixelsX=' + this.getVoronoiDrawWidth() + '&pixelsY=' + this.getVoronoiDrawHeight() + '&smoothingIterations=' + this.smoothingRepetitions + '&sourceChrom=' + sourceChrom.name + '&targetChrom=' + targetChrom.name + '&xStart=' + minX + '&xEnd=' + maxX + '&yStart=' + minY + '&yEnd=' + maxY)
+    //         .then((response) => {
+    //             if (response.status !== 200) {
+    //                 console.log('Looks like there was a problem. Status Code: ' +
+    //                     response.status);
+    //                 return;
+    //             }
 
-                response.json().then(data => {
-                    self.updateFromJSON(data)
-                });
-            });
-    }
+    //             response.json().then(data => {
+    //                 self.updateFromJSON(data)
+    //             });
+    //         });
+    // }
 
     getVoronoiDrawWidth() {
         return Math.min(this.axisWidth, this.voronoiCanvas.width)
@@ -136,20 +156,26 @@ export class VoronoiPlot extends Axis {
         .range(["saddlebrown", "lightgreen", "steelblue"])
         .domain([0, this.colours/2, this.colours]);
 
-    singlePoints: any
-    twoPoints: any
-    polygons: any
+    // singlePoints: any
+    // twoPoints: any
+    // polygons: any
 
-    async updateFromJSON(data: any) {
-        if(data) {
-            this.singlePoints = data['Points']
-            this.twoPoints = data['TwoPoints']
-            this.polygons = data['Polygons']
-        } else {
-            this.singlePoints = null;
-            this.twoPoints = null;
-            this.polygons = null;
-        }
+    // async updateFromJSON(data: any) {
+    //     if(data) {
+    //         this.singlePoints = data['Points']
+    //         this.twoPoints = data['TwoPoints']
+    //         this.polygons = data['Polygons']
+    //     } else {
+    //         this.singlePoints = null;
+    //         this.twoPoints = null;
+    //         this.polygons = null;
+    //     }
+
+    //     this.redrawVoronoi();
+    // }
+
+    setVoronoi(voronoi: Voronoi) {
+        this.voronoi = voronoi;
 
         this.redrawVoronoi();
     }
@@ -166,32 +192,33 @@ export class VoronoiPlot extends Axis {
             voronoiCanvasCTX.fillStyle = this.colourScale(0);
         }
 
-        if (this.singlePoints) {
-            for (let i = 0; i < this.singlePoints.length; i++) {
-                voronoiCanvasCTX.fillRect(this.singlePoints[i]['X'], this.singlePoints[i]['Y'], 1, 1);
-            }
-        }
-        if (this.twoPoints) {
-            for (let i = 0; i < this.twoPoints.length; i++) {
-                voronoiCanvasCTX.fillRect(this.twoPoints[i]['MinX'], this.twoPoints[i]['MinY'], this.twoPoints[i]['MaxX'] - this.twoPoints[i]['MinX'], this.twoPoints[i]['MaxY'] - this.twoPoints[i]['MinY']);
-            }
-        }
+        // if (this.singlePoints) {
+        //     for (let i = 0; i < this.singlePoints.length; i++) {
+        //         voronoiCanvasCTX.fillRect(this.singlePoints[i]['X'], this.singlePoints[i]['Y'], 1, 1);
+        //     }
+        // }
+        // if (this.twoPoints) {
+        //     for (let i = 0; i < this.twoPoints.length; i++) {
+        //         voronoiCanvasCTX.fillRect(this.twoPoints[i]['MinX'], this.twoPoints[i]['MinY'], this.twoPoints[i]['MaxX'] - this.twoPoints[i]['MinX'], this.twoPoints[i]['MaxY'] - this.twoPoints[i]['MinY']);
+        //     }
+        // }
 
-        if(this.polygons && this.colourScale && this.scale) {
+        //if(this.polygons && this.colourScale && this.scale) {
+        if(this.colourScale && this.scale) {
             let axisCanvas = this.getAxisCanvas();
             
-            for (let i = 0; i < this.polygons.length; i++) {
-                let points = this.polygons[i]['Points']
-                voronoiCanvasCTX.fillStyle = this.colourScale(this.scale(Math.log(this.polygons[i]['Area'])));
+            for (let i = 0; i < this.voronoi.polygons.length; i++) {
+                let points = this.voronoi.polygons[i].points
+                voronoiCanvasCTX.fillStyle = this.colourScale(this.scale(Math.log(this.voronoi.polygons[i].area)));
 
                 voronoiCanvasCTX.beginPath();
                 //voronoiCanvasCTX.moveTo(points[0], points[1])
                 //for (let j = 2; j < points.length; j += 2) {
                 //    voronoiCanvasCTX.lineTo(points[j], points[j + 1])
                 //}
-                voronoiCanvasCTX.moveTo(points[0]['X'], points[0]['Y'])
+                voronoiCanvasCTX.moveTo(points[0].x, points[0].y)
                 for (let j = 1; j < points.length; j++) {
-                    voronoiCanvasCTX.lineTo(points[j]['X'], points[j]['Y'])
+                    voronoiCanvasCTX.lineTo(points[j].x, points[j].y)
                 }
 
                 //voronoiCanvasCTX.moveTo(((points[0]['X'] - minX) / (maxX - minX)) * axisCanvas.width, ((points[0]['Y'] - minY) / (maxY - minY)) * axisCanvas.height)
@@ -214,8 +241,8 @@ export class VoronoiPlot extends Axis {
 
             if(this.displayCentroid) {
                 if (this.displayVoronoiPoints) {
-                    for (let i = 0; i < this.polygons.length; i++) {
-                        voronoiCanvasCTX.fillRect(this.polygons[i]['DataPoint'][0], this.polygons[i]['DataPoint'][1], 2, 2);
+                    for (let i = 0; i < this.voronoi.polygons.length; i++) {
+                   //     voronoiCanvasCTX.fillRect(this.polygons[i]['DataPoint'][0], this.polygons[i]['DataPoint'][1], 2, 2);
                     }
                 }
             }
@@ -224,98 +251,98 @@ export class VoronoiPlot extends Axis {
         this.redraw()
     }
 
-    loadDataForVoronoi(sourceChrom: Chromosome, targetChrom: Chromosome, minX: number, maxX: number, minY: number, maxY: number) {
-        this.sourceChrom = sourceChrom
-        this.targetChrom = targetChrom
+    // loadDataForVoronoi(sourceChrom: Chromosome, targetChrom: Chromosome, minX: number, maxX: number, minY: number, maxY: number) {
+    //     this.sourceChrom = sourceChrom
+    //     this.targetChrom = targetChrom
 
-        var self = this;
+    //     var self = this;
 
-        fetch('./points?sourceChrom=' + sourceChrom.name + '&targetChrom=' + targetChrom.name + '&xStart=' + minX + '&xEnd=' + maxX + '&yStart=' + minY + '&yEnd=' + maxY)
-            .then((response) => {
-                if (response.status !== 200) {
-                    console.log('Looks like there was a problem. Status Code: ' +
-                        response.status);
-                    return;
-                }
+    //     fetch('./points?sourceChrom=' + sourceChrom.name + '&targetChrom=' + targetChrom.name + '&xStart=' + minX + '&xEnd=' + maxX + '&yStart=' + minY + '&yEnd=' + maxY)
+    //         .then((response) => {
+    //             if (response.status !== 200) {
+    //                 console.log('Looks like there was a problem. Status Code: ' +
+    //                     response.status);
+    //                 return;
+    //             }
 
-                // For testing drawing of voronoi
-                /*response.json().then(data => {
-                    self.updateDataLimits(minX, maxX, minY, maxY);
-                    this.minViewX = minX;
-                    this.maxViewX = maxX;
-                    this.minViewY = minY;
-                    this.maxViewY = maxY;
+    //             // For testing drawing of voronoi
+    //             /*response.json().then(data => {
+    //                 self.updateDataLimits(minX, maxX, minY, maxY);
+    //                 this.minViewX = minX;
+    //                 this.maxViewX = maxX;
+    //                 this.minViewY = minY;
+    //                 this.maxViewY = maxY;
 
-                    var axisCanvas = this.getAxisCanvas();
+    //                 var axisCanvas = this.getAxisCanvas();
 
-                    let polygons = data['Polygons']
-                    let voronoiCanvasCTX = <CanvasRenderingContext2D> this.voronoiCanvas.getContext("2d");
-                    voronoiCanvasCTX.clearRect(0, 0, this.voronoiCanvas.width, this.voronoiCanvas.height);
+    //                 let polygons = data['Polygons']
+    //                 let voronoiCanvasCTX = <CanvasRenderingContext2D> this.voronoiCanvas.getContext("2d");
+    //                 voronoiCanvasCTX.clearRect(0, 0, this.voronoiCanvas.width, this.voronoiCanvas.height);
 
                     
 
-                    let colours = 200;
-                    var scale = d3.scaleQuantize()
-                    .range(d3.range(colours))
-                    .domain([Math.log(5e6), Math.log(5e7)]);
+    //                 let colours = 200;
+    //                 var scale = d3.scaleQuantize()
+    //                 .range(d3.range(colours))
+    //                 .domain([Math.log(5e6), Math.log(5e7)]);
 
-                    var colorScale = d3.scaleLinear<string>()
-                    .range(["saddlebrown", "lightgreen", "steelblue"])
-                    .domain([0, 2*colours / 3, colours]);
+    //                 var colorScale = d3.scaleLinear<string>()
+    //                 .range(["saddlebrown", "lightgreen", "steelblue"])
+    //                 .domain([0, 2*colours / 3, colours]);
 
-                    for(let i = 0; i < polygons.length; i++) {
-                        let points = polygons[i]['Points']
-                        voronoiCanvasCTX.fillStyle = colorScale(scale(Math.log(polygons[i]['Area'])));
+    //                 for(let i = 0; i < polygons.length; i++) {
+    //                     let points = polygons[i]['Points']
+    //                     voronoiCanvasCTX.fillStyle = colorScale(scale(Math.log(polygons[i]['Area'])));
 
-                        voronoiCanvasCTX.beginPath();
-                        voronoiCanvasCTX.moveTo(((points[0]['X'] - minX) / (maxX - minX)) * axisCanvas.width, ((points[0]['Y'] - minY) / (maxY - minY)) * axisCanvas.height)
+    //                     voronoiCanvasCTX.beginPath();
+    //                     voronoiCanvasCTX.moveTo(((points[0]['X'] - minX) / (maxX - minX)) * axisCanvas.width, ((points[0]['Y'] - minY) / (maxY - minY)) * axisCanvas.height)
             
-                        for(let j = 1; j < points.length; j++) {
-                            voronoiCanvasCTX.lineTo(((points[j]['X'] - minX) / (maxX - minX)) * axisCanvas.width, ((points[j]['Y'] - minY) / (maxY - minY)) * axisCanvas.height)
-                        }
+    //                     for(let j = 1; j < points.length; j++) {
+    //                         voronoiCanvasCTX.lineTo(((points[j]['X'] - minX) / (maxX - minX)) * axisCanvas.width, ((points[j]['Y'] - minY) / (maxY - minY)) * axisCanvas.height)
+    //                     }
 
-                        //voronoiCanvasCTX.lineTo(((points[0]['X'] - minX) / (maxX - minX)) * axisCanvas.width, ((points[0]['Y'] - minY) / (maxY - minY)) * axisCanvas.height)
-                        voronoiCanvasCTX.closePath();
-                        //this.voronoi.renderCell(i, voronoiCanvasCTX);
-                        //console.log('rgb(100, 100, ' + Math.round(255*(area / maxArea))  + ')');            
-                        //voronoiCanvasCTX.fill();
-                        voronoiCanvasCTX.stroke();
-                    }
+    //                     //voronoiCanvasCTX.lineTo(((points[0]['X'] - minX) / (maxX - minX)) * axisCanvas.width, ((points[0]['Y'] - minY) / (maxY - minY)) * axisCanvas.height)
+    //                     voronoiCanvasCTX.closePath();
+    //                     //this.voronoi.renderCell(i, voronoiCanvasCTX);
+    //                     //console.log('rgb(100, 100, ' + Math.round(255*(area / maxArea))  + ')');            
+    //                     //voronoiCanvasCTX.fill();
+    //                     voronoiCanvasCTX.stroke();
+    //                 }
 
-                    self.redraw()
-                });
-                return*/
+    //                 self.redraw()
+    //             });
+    //             return*/
 
-                // Examine the text in the response
-                response.arrayBuffer().then((byteBuffer) => {
-                    self.points = new Uint32Array(byteBuffer);
+    //             // Examine the text in the response
+    //             response.arrayBuffer().then((byteBuffer) => {
+    //                 self.points = new Uint32Array(byteBuffer);
 
-                    self.normPoints = Array<number[]>(self.points.length);
+    //                 self.normPoints = Array<number[]>(self.points.length);
 
-                    for (let i = 0; i < self.points.length / 2; i++) {
-                        self.normPoints[i * 2] = Array<number>(2);
+    //                 for (let i = 0; i < self.points.length / 2; i++) {
+    //                     self.normPoints[i * 2] = Array<number>(2);
 
-                        self.normPoints[i * 2 + 1] = Array<number>(2);
-                    }
+    //                     self.normPoints[i * 2 + 1] = Array<number>(2);
+    //                 }
 
-                    console.log(self);
-                    //self.updatePoints();
+    //                 console.log(self);
+    //                 //self.updatePoints();
 
-                    self.updateDataLimits(minX, maxX, minY, maxY);
-                    self.updateView(minX, maxX, minY, maxY);
-                });
-            }
-            )
-            .catch(function (err) {
-                console.log('Fetch Error :-S', err);
-            });
-    }
+    //                 self.updateDataLimits(minX, maxX, minY, maxY);
+    //                 self.updateView(minX, maxX, minY, maxY);
+    //             });
+    //         }
+    //         )
+    //         .catch(function (err) {
+    //             console.log('Fetch Error :-S', err);
+    //         });
+    // }
 
-    setData(data: Uint32Array) {
-        this.points = data;
-    }
+    //setData(data: Uint32Array) {
+    //    this.points = data;
+    //}
 
-    polygonArea(polygon: Delaunay.Polygon) {
+    /*polygonArea(polygon: Delaunay.Polygon) {
         let area = 0;   // Accumulates area 
         let j = 0;
 
@@ -347,10 +374,10 @@ export class VoronoiPlot extends Axis {
         }
 
         return k *= 3, [x / k, y / k];
-    }
+    }*/
 
 
-    setSmoothingRepetitions(smoothingRepetitions: number) {
+    /*setSmoothingRepetitions(smoothingRepetitions: number) {
         this.smoothingRepetitions = smoothingRepetitions;
 
         this.calculateVoronoi();
@@ -362,7 +389,7 @@ export class VoronoiPlot extends Axis {
 
         this.calculateVoronoi();
         this.redraw();
-    }
+    }*/
 
     setDisplayVoronoiEdges(display: boolean) {
         this.displayVoronoiEdges = display;
@@ -371,7 +398,7 @@ export class VoronoiPlot extends Axis {
     }
 
     // When updating points or view -> recreate voronoi
-    calculateVoronoi() {
+    /*calculateVoronoi() {
         let startX = this.minViewX;
         let endX = this.maxViewX;
         let startY = this.minViewY;
@@ -502,7 +529,7 @@ export class VoronoiPlot extends Axis {
                 voronoiCanvasCTX.fillRect(this.normPoints[i][0], this.normPoints[i][1], 1, 1);
             }
         }
-    }
+    }*/
 
     // When changing contact plot -> only redraw contacts
 
@@ -588,7 +615,7 @@ export class VoronoiPlot extends Axis {
         // console.log(voronoi)
     }
 
-    updateView(minX: number, maxX: number, minY: number, maxY: number): void {
+    /*updateView(minX: number, maxX: number, minY: number, maxY: number): void {
         if (minX < 0) {
             minX = 0;
         }
@@ -604,5 +631,5 @@ export class VoronoiPlot extends Axis {
         this.calculateVoronoi();
         this.drawVoronoi();
         this.redraw();
-    }
+    }*/
 }

@@ -550,6 +550,7 @@ func GetVoronoiAndImage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	buf := new(bytes.Buffer)
+	binary.Write(buf, binary.BigEndian, uint32(numBins))
 	err = binary.Write(buf, binary.BigEndian, overviewImage)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -601,16 +602,48 @@ func GetVoronoiAndImage(w http.ResponseWriter, r *http.Request) {
 	binSizeX := float64(maxX-minX) / float64(numPixelsX)
 	binSizeY := float64(maxY-minY) / float64(numPixelsY)
 
-	fmt.Println(result.Polygons[0].Points[0])
-	fmt.Println(binSizeX)
-	fmt.Println(binSizeY)
+	voronoiBuffer := new(bytes.Buffer)
+	err = binary.Write(voronoiBuffer, binary.BigEndian, uint32(len(result.Polygons)))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
 	for polyIndex := range result.Polygons {
+		err = binary.Write(voronoiBuffer, binary.BigEndian, uint32(len(result.Polygons[polyIndex].Points)))
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		err = binary.Write(voronoiBuffer, binary.BigEndian, result.Polygons[polyIndex].Area)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
 		for index := range result.Polygons[polyIndex].Points {
 			result.Polygons[polyIndex].Points[index].X = (result.Polygons[polyIndex].Points[index].X - float64(minX)) / binSizeX
 			result.Polygons[polyIndex].Points[index].Y = (result.Polygons[polyIndex].Points[index].Y - float64(minY)) / binSizeY
+
+			err = binary.Write(voronoiBuffer, binary.BigEndian, result.Polygons[polyIndex].Points[index].X)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			err = binary.Write(voronoiBuffer, binary.BigEndian, result.Polygons[polyIndex].Points[index].Y)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
 		}
 	}
-	fmt.Println(result.Polygons[0].Points[0])
+
+	w.Header().Set("Content-Type", "application/octet-stream")
+
+	w.Write(buf.Bytes())
+	w.Write(voronoiBuffer.Bytes())
+
+	return
 
 	bytes, err := json.Marshal(struct {
 		Voronoi *voronoi.Voronoi //*voronoi.Int16VoronoiResult

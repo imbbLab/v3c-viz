@@ -131,15 +131,12 @@ func FromPoints(data []delaunay.Point, bounds Rectangle, normalisation Rectangle
 	xDim := normalisation.Width()
 	yDim := normalisation.Height()
 
-	fmt.Println(xDim)
-	fmt.Println(vor.Polygons[0].Points[0])
 	for polyIndex := range vor.Polygons {
 		for index := range vor.Polygons[polyIndex].Points {
 			vor.Polygons[polyIndex].Points[index].X = vor.Polygons[polyIndex].Points[index].X * xDim
 			vor.Polygons[polyIndex].Points[index].Y = vor.Polygons[polyIndex].Points[index].Y * yDim
 		}
 	}
-	fmt.Println(vor.Polygons[0].Points[0])
 
 	elapsed = time.Since(start)
 	fmt.Printf("Total voronoi: %s\n", elapsed)
