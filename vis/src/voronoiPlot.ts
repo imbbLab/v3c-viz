@@ -61,6 +61,10 @@ export class VoronoiPlot extends Axis {
         this.voronoiCanvas.height = 1024; //this.axisHeight;
 
         this.voronoi = Delaunay.from([]).voronoi();
+        this.voronoiCanvas.style.position = 'absolute';
+        this.voronoiCanvas.style.top = '1000px';
+        this.voronoiCanvas.style.left = '1000px'
+        document.body.appendChild(this.voronoiCanvas)
 
         // Set up the controls
         //this.numPointsLabel = document.createElement('label');
@@ -175,15 +179,19 @@ export class VoronoiPlot extends Axis {
 
         if(this.polygons && this.colourScale && this.scale) {
             let axisCanvas = this.getAxisCanvas();
-
+            
             for (let i = 0; i < this.polygons.length; i++) {
                 let points = this.polygons[i]['Points']
                 voronoiCanvasCTX.fillStyle = this.colourScale(this.scale(Math.log(this.polygons[i]['Area'])));
 
                 voronoiCanvasCTX.beginPath();
-                voronoiCanvasCTX.moveTo(points[0], points[1])
-                for (let j = 2; j < points.length; j += 2) {
-                    voronoiCanvasCTX.lineTo(points[j], points[j + 1])
+                //voronoiCanvasCTX.moveTo(points[0], points[1])
+                //for (let j = 2; j < points.length; j += 2) {
+                //    voronoiCanvasCTX.lineTo(points[j], points[j + 1])
+                //}
+                voronoiCanvasCTX.moveTo(points[0]['X'], points[0]['Y'])
+                for (let j = 1; j < points.length; j++) {
+                    voronoiCanvasCTX.lineTo(points[j]['X'], points[j]['Y'])
                 }
 
                 //voronoiCanvasCTX.moveTo(((points[0]['X'] - minX) / (maxX - minX)) * axisCanvas.width, ((points[0]['Y'] - minY) / (maxY - minY)) * axisCanvas.height)

@@ -14,6 +14,7 @@ import { Rectangle } from "./axis";
 
 import * as d3 from 'd3';
 import { area } from "d3";
+import { start } from "node:repl";
 
 //import igv = require('igv');
 //import { browser } from "igv_wrapper";
@@ -169,21 +170,47 @@ interface MinMax {
     Max: number
 }
 
+function polygonArea(polygon: any) {
+    let points = polygon['Points']
+    let area = 0;   // Accumulates area 
+    let j = 0;
+
+    for (let i = 2; i < points.length; i+=2) {
+        //area += (polygon[j][0]+polygon[i][0]) * (polygon[j][1]+polygon[i][1]); 
+        var crossProduct = polygon[j+0] * polygon[i+1] - polygon[j+1] * polygon[i+0];
+        area += crossProduct;
+        j = i;  //j is previous vertex to i
+    }
+    return area / 2;
+}
+
 function getMinMaxArea(polygons: any, twoPoints: any, points: any): MinMax {
-    var minMax: MinMax = { Min: -1, Max: -1};
+    var minMax: MinMax = { Min: -1, Max: -1 };
 
     if (polygons) {
+        let maxIndex = 0;
+
         for (let i = 0; i < polygons.length; i++) {
+            let centroid = polygons[i]['DataPoint']
+            if (polygons[i]['Clipped'] || centroid[0] > voronoiMap.getVoronoiDrawWidth() || centroid[1] > voronoiMap.getVoronoiDrawHeight()) {
+                continue;
+            }
+
             let area = Math.log(polygons[i]['Area'])
 
             if (minMax.Min == -1 || area < minMax.Min) {
                 minMax.Min = area
             }
             if (minMax.Max == -1 || area > minMax.Max) {
+                maxIndex = i
                 minMax.Max = area
             }
         }
+
+        console.log(polygons[maxIndex])
+        console.log(Math.log(polygons[maxIndex]['Area']))
     }
+    console.log(minMax)
 
     if (twoPoints) {
         for (let i = 0; i < twoPoints.length; i++) {
@@ -212,6 +239,44 @@ function getMinMaxArea(polygons: any, twoPoints: any, points: any): MinMax {
     }
 
     return minMax
+}
+
+function binAreas(polygons: any, twoPoints: any, points: any, binWidth: number, numBins: number, minMaxArea: MinMax): Uint32Array {
+    let areaBins = new Uint32Array(numBins);
+    for (let i = 0; i < areaBins.length; i++) {
+        areaBins[i] = 0
+    }
+
+    if (polygons) {
+        for (let i = 0; i < polygons.length; i++) {
+            let centroid = polygons[i]['DataPoint']
+            if (polygons[i]['Clipped'] || centroid[0] > voronoiMap.getVoronoiDrawWidth() || centroid[1] > voronoiMap.getVoronoiDrawHeight()) {
+                continue;
+            }
+
+            if (Math.log(polygons[i]['Area']) == minMaxArea.Max) {
+                console.log(polygons[i])
+            }
+
+            let areaBin = Math.round((Math.log(polygons[i]['Area']) - minMaxArea.Min) / binWidth)
+            areaBins[areaBin]++
+        }
+    }
+    if (twoPoints) {
+        for (let i = 0; i < twoPoints.length; i++) {
+            let areaBin = Math.round((Math.log(twoPoints[i]['Area']) - minMaxArea.Min) / binWidth)
+            areaBins[areaBin]++
+        }
+    }
+
+    if (points) {
+        for (let i = 0; i < points.length; i++) {
+            let areaBin = Math.round((Math.log(points[i]['Area']) - minMaxArea.Min) / binWidth)
+            areaBins[areaBin]++
+        }
+    }
+
+    return areaBins
 }
 
 function requestViewUpdate(request: ViewRequest) {
@@ -265,8 +330,8 @@ function requestViewUpdate(request: ViewRequest) {
             voronoiMap.updateViewLimits(startX, endX, startY, endY);
             imageMap.setChromPair(sourceChrom, targetChrom);
             imageMap.updateViewLimits(startX, endX, startY, endY);
-//
-            fetch('./voronoiandimage?pixelsX=' + voronoiMap.getVoronoiDrawWidth()   + '&pixelsY=' + voronoiMap.getVoronoiDrawHeight() + '&smoothingIterations=' + voronoiMap.smoothingRepetitions + '&numBins=' + imageMap.numBins + '&sourceChrom=' + sourceChrom.name + '&targetChrom=' + targetChrom.name + '&xStart=' + startX + '&xEnd=' + endX + '&yStart=' + startY + '&yEnd=' + endY)
+            //
+            fetch('./voronoiandimage?pixelsX=' + voronoiMap.getVoronoiDrawWidth() + '&pixelsY=' + voronoiMap.getVoronoiDrawHeight() + '&smoothingIterations=' + voronoiMap.smoothingRepetitions + '&numBins=' + imageMap.numBins + '&sourceChrom=' + sourceChrom.name + '&targetChrom=' + targetChrom.name + '&xStart=' + startX + '&xEnd=' + endX + '&yStart=' + startY + '&yEnd=' + endY)
                 .then(
                     (response) => {
                         if (response.status !== 200) {
@@ -287,6 +352,7 @@ function requestViewUpdate(request: ViewRequest) {
                             }
 
                             // Update the colour
+                            let redrawPolys: any = []
 
                             if (data['Voronoi']) {
                                 let points = data['Voronoi']['Points']
@@ -303,49 +369,59 @@ function requestViewUpdate(request: ViewRequest) {
                                 let colourCanvasCTX = <CanvasRenderingContext2D>colourCanvas.getContext("2d");
                                 let histogramY = colourCanvas.height - 10
                                 let numBins = colourCanvas.width
-                                let areaBins = new Uint32Array(numBins);
-                                for (let i = 0; i < areaBins.length; i++) {
-                                    areaBins[i] = 0
-                                }
 
-                                let binWidth = (minMaxArea.Max - minMaxArea.Min) / (numBins - 1)
+
                                 let maxBin = 0
 
-                                if(polygons) {
-                                    for (let i = 0; i < polygons.length; i++) {
-                                        let areaBin = Math.round((Math.log(polygons[i]['Area']) - minMaxArea.Min) / binWidth)
-                                        areaBins[areaBin]++
-                                    }
-                                }
-                                if(twoPoints) {
-                                    for (let i = 0; i < twoPoints.length; i++) {
-                                        let areaBin = Math.round((Math.log(twoPoints[i]['Area']) - minMaxArea.Min) / binWidth)
-                                        areaBins[areaBin]++
-                                    }
-                                }
+                                let binWidth = (minMaxArea.Max - minMaxArea.Min) / (numBins)
+                                let areaBins = binAreas(polygons, twoPoints, points, binWidth, numBins, minMaxArea);
+                                // let startBin = areaBins.length - 1;
+                                // let endBin = 0;
+                                // for (let i = 0; i < areaBins.length; i++) {
+                                //     if (areaBins[i] > 1) {
+                                //         startBin = i;
+                                //         break;
+                                //     }
+                                // }
+                                // for (let i = areaBins.length - 1; i >= 0; i--) {
+                                //     if (areaBins[i] > 1) {
+                                //         endBin = i;
+                                //         break;
+                                //     }
+                                // }
+                                // if (startBin < areaBins.length && endBin > 0) {
+                                //     minMaxArea.Max = binWidth * endBin + minMaxArea.Min
+                                //     minMaxArea.Min = binWidth * startBin + minMaxArea.Min
+                                //     binWidth = (minMaxArea.Max - minMaxArea.Min) / (numBins)
+                                //     areaBins = binAreas(polygons, twoPoints, points, binWidth, numBins, minMaxArea);
+                                // }
 
-                                if(points) {
-                                    for (let i = 0; i < points.length; i++) {
-                                        let areaBin = Math.round((Math.log(points[i]['Area']) - minMaxArea.Min) / binWidth)
-                                        areaBins[areaBin]++
-                                    }
-                                }
-
-                                for(let i = 0; i < areaBins.length; i++) {
-                                    if(areaBins[i] > maxBin) {
+                                for (let i = 0; i < areaBins.length; i++) {
+                                    if (areaBins[i] > maxBin) {
                                         maxBin = areaBins[i]
+                                    }
+                                }
+
+                                for (let i = 0; i < polygons.length; i++) {
+                                    if (polygons[i]['Clipped']) {
+                                        continue;
+                                    }
+
+                                    if (Math.log(polygons[i]['Area']) > minMaxArea.Max) {
+                                        redrawPolys.push(polygons[i])
                                     }
                                 }
 
                                 voronoiMap.scale = d3.scaleQuantize()
                                     .range(d3.range(voronoiMap.colours))
-                                    .domain([minMaxArea.Min, minMaxArea.Max ]);
+                                    .domain([minMaxArea.Min, minMaxArea.Max]);
 
                                 for (let i = 0; i < numBins; i++) {
                                     colourCanvasCTX.strokeStyle = 'rgb(0, 0, 0)'
                                     colourCanvasCTX.beginPath();
                                     colourCanvasCTX.moveTo(i, histogramY);
-                                    colourCanvasCTX.lineTo(i, histogramY - (areaBins[i] / maxBin * colourCanvas.height))
+                                    colourCanvasCTX.lineTo(i, histogramY - (Math.log(areaBins[i]) / Math.log(maxBin) * histogramY) - 10)
+                                    //colourCanvasCTX.lineTo(i, histogramY - (areaBins[i] / maxBin * colourCanvas.height))
                                     colourCanvasCTX.stroke();
 
                                     colourCanvasCTX.strokeStyle = voronoiMap.colourScale(voronoiMap.scale(binWidth * i + minMaxArea.Min))
@@ -381,7 +457,8 @@ function requestViewUpdate(request: ViewRequest) {
                                         colourCanvasCTX.strokeStyle = 'rgb(0, 0, 0)'
                                         colourCanvasCTX.beginPath();
                                         colourCanvasCTX.moveTo(i, histogramY);
-                                        colourCanvasCTX.lineTo(i, histogramY - (areaBins[i] / maxBin * colourCanvas.height))
+                                        colourCanvasCTX.lineTo(i, histogramY - (Math.log(areaBins[i]) / Math.log(maxBin) * histogramY))
+                                        //colourCanvasCTX.lineTo(i, histogramY - (areaBins[i] / maxBin * colourCanvas.height))
                                         colourCanvasCTX.stroke();
 
                                         colourCanvasCTX.strokeStyle = voronoiMap.colourScale(voronoiMap.scale(binWidth * i + minMaxArea.Min))
@@ -408,12 +485,50 @@ function requestViewUpdate(request: ViewRequest) {
                                     colourCanvasCTX.lineTo(maxScaleX + 5, colourCanvas.height);
                                     colourCanvasCTX.fill();
                                     voronoiMap.redrawVoronoi();
+
+                                    let voronoiCanvasCTX = <CanvasRenderingContext2D>voronoiMap.voronoiCanvas.getContext("2d");
+                                    voronoiCanvasCTX.fillStyle = 'rgb(0, 0, 0)';
+                                    for (let i = 0; i < polygons.length; i++) {
+                                        if (polygons[i]['Clipped']) {
+                                            continue;
+                                        }
+
+                                        if (Math.log(polygons[i]['Area']) > maxScale) {
+                                            console.log(polygons[i])
+                                            console.log(polygonArea(polygons[i]))
+                                            let points = polygons[i]['Points']
+
+                                            voronoiCanvasCTX.beginPath();
+                                            voronoiCanvasCTX.moveTo(points[0], points[1])
+                                            for (let j = 2; j < points.length; j += 2) {
+                                                voronoiCanvasCTX.lineTo(points[j], points[j + 1])
+                                            }
+                                            voronoiCanvasCTX.closePath();
+                                            voronoiCanvasCTX.fill();
+                                        }
+                                    }
+                                    voronoiMap.redraw();
+
                                 });
                             }
 
                             let buf = Buffer.from(Uint8Array.from(atob(data['Image']), c => c.charCodeAt(0)));
                             imageMap.updateFromArray(new Uint32Array(buf.buffer, buf.byteOffset, buf.byteLength / Uint32Array.BYTES_PER_ELEMENT))
-                            voronoiMap.updateFromJSON(data['Voronoi'])
+                            voronoiMap.updateFromJSON(data['Voronoi']).then(() => {
+                                let voronoiCanvasCTX = <CanvasRenderingContext2D>voronoiMap.voronoiCanvas.getContext("2d");
+                                voronoiCanvasCTX.fillStyle = 'rgb(0, 0, 0)';
+                                for (let i = 0; i < redrawPolys.length; i++) {
+                                    let points = redrawPolys[i]['Points']
+
+                                    voronoiCanvasCTX.beginPath();
+                                    voronoiCanvasCTX.moveTo(points[0], points[1])
+                                    for (let j = 2; j < points.length; j += 2) {
+                                        voronoiCanvasCTX.lineTo(points[j], points[j + 1])
+                                    }
+                                    voronoiCanvasCTX.closePath();
+                                    voronoiCanvasCTX.fill();
+                                }
+                            })
 
                         })
                     });

@@ -3,6 +3,7 @@ package voronoi
 import (
 	"errors"
 	"fmt"
+	"log"
 	"math"
 	"sync"
 	"time"
@@ -27,7 +28,7 @@ func Rect(x0, y0, x1, y1 float64) Rectangle {
 }
 
 type Voronoi struct {
-	Polygons []Polygon
+	Polygons []*Polygon
 }
 
 //noNormlisation := func(point delaunay.Point) delaunay.Point {
@@ -73,8 +74,15 @@ func FromPoints(data []delaunay.Point, bounds Rectangle, normalisation Rectangle
 		defer func() {
 			if r := recover(); r != nil {
 
-				fmt.Printf("Paniced when processing the points %v\n", totalPoints)
+				fmt.Printf("Paniced when processing %d points\n", len(totalPoints))
 				fmt.Println(r)
+
+				// Check the points for odd features to assist with debugging
+				for _, point := range totalPoints {
+					if math.IsInf(point.X, 0) || math.IsNaN(point.X) || math.IsInf(point.Y, 0) || math.IsNaN(point.Y) {
+						fmt.Printf("Odd point created %v\n", point)
+					}
+				}
 
 				vor = nil
 				err = errors.New("error when performing voronoi")
@@ -104,10 +112,10 @@ func FromPoints(data []delaunay.Point, bounds Rectangle, normalisation Rectangle
 			totalPoints = append(totalPoints, fixedPoint4)
 
 			for _, polygon := range vor.Polygons {
-				if len(polygon.Points) > 0 {
+				if polygon != nil && len(polygon.Points) > 0 {
 					centroid := polygon.Centroid()
-					if math.IsNaN(centroid.X) || math.IsNaN(centroid.Y) {
-						fmt.Printf("We have calulated NaN for polygon: %v\n", polygon)
+					if math.IsNaN(centroid.X) || math.IsNaN(centroid.Y) || math.IsInf(centroid.X, 0) || math.IsInf(centroid.Y, 0) {
+						log.Printf("We have calculated bad centroid for polygon: %v\n", polygon)
 					} else {
 						totalPoints = append(totalPoints, centroid)
 					}
@@ -118,6 +126,20 @@ func FromPoints(data []delaunay.Point, bounds Rectangle, normalisation Rectangle
 		elapsed = time.Since(midPoint)
 		fmt.Printf("Reset: %s\n", elapsed)
 	}
+
+	// Scale the points back to original space
+	xDim := normalisation.Width()
+	yDim := normalisation.Height()
+
+	fmt.Println(xDim)
+	fmt.Println(vor.Polygons[0].Points[0])
+	for polyIndex := range vor.Polygons {
+		for index := range vor.Polygons[polyIndex].Points {
+			vor.Polygons[polyIndex].Points[index].X = vor.Polygons[polyIndex].Points[index].X * xDim
+			vor.Polygons[polyIndex].Points[index].Y = vor.Polygons[polyIndex].Points[index].Y * yDim
+		}
+	}
+	fmt.Println(vor.Polygons[0].Points[0])
 
 	elapsed = time.Since(start)
 	fmt.Printf("Total voronoi: %s\n", elapsed)
@@ -148,7 +170,7 @@ func calculateVoronoi(triangulation *delaunay.Triangulation, bounds Rectangle) *
 	clipArea := Polygon{Points: []delaunay.Point{{X: bounds.Min.X, Y: bounds.Min.Y}, {X: bounds.Max.X, Y: bounds.Min.Y}, {X: bounds.Max.X, Y: bounds.Max.Y}, {X: bounds.Min.X, Y: bounds.Max.Y}}}
 
 	var voronoi Voronoi
-	voronoi.Polygons = make([]Polygon, len(triangulation.Points))
+	polygons := make([]*Polygon, len(triangulation.Points))
 
 	var wg sync.WaitGroup
 	wg.Add(len(triangulation.Points))
@@ -171,15 +193,20 @@ func calculateVoronoi(triangulation *delaunay.Triangulation, bounds Rectangle) *
 				polygon.Points = append(polygon.Points, triangleCenter(triangulation, edges[i]/3)) //triangleOfEdge(edges[i])))
 			}
 
+			if len(polygon.Points) < 3 {
+				log.Printf("We have a problem polygon: %v\n", polygon)
+				return
+			}
+
 			// Clip the polygon to the view
 
 			//polygon.calculateArea()
 			//area := polygon.Area
 			polygon = SutherlandHodgman(polygon, clipArea)
-			//polygon.Area = area
+
 			polygon.calculateArea()
 			polygon.DataPoint = polygon.Centroid()
-			voronoi.Polygons[p] = polygon
+			polygons[p] = &polygon
 
 			/*	if len(polygon.Points) > 0 {
 				polygon.calculateArea()
@@ -190,6 +217,20 @@ func calculateVoronoi(triangulation *delaunay.Triangulation, bounds Rectangle) *
 	}
 
 	wg.Wait()
+
+	voronoi.Polygons = make([]*Polygon, 0, len(polygons))
+
+	for _, polygon := range polygons {
+		if polygon == nil || len(polygon.Points) < 3 {
+			continue
+		}
+
+		centroid := polygon.Centroid()
+		if !math.IsNaN(centroid.X) && !math.IsNaN(centroid.Y) { // && centroid.X >= bounds.Min.X && centroid.X <= bounds.Max.X &&
+			//centroid.Y >= bounds.Min.Y && centroid.Y <= bounds.Max.Y {
+			voronoi.Polygons = append(voronoi.Polygons, polygon)
+		}
+	}
 
 	return &voronoi
 }

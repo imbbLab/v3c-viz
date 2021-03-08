@@ -8,6 +8,7 @@ type Polygon struct {
 	DataPoint delaunay.Point
 	Points    []delaunay.Point
 	Area      float64
+	Clipped   bool
 }
 
 func (polygon *Polygon) calculateArea() {
@@ -69,6 +70,7 @@ func intersection(cp1, cp2, s, e delaunay.Point) delaunay.Point {
 
 // Sutherland-Hodgman clipping modified from https://rosettacode.org/wiki/Sutherland-Hodgman_polygon_clipping#C.2B.2B
 func SutherlandHodgman(subjectPolygon Polygon, clipPolygon Polygon) Polygon {
+	var clipped bool
 	var cp1, cp2, s, e delaunay.Point
 
 	var inputPolygon, outputPolygon Polygon
@@ -108,6 +110,7 @@ func SutherlandHodgman(subjectPolygon Polygon, clipPolygon Polygon) Polygon {
 			} else if !inside(s, cp1, cp2) && inside(e, cp1, cp2) {
 				outputPolygon.Points = append(outputPolygon.Points, intersection(cp1, cp2, s, e))
 				outputPolygon.Points = append(outputPolygon.Points, e)
+				clipped = true
 				counter++
 				counter++
 
@@ -116,6 +119,7 @@ func SutherlandHodgman(subjectPolygon Polygon, clipPolygon Polygon) Polygon {
 				// is added to the output list
 			} else if inside(s, cp1, cp2) && !inside(e, cp1, cp2) {
 				outputPolygon.Points = append(outputPolygon.Points, intersection(cp1, cp2, s, e))
+				clipped = true
 				counter++
 
 				// Case 4: Both vertices are outside
@@ -127,5 +131,6 @@ func SutherlandHodgman(subjectPolygon Polygon, clipPolygon Polygon) Polygon {
 		newPolygonSize = counter
 	}
 
+	outputPolygon.Clipped = clipped
 	return outputPolygon
 }

@@ -1,6 +1,8 @@
 package voronoi
 
-import "math"
+import (
+	"math"
+)
 
 func ConvertToint16(voronoi *Voronoi, bounds Rectangle, normalisation Rectangle, numPixelsX, numPixelsY int) *Int16VoronoiResult {
 	var result Int16VoronoiResult
@@ -65,21 +67,22 @@ func ConvertToint16(voronoi *Voronoi, bounds Rectangle, normalisation Rectangle,
 		maxPolyY = (maxPolyY - bounds.Min.Y) / yDim * float64(numPixelsY)
 
 		// TODO: Remove duplicates in .Points and .TwoPoints
+		//result.Polygons = append(result.Polygons, polygonToint16(polygon, bounds, normalisation, numPixelsX, numPixelsY))
 
-		if math.Floor(minPolyX) == math.Floor(maxPolyX) && math.Floor(minPolyY) == math.Floor(maxPolyY) {
-			result.Points = append(result.Points, int16Point{X: int16(math.Floor(minPolyX)), Y: int16(math.Floor(minPolyY)), Area: math.Round(polygon.Area * normalisation.Width() * normalisation.Height())})
-		} else if maxPolyX-minPolyX < 2 && maxPolyY-minPolyY < 2 {
-			result.TwoPoints = append(result.TwoPoints, int16TwoPoint{MinX: int16(math.Floor(minPolyX)), MaxX: int16(math.Floor(maxPolyX)),
-				MinY: int16(math.Floor(minPolyY)), MaxY: int16(math.Floor(maxPolyY)), Area: math.Round(polygon.Area * normalisation.Width() * normalisation.Height())})
-		} else { // if minPolyX > 0 || minPolyY > 0 || maxPolyX <= float64(numPixelsX) || maxPolyY <= float64(numPixelsY) {
-			result.Polygons = append(result.Polygons, polygonToint16(polygon, bounds, normalisation, numPixelsX, numPixelsY))
-		}
+		//		if math.Floor(minPolyX) == math.Floor(maxPolyX) && math.Floor(minPolyY) == math.Floor(maxPolyY) {
+		//			result.Points = append(result.Points, int16Point{X: int16(math.Floor(minPolyX)), Y: int16(math.Floor(minPolyY)), Area: math.Round(normalisation.Width() * normalisation.Height())})
+		//		} else if maxPolyX-minPolyX < 2 && maxPolyY-minPolyY < 2 {
+		//			result.TwoPoints = append(result.TwoPoints, int16TwoPoint{MinX: int16(math.Floor(minPolyX)), MaxX: int16(math.Floor(maxPolyX)),
+		//				MinY: int16(math.Floor(minPolyY)), MaxY: int16(math.Floor(maxPolyY)), Area: math.Round(polygon.Area * normalisation.Width() * normalisation.Height())})
+		//		} else { // if minPolyX > 0 || minPolyY > 0 || maxPolyX <= float64(numPixelsX) || maxPolyY <= float64(numPixelsY) {
+		result.Polygons = append(result.Polygons, polygonToint16(polygon, bounds, normalisation, numPixelsX, numPixelsY))
+		//		}
 	}
 
 	return &result
 }
 
-func polygonToint16(polygon Polygon, bounds Rectangle, normalisation Rectangle, pixelsX, pixelsY int) int16Polygon {
+func polygonToint16(polygon *Polygon, bounds Rectangle, normalisation Rectangle, pixelsX, pixelsY int) int16Polygon {
 	var newPoly int16Polygon
 
 	maxValue := float64(math.MaxInt16)
@@ -108,6 +111,7 @@ func polygonToint16(polygon Polygon, bounds Rectangle, normalisation Rectangle, 
 		newPoly.DataPoint = []int16{int16(math.Floor((polygon.DataPoint.X - bounds.Min.X) / xDim * float64(pixelsX))), int16(math.Floor((polygon.DataPoint.Y - bounds.Min.Y) / yDim * float64(pixelsY)))}
 		newPoly.Points = append(newPoly.Points, int16(x), int16(y)) //int16Point{X: int16(x), Y: int16(y)})
 		newPoly.Area = math.Round(polygon.Area * normalisation.Width() * normalisation.Height())
+		newPoly.Clipped = polygon.Clipped
 	}
 
 	return newPoly
@@ -133,6 +137,7 @@ type int16Polygon struct {
 	DataPoint []int16
 	Points    []int16 //int16Point
 	Area      float64
+	Clipped   bool
 }
 
 type Int16VoronoiResult struct {

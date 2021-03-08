@@ -103,6 +103,11 @@ export class ImageMap extends Axis {
         this.callback = callback;
     }
 
+    setDimensions(width: number, height: number) {
+        super.setDimensions(width, height);
+        this.setNumberBins(this.axisWidth);
+    }
+
     //onImageLoad: (minX: number, maxX: number, minY: number, maxY: number) => void = () => {};
 
     //setOnImageLoad(onImageLoad: (minX: number, maxX: number, minY: number, maxY: number) => void) {

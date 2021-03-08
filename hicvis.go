@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"math"
 	"net"
 	"net/http"
 	"os"
@@ -387,7 +388,7 @@ func GetVoronoi(w http.ResponseWriter, r *http.Request) {
 	w.Write(bytes)
 }
 
-func performVoronoi(points []*pairs.Entry, query pairs.Query, smoothingIterations int, numPixelsX, numPixelsY int) (*voronoi.Int16VoronoiResult, error) {
+func performVoronoi(points []*pairs.Entry, query pairs.Query, smoothingIterations int, numPixelsX, numPixelsY int) (*voronoi.Voronoi, error) {
 
 	// Normalisation options for voronoi calculation:
 	// 1) No normalisation
@@ -440,12 +441,10 @@ func performVoronoi(points []*pairs.Entry, query pairs.Query, smoothingIteration
 	//fmt.Println(triangulation)
 	fmt.Printf("Finishing voronoi calculation: %s\n", elapsed)
 
-	result := voronoi.ConvertToint16(vor, bounds, normalisation, numPixelsX, numPixelsY)
-
 	//elapsed = time.Since(start)
 	//fmt.Printf("[%s] Originally had %d polygons, but now have %d\n", elapsed, len(vor.Polygons), len(result.Polygons))
 
-	return result, err
+	return vor, err
 }
 
 func uint32ToByte(data []uint32) []byte {
@@ -562,7 +561,8 @@ func GetVoronoiAndImage(w http.ResponseWriter, r *http.Request) {
 		sumPoints += int(count)
 	}
 
-	var result *voronoi.Int16VoronoiResult
+	//var result *voronoi.Int16VoronoiResult
+	var result *voronoi.Voronoi
 	if sumPoints < opts.MaximumVoronoiPoints {
 		points, err := pairsFile.Index().Search(pairsQuery)
 		if err != nil {
@@ -584,9 +584,9 @@ func GetVoronoiAndImage(w http.ResponseWriter, r *http.Request) {
 
 				if overviewImage[index] > 0 {
 					points = append(points, &pairs.Entry{SourceChrom: sourceChrom,
-						SourcePosition: uint64((float64(x)/float64(numBins))*float64(maxX-minX)) + uint64(minX),
+						SourcePosition: uint64(math.Floor((float64(x)/float64(numBins))*float64(maxX-minX))) + uint64(minX),
 						TargetChrom:    targetChrom,
-						TargetPosition: uint64((float64(y)/float64(numBins))*float64(maxY-minY)) + uint64(minY)})
+						TargetPosition: uint64(math.Floor((float64(y)/float64(numBins))*float64(maxY-minY))) + uint64(minY)})
 				}
 			}
 		}
@@ -598,8 +598,22 @@ func GetVoronoiAndImage(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	binSizeX := float64(maxX-minX) / float64(numPixelsX)
+	binSizeY := float64(maxY-minY) / float64(numPixelsY)
+
+	fmt.Println(result.Polygons[0].Points[0])
+	fmt.Println(binSizeX)
+	fmt.Println(binSizeY)
+	for polyIndex := range result.Polygons {
+		for index := range result.Polygons[polyIndex].Points {
+			result.Polygons[polyIndex].Points[index].X = (result.Polygons[polyIndex].Points[index].X - float64(minX)) / binSizeX
+			result.Polygons[polyIndex].Points[index].Y = (result.Polygons[polyIndex].Points[index].Y - float64(minY)) / binSizeY
+		}
+	}
+	fmt.Println(result.Polygons[0].Points[0])
+
 	bytes, err := json.Marshal(struct {
-		Voronoi *voronoi.Int16VoronoiResult
+		Voronoi *voronoi.Voronoi //*voronoi.Int16VoronoiResult
 		Image   string
 	}{Voronoi: result,
 		Image: base64.StdEncoding.EncodeToString(buf.Bytes())}) //voronoi) //
