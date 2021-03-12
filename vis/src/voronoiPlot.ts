@@ -86,7 +86,7 @@ export class VoronoiPlot extends Axis {
         this.voronoiCanvas.style.position = 'absolute';
         this.voronoiCanvas.style.top = '1000px';
         this.voronoiCanvas.style.left = '1000px'
-        document.body.appendChild(this.voronoiCanvas)
+        //document.body.appendChild(this.voronoiCanvas)
 
         // Set up the controls
         //this.numPointsLabel = document.createElement('label');

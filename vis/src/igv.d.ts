@@ -6,8 +6,6 @@ declare module 'igv' {
         end: string;
         label: string;
 
-        initialEnd: string
-
         shiftPixels(x: number, y: number): boolean
     }
 
@@ -212,6 +210,7 @@ declare module 'igv' {
 
   export interface IGVBrowser {
     $root: JQuery
+    $searchInput: JQuery
 
     constants: Constants
     trackContainer: HTMLDivElement;

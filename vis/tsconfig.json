@@ -3,6 +3,7 @@
     // enabling the VSCode build tasks "tsc: build" and "tsc: watch".
     "compilerOptions": {
       "target": "es6",            // Compatible with older browsers
+      "lib": ["DOM", "DOM.Iterable", "ESNext"],
       "module": "commonjs",            // Compatible with both Node.js and browser
       "moduleResolution": "node", // Tell tsc to look in node_modules for modules
       "sourceMap": true,          // Creates *.js.map files

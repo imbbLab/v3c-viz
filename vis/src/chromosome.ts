@@ -1,9 +1,8 @@
 
 export interface  Locus {
     chr: string
-    start: string
-    //end?: string
-    initialEnd: string 
+    start: number
+    end: number
 }
 
 export class Chromosome {

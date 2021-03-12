@@ -236,6 +236,19 @@ function binAreas(voronoi: Voronoi, binWidth: number, numBins: number, minMaxAre
     return areaBins
 }
 
+function getLocusFromBrowser(browser: igv.IGVBrowser): Locus {
+    let value = browser.$searchInput.val();
+    if(value) {
+        let searchValue = <string>value.toString();
+        let parts = searchValue.split(':');
+        let chrParts = parts[1].split('-');
+        
+        return {chr: parts[0], start: parseInt(chrParts[0].replaceAll(',', '')), end:parseInt(chrParts[1].replaceAll(',', ''))};
+    } 
+
+    return {chr: "", start: 0, end: 0}
+}
+
 function requestViewUpdate(request: ViewRequest) {
     if (request.dimension == "x") {
         xRequest = request;
@@ -260,11 +273,11 @@ function requestViewUpdate(request: ViewRequest) {
             let newSourceChrom = getChromosomeFromMap(chromosomes, xRequest.locus.chr)
             let newTargetChrom = getChromosomeFromMap(chromosomes, yRequest.locus.chr)
 
-            let startX = parseInt(xRequest.locus.start)
-            let endX = parseInt(xRequest.locus.initialEnd)
+            let startX = xRequest.locus.start
+            let endX = xRequest.locus.end
 
-            let startY = parseInt(yRequest.locus.start)
-            let endY = parseInt(yRequest.locus.initialEnd)
+            let startY = yRequest.locus.start
+            let endY = yRequest.locus.end
 
             if (startX < 0) {
                 startX = 0;
@@ -348,7 +361,6 @@ function requestViewUpdate(request: ViewRequest) {
 
                                 vor.polygons.push(polygon)
                             }
-console.log(vor)
 
                             let minMaxArea = getMinMaxArea(vor);
 
@@ -714,7 +726,7 @@ fetch('./details')
                     bottomBrowser.updateLocusSearchWidget = function (referenceFrameList: igv.ReferenceFrame[]): void {
                         bottomBrowser._updateLocusSearchWidget(referenceFrameList);
 
-                        requestViewUpdate({ dimension: "x", locus: referenceFrameList[0] }) //, callback: () =>{console.log(referenceFrameList); 
+                        requestViewUpdate({ dimension: "x", locus: getLocusFromBrowser(bottomBrowser) }) //, callback: () =>{console.log(referenceFrameList); 
 
                     }
 
@@ -725,7 +737,10 @@ fetch('./details')
                         rightBrowser.updateLocusSearchWidget = function (referenceFrameList: igv.ReferenceFrame[]): void {
                             rightBrowser._updateLocusSearchWidget(referenceFrameList)
 
-                            requestViewUpdate({ dimension: "y", locus: referenceFrameList[0] })
+                            let searchValue = <string>rightBrowser.$searchInput.val()?.toString();
+                            let parts = searchValue.split(':');
+                            let chrParts = parts[1].split('-');
+                            requestViewUpdate({ dimension: "y", locus: getLocusFromBrowser(rightBrowser) })
                         }
 
 
@@ -901,8 +916,8 @@ fetch('./details')
 
                         const smoothingMenu = voronoiGUI.addFolder('Smoothing');
                         smoothingMenu.add(voronoiMap, 'smoothingRepetitions', 0, 10, 1).name('Repetitions').onChange((value) => {
-                            requestViewUpdate({ dimension: "x", locus: bottomBrowser.referenceFrameList[0] })
-                            requestViewUpdate({ dimension: "y", locus: rightBrowser.referenceFrameList[0] })
+                            requestViewUpdate({ dimension: "x", locus: getLocusFromBrowser(bottomBrowser)  })
+                            requestViewUpdate({ dimension: "y", locus: getLocusFromBrowser(rightBrowser) })
                             /*voronoiMap.calculateVoronoi();
                             voronoiMap.drawVoronoi();
                             voronoiMap.redraw();*/
