@@ -489,6 +489,39 @@ func GetInteract(w http.ResponseWriter, r *http.Request) {
 	w.Write(bytes)
 }
 
+func SetInteract(w http.ResponseWriter, r *http.Request) {
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	bodyData := string(body)
+	fmt.Println(bodyData)
+
+	type interactData struct {
+		Interactions []interact.Interaction
+	}
+	var interactions interactData
+
+	err = json.Unmarshal([]byte(bodyData), &interactions)
+	if err != nil {
+		errorMessage := "Error when attempting to unmarshal annotation name " + bodyData + ": " + err.Error()
+		log.Println(errorMessage)
+
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	fmt.Println(interactions)
+	interactFile = new(interact.InteractFile)
+	interactFile.Interactions = make(map[string][]interact.Interaction)
+
+	for _, interaction := range interactions.Interactions {
+		interactFile.Interactions[interaction.ChromPairName()] = append(interactFile.Interactions[interaction.ChromPairName()], interaction)
+	}
+}
+
 func GetVoronoiAndImage(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query()
 
@@ -841,7 +874,8 @@ func startServer(listener net.Listener) {
 	router.HandleFunc("/points", GetPoints)
 	router.HandleFunc("/voronoi", GetVoronoi)
 	router.HandleFunc("/voronoiandimage", GetVoronoiAndImage)
-	router.HandleFunc("/interact", GetInteract)
+	router.HandleFunc("/interact", GetInteract).Methods("GET")
+	router.HandleFunc("/interact", SetInteract).Methods("POST")
 	router.HandleFunc("/densityImage", GetDensityImage)
 	//router.HandleFunc("/", ListProjects).Methods("GET")
 	router.PathPrefix("/").Handler(http.FileServer(http.Dir("./static/")))
