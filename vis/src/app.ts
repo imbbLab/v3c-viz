@@ -296,6 +296,10 @@ function requestViewUpdate(request: ViewRequest) {
                 targetChrom = newTargetChrom
             }
 
+            // Update the URL to reflect the current view
+            let nextURL = window.location.href.split('?')[0] + "?srcChrom=" + sourceChrom.name + "&srcStart=" + startX + "&srcEnd=" + endX + "&tarChrom=" + targetChrom.name + "&tarStart=" + startY + "&tarEnd=" + endY
+            window.history.pushState({}, sourceChrom.nameWithChr() + ":" + startX + "-" + endX + " x " + targetChrom + ":" + startY + "-" + endY, nextURL);
+
             voronoiMap.setChromPair(sourceChrom, targetChrom);
             voronoiMap.updateViewLimits(startX, endX, startY, endY);
             imageMap.setChromPair(sourceChrom, targetChrom);
@@ -485,99 +489,60 @@ fetch('./details')
             }
 
             response.json().then(details => {
-                console.log(details);
-
-                //var sourceChromSelect = <HTMLSelectElement>document.getElementById('sourceChromSelect');
-                //var targetChromSelect = <HTMLSelectElement>document.getElementById('targetChromSelect');
-                // Clear all options 
-                //var i, L = sourceChromSelect.options.length - 1;
-                //for(i = L; i >= 0; i--) {
-                //    sourceChromSelect.remove(i);
-                //    targetChromSelect.remove(i);
-                //}
-
                 var chromosomeDetails = details['Chromosomes'];
                 chromosomeDetails.forEach((chromosome: any) => {
-                    //sourceChromSelect.options.add(new Option(chromosome['Name'], chromosome['Name']));
-                    //targetChromSelect.options.add(new Option(chromosome['Name'], chromosome['Name']));
-
                     chromosomes.set(chromosome['Name'], Chromosome.fromJSON(chromosome))
                 });
-                /*sourceChromSelect.addEventListener("change", (event) => {
-                    sourceChrom = <Chromosome>chromosomes.get(sourceChromSelect.value);
 
-                    imageMap.setChromPair(sourceChrom, targetChrom)
-                    let interactionSet = interactions.get(sourceChrom.name+"-"+targetChrom.name)
-                    if(interactionSet) {
-                        imageMap.setInteractions(interactionSet);
-                    } else {
-                        imageMap.setInteractions([])
-                    }
-                })
-                targetChromSelect.addEventListener("change", (event) => {
-                    targetChrom = <Chromosome>chromosomes.get(targetChromSelect.value);
+                var locusBottom: string
+                var locusRight: string
 
-                    imageMap.setChromPair(sourceChrom, targetChrom)
-                    let interactionSet = interactions.get(sourceChrom.name+"-"+targetChrom.name)
-                    if(interactionSet) {
-                        imageMap.setInteractions(interactionSet);
-                    } else {
-                        imageMap.setInteractions([])
-                    }
-                })*/
+                // If parameters set as part of URL, then load that region of the chromosome, otherwise just load the whole of the first chromosome
+                const queryString = window.location.search;
+                const urlParams = new URLSearchParams(queryString);
+                
+                const srcChrom = urlParams.get('srcChrom');
+                const tarChrom = urlParams.get('tarChrom');
+                const srcStart = urlParams.get('srcStart');
+                const srcEnd = urlParams.get('srcEnd');
+                const tarStart = urlParams.get('tarStart');
+                const tarEnd = urlParams.get('tarEnd');
 
+                if(srcChrom && srcStart && srcEnd && tarChrom && tarStart && tarEnd) {
+                    sourceChrom = getChromosomeFromMap(chromosomes, srcChrom)
+                    targetChrom = getChromosomeFromMap(chromosomes, tarChrom)
 
-                sourceChrom = getChromosomeFromMap(chromosomes, details['Chromosomes'][0]['Name'])
-                targetChrom = sourceChrom
+                    locusBottom = sourceChrom.name + ":" + srcStart + "-" + srcEnd;
+                    locusRight = targetChrom.name + ":" + tarStart + "-" + tarEnd;
+                } else {
+                    sourceChrom = getChromosomeFromMap(chromosomes, details['Chromosomes'][0]['Name'])
+                    targetChrom = sourceChrom
 
-                const locus = sourceChrom.name + ":0-" + sourceChrom.length; //'chr4:0-1348131'
+                    locusBottom = sourceChrom.name + ":0-" + sourceChrom.length; //'chr4:0-1348131'
+                    locusRight = locusBottom
+                }
+                console.log(locusBottom)
 
                 // Set up the options
-                const options: igv.IIGVBrowserOptions = {
+                const optionsBottom: igv.IIGVBrowserOptions = {
                     palette: ['#00A0B0', '#6A4A3C', '#CC333F', '#EB6841'],
-                    locus: locus,
+                    locus: locusBottom,
 
                     reference: {
                         id: details['Genome'],
                         fastaURL: 'https://s3.amazonaws.com/igv.broadinstitute.org/genomes/seq/' + details['Genome'] + '/' + details['Genome'] + '.fa',
                         indexURL: 'https://s3.amazonaws.com/igv.broadinstitute.org/genomes/seq/' + details['Genome'] + '/' + details['Genome'] + '.fa.fai',
-                        //cytobandURL: "https://s3.amazonaws.com/igv.org.genomes/dm6/cytoBandIdeo.txt.gz"
                     },
+                }
+                const optionsRight: igv.IIGVBrowserOptions = {
+                    palette: ['#00A0B0', '#6A4A3C', '#CC333F', '#EB6841'],
+                    locus: locusRight,
 
-                    //trackDefaults: {
-                    //  bam: {
-                    //    coverageThreshold: 0.2,
-                    //    coverageQualityWeight: true
-                    //  }
-                    //},
-
-                    // tracks: [
-                    //     {
-                    //         "name": "Ensembl Genes",
-                    //         "type": "annotation",
-                    //         "format": "ensgene",
-                    //         "displayMode": "EXPANDED",
-                    //         "url": "https://s3.dualstack.us-east-1.amazonaws.com/igv.org.genomes/" + details['Genome'] + "/ensGene.txt.gz",
-                    //         "indexURL": "https://s3.dualstack.us-east-1.amazonaws.com/igv.org.genomes/" + details['Genome'] + "/ensGene.txt.gz.tbi",
-                    //         "visibilityWindow": 20000000
-                    //     },
-                    //     {
-                    //         "name": "Repeat Masker",
-                    //         "type": "annotation",
-                    //         "format": "rmsk",
-                    //         "displayMode": "EXPANDED",
-                    //         "url": "https://s3.dualstack.us-east-1.amazonaws.com/igv.org.genomes/" + details['Genome'] + "/rmsk.txt.gz",
-                    //         "indexURL": "https://s3.dualstack.us-east-1.amazonaws.com/igv.org.genomes/" + details['Genome'] + "/rmsk.txt.gz.tbi",
-                    //         "visibilityWindow": 1000000
-                    //     },
-                    //     //        {
-                    //     //          "name": "CpG Islands",
-                    //     //          "type": "annotation",
-                    //     //          "format": "cpgIslandExt",
-                    //     //          "displayMode": "EXPANDED",
-                    //     //          "url": "https://s3.dualstack.us-east-1.amazonaws.com/igv.org.genomes/dm6/cpgIslandExt.txt.gz"
-                    //     //        }
-                    // ]
+                    reference: {
+                        id: details['Genome'],
+                        fastaURL: 'https://s3.amazonaws.com/igv.broadinstitute.org/genomes/seq/' + details['Genome'] + '/' + details['Genome'] + '.fa',
+                        indexURL: 'https://s3.amazonaws.com/igv.broadinstitute.org/genomes/seq/' + details['Genome'] + '/' + details['Genome'] + '.fa.fai',
+                    },
                 }
 
 
@@ -718,7 +683,7 @@ fetch('./details')
 
 
 
-                var promise: Promise<igv.IGVBrowser> = igv.createBrowser(<HTMLDivElement>document.getElementById('gene-browser-below'), options);
+                var promise: Promise<igv.IGVBrowser> = igv.createBrowser(<HTMLDivElement>document.getElementById('gene-browser-below'), optionsBottom);
                 promise.then(belowBrowser => {
                     bottomBrowser = belowBrowser;
                     // Override the method for updating search widget when resizing
@@ -726,26 +691,23 @@ fetch('./details')
                     bottomBrowser.updateLocusSearchWidget = function (referenceFrameList: igv.ReferenceFrame[]): void {
                         bottomBrowser._updateLocusSearchWidget(referenceFrameList);
 
-                        requestViewUpdate({ dimension: "x", locus: getLocusFromBrowser(bottomBrowser) }) //, callback: () =>{console.log(referenceFrameList); 
+                        requestViewUpdate({ dimension: "x", locus: getLocusFromBrowser(bottomBrowser) }) 
 
                     }
 
-                    var promise: Promise<igv.IGVBrowser> = igv.createBrowser(<HTMLDivElement>document.getElementById('gene-browser-right'), options);
+                    var promise: Promise<igv.IGVBrowser> = igv.createBrowser(<HTMLDivElement>document.getElementById('gene-browser-right'), optionsRight);
                     promise.then(browser => {
                         rightBrowser = browser;
                         rightBrowser._updateLocusSearchWidget = rightBrowser.updateLocusSearchWidget;
                         rightBrowser.updateLocusSearchWidget = function (referenceFrameList: igv.ReferenceFrame[]): void {
                             rightBrowser._updateLocusSearchWidget(referenceFrameList)
 
-                            let searchValue = <string>rightBrowser.$searchInput.val()?.toString();
-                            let parts = searchValue.split(':');
-                            let chrParts = parts[1].split('-');
                             requestViewUpdate({ dimension: "y", locus: getLocusFromBrowser(rightBrowser) })
                         }
 
 
-                        belowBrowser.search(sourceChrom.name + ":0-" + sourceChrom.length);
-                        rightBrowser.search(targetChrom.name + ":0-" + targetChrom.length);
+                        belowBrowser.search(locusBottom);
+                        rightBrowser.search(locusRight);
 
                         let fileSelector = <HTMLInputElement>document.getElementById('file-selector')
                         fileSelector.addEventListener('change', (event) => {
