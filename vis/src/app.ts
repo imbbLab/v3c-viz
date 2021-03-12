@@ -67,6 +67,76 @@ hideButton.addEventListener('click', (event) => {
     reposition();
 });
 
+let saveButton = <HTMLInputElement>document.getElementById('saveButton');
+saveButton.addEventListener('click', (event) => {
+    let downloadCanvas = <HTMLCanvasElement>document.getElementById('downloadCanvas');
+    voronoiMap.redraw();
+
+    let trackSizesBelow = 0;
+    let trackSizesRight = 0;
+
+    console.log(bottomBrowser)
+    bottomBrowser.trackViews.forEach((trackView: igv.TrackView) => {
+        console.log(trackView.viewports[0])
+        if(trackView.viewports[0].canvas) {
+            trackSizesBelow += trackView.viewports[0].canvas.height;
+        }
+    })
+
+    rightBrowser.trackViews.forEach((trackView: igv.TrackView) => {
+        console.log(trackView.viewports[0])
+        if(trackView.viewports[0].canvas) {
+            trackSizesRight += trackView.viewports[0].canvas.height;
+        }
+    })
+
+    downloadCanvas.width = voronoiMap.canvas.width + trackSizesRight;
+    downloadCanvas.height = voronoiMap.canvas.height + trackSizesBelow;
+
+    let downloadCanvasCTX = <CanvasRenderingContext2D>downloadCanvas.getContext("2d");
+    downloadCanvasCTX.drawImage(voronoiMap.canvas, 0, 0);
+
+    let lastY = voronoiMap.canvas.height;
+    bottomBrowser.trackViews.forEach((trackView: igv.TrackView) => {
+        let trackCanvas = trackView.viewports[0].canvas
+
+        if(trackCanvas && trackCanvas.width > 0) {
+            let canvasXOffset = 0;
+            
+            if(trackCanvas.style.left != "") {
+                canvasXOffset = -parseInt(trackCanvas.style.left.replace("px", ""))
+            }
+
+            downloadCanvasCTX.drawImage(trackCanvas, canvasXOffset, 0, voronoiMap.axisWidth, trackCanvas.height, voronoiMap.axisOffsetX, lastY, voronoiMap.axisWidth, trackCanvas.height);
+            lastY += trackView.viewports[0].canvas.height;
+        }
+    })
+
+    let lastX = voronoiMap.canvas.width;
+    rightBrowser.trackViews.forEach((trackView: igv.TrackView) => {
+        let trackCanvas = trackView.viewports[0].canvas
+
+        if(trackCanvas && trackCanvas.width > 0) {
+            let canvasXOffset = 0;
+            
+            if(trackCanvas.style.left != "") {
+                canvasXOffset = -parseInt(trackCanvas.style.left.replace("px", ""))
+            }
+            downloadCanvasCTX.save();
+            downloadCanvasCTX.translate(lastX, voronoiMap.canvas.height - voronoiMap.axisOffsetY);
+            downloadCanvasCTX.rotate(270*Math.PI/180);
+            downloadCanvasCTX.drawImage(trackCanvas, canvasXOffset, 0, voronoiMap.axisWidth, trackCanvas.height, 0, 0, voronoiMap.axisWidth, trackCanvas.height);
+            downloadCanvasCTX.restore();
+            lastX += trackView.viewports[0].canvas.height;
+        }
+    })
+
+    var link = <HTMLAnchorElement>document.getElementById('link');
+    link.setAttribute('download', 'voronoiImage.png');
+    link.setAttribute('href', downloadCanvas.toDataURL("image/png").replace("image/png", "image/octet-stream"));
+    link.click();
+})
+
 function reposition() {
     // TODO: Only reposition maximum once every 50 ms as this requires loading data (voronoi)
 

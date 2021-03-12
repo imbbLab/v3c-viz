@@ -61,7 +61,11 @@
   <!--<link rel="stylesheet" href="gui.css">-->
 </head>
 <body> 
-  
+  <a id="link"></a>
+  <div style="display:none">
+    <canvas id="downloadCanvas" ></canvas>
+  </div>
+
   <div>
     <div>
       <input type="button" value="Hide" id="hideButton"  style="position:absolute; left:0px; top:0px; z-index: 2;" />
@@ -82,6 +86,7 @@
           <label>Target Chromosome: </label><select id="targetChromSelect"></select>
         </div>-->
         <input type="file" id="file-selector" accept=".bed, .bw">
+        <input type="button" value="Save" id="saveButton" />
         <br />
         <canvas id="voronoi-colour" width="700" height="100"></canvas>
       </div>

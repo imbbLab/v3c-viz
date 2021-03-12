@@ -176,6 +176,8 @@ declare module 'igv' {
     $trackManipulationHandle: JQuery
     $viewportContainer: JQuery
 
+    controlCanvas: HTMLCanvasElement
+
     scrollbar: TrackScrollbar
 
     scrollBy(amount: number): void
@@ -186,6 +188,7 @@ declare module 'igv' {
     $viewport: JQuery
     referenceFrame: ReferenceFrame
     trackView: TrackView
+    canvas: HTMLCanvasElement
   }
 
   export interface IGVMouseEvent {

@@ -1,5 +1,4 @@
 library(httr)
-library(hash)
 
 interaction1 <- list(SourceChrom = "chr4", SourceStart = 717970, SourceEnd = 717975,
                      TargetChrom = "chr4", TargetStart = 757550, TargetEnd = 757555)
