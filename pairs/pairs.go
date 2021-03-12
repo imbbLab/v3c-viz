@@ -2,6 +2,7 @@ package pairs
 
 import (
 	"bufio"
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"image"
@@ -304,6 +305,112 @@ func EntriesToImage(entries []*Entry, query Query, numBins uint64) []uint32 {
 	return imageData
 }
 
+type indexConf struct {
+	Preset  int32
+	SeqCol  int32
+	SeqBeg  int32
+	EndCol  int32
+	SeqCol2 int32
+	BegCol2 int32
+	EndCol2 int32
+
+	Delimiter            byte
+	RegionSplitCharacter byte
+	Padding              [2]byte
+	MetaChar             int32
+	LineSkip             int32
+}
+
+type indexHeader struct {
+	Magic        [8]byte
+	NumSequences int32
+	LineCount    uint64
+
+	Conf indexConf
+
+	//TName map[string]string
+	//Index
+}
+
+type binDetails struct {
+	BinNumber uint32
+	NumChunks int32
+}
+
+type chunkDetails struct {
+	ChunkBegin uint64
+	ChunkEnd   uint64
+}
+
+func ParseIndex(filename string) error {
+	indexFile, err := os.Open(filename)
+	if err != nil {
+		return err
+	}
+
+	indexReader, err := bgzf.NewReader(indexFile, 0)
+	if err != nil {
+		return err
+	}
+
+	//magicBytes := make([]byte, 4)
+	//indexReader.Read(magicBytes)
+
+	//bufReader := bufio.NewReader(indexReader)
+	var header indexHeader
+	binary.Read(indexReader, binary.LittleEndian, &header)
+
+	//fmt.Println(string(magicBytes))
+	fmt.Println(header)
+	fmt.Println(string(header.Magic[:]))
+
+	fmt.Println(string(header.Conf.Delimiter))
+	fmt.Println(string(header.Conf.RegionSplitCharacter))
+	fmt.Println(string(header.Conf.MetaChar))
+
+	var length int32
+	binary.Read(indexReader, binary.LittleEndian, &length)
+
+	fmt.Println(length)
+	buf := make([]byte, length)
+	binary.Read(indexReader, binary.LittleEndian, &buf)
+
+	fmt.Println(string(buf))
+
+	//	for NumSequences
+	var numBins int32
+	var numIntervals int32
+	binary.Read(indexReader, binary.LittleEndian, &numBins)
+
+	fmt.Println(numBins)
+
+	for binIndex := int32(0); binIndex < numBins; binIndex++ {
+		var details binDetails
+		binary.Read(indexReader, binary.LittleEndian, &details)
+
+		if binIndex < 100 {
+			fmt.Println(details)
+		}
+
+		for chunkIndex := int32(0); chunkIndex < details.NumChunks; chunkIndex++ {
+			var chunk chunkDetails
+			binary.Read(indexReader, binary.LittleEndian, &chunk)
+
+			//fmt.Println(chunk)
+		}
+	}
+
+	binary.Read(indexReader, binary.LittleEndian, &numIntervals)
+
+	fmt.Printf("Num intervals: %d [%d]\n", numIntervals, numBins)
+	intervalOffsets := make([]uint64, numIntervals)
+	binary.Read(indexReader, binary.LittleEndian, &intervalOffsets)
+
+	fmt.Println(intervalOffsets)
+
+	return nil
+}
+
 func ParseBGZF(filename string) (File, error) {
 
 	var err error
@@ -314,16 +421,10 @@ func ParseBGZF(filename string) (File, error) {
 		return nil, err
 	}
 
-	pairsFile.index = new(BGZFIndex)
-
-	pairsFile.index.mu.Lock()
-
 	pairsFile.bgzfReader, err = bgzf.NewReader(pairsFile.file, 0)
 	if err != nil {
 		return nil, err
 	}
-
-	pairsFile.index.reader = pairsFile.bgzfReader
 
 	bufReader := bufio.NewReader(pairsFile.bgzfReader)
 
@@ -332,12 +433,19 @@ func ParseBGZF(filename string) (File, error) {
 		return nil, err
 	}
 
+	ParseIndex(strings.Replace(filename, ".gz", ".gz.px2", 1))
+	//return &pairsFile, nil
+
 	fmt.Println("Finished parsing header, creating index...")
 
 	maxLinesPerIndex := 100000
 	//numBins := uint64(500)
 
 	//imageData := make([]uint32, numBins*numBins)
+
+	pairsFile.index = new(BGZFIndex)
+	pairsFile.index.mu.Lock()
+	pairsFile.index.reader = pairsFile.bgzfReader
 
 	pairsFile.index.ChromPairStart = make(map[string]bgzf.Chunk)
 	pairsFile.index.ChromPairEnd = make(map[string]bgzf.Chunk)
