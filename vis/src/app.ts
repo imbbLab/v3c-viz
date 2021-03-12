@@ -548,6 +548,26 @@ window.addEventListener('resize', (event) => {
     reposition();
 })
 
+interface GenomeURL {
+    fastaURL: string
+    indexURL: string
+}
+
+function getGenomeURLs(genome: string) : GenomeURL {
+    switch(genome) {
+        case "dm6":
+            return {fastaURL: "https://s3.amazonaws.com/igv.broadinstitute.org/genomes/seq/dm6/dm6.fa", indexURL: "https://s3.amazonaws.com/igv.broadinstitute.org/genomes/seq/dm6/dm6.fa.fai"}
+        case "hg19":
+            return {fastaURL: "https://s3.amazonaws.com/igv.broadinstitute.org/genomes/seq/hg19/hg19.fasta", indexURL: "https://s3.amazonaws.com/igv.broadinstitute.org/genomes/seq/hg19/hg19.fasta.fai"}
+        case "hg38":
+            return {fastaURL: "https://s3.amazonaws.com/igv.broadinstitute.org/genomes/seq/hg38/hg38.fa", indexURL: "https://s3.amazonaws.com/igv.broadinstitute.org/genomes/seq/hg38/hg38.fa.fai"}
+    }
+    // TODO: Unknown genome - should ask the user for the fasta files?
+
+    // Try a default
+    return {fastaURL: "https://s3.amazonaws.com/igv.broadinstitute.org/genomes/seq/" + genome + "/" + genome + ".fa", indexURL: "https://s3.amazonaws.com/igv.broadinstitute.org/genomes/seq/" + genome + "/" + genome + ".fa.fai"}
+}
+
 // First get the details of the chromosome from the server
 fetch('./details')
     .then(
@@ -593,6 +613,8 @@ fetch('./details')
                 }
                 console.log(locusBottom)
 
+                let urls = getGenomeURLs(details['Genome']);
+
                 // Set up the options
                 const optionsBottom: igv.IIGVBrowserOptions = {
                     palette: ['#00A0B0', '#6A4A3C', '#CC333F', '#EB6841'],
@@ -600,8 +622,8 @@ fetch('./details')
 
                     reference: {
                         id: details['Genome'],
-                        fastaURL: 'https://s3.amazonaws.com/igv.broadinstitute.org/genomes/seq/' + details['Genome'] + '/' + details['Genome'] + '.fa',
-                        indexURL: 'https://s3.amazonaws.com/igv.broadinstitute.org/genomes/seq/' + details['Genome'] + '/' + details['Genome'] + '.fa.fai',
+                        fastaURL: urls.fastaURL,
+                        indexURL: urls.indexURL,
                     },
                 }
                 const optionsRight: igv.IIGVBrowserOptions = {
@@ -610,8 +632,8 @@ fetch('./details')
 
                     reference: {
                         id: details['Genome'],
-                        fastaURL: 'https://s3.amazonaws.com/igv.broadinstitute.org/genomes/seq/' + details['Genome'] + '/' + details['Genome'] + '.fa',
-                        indexURL: 'https://s3.amazonaws.com/igv.broadinstitute.org/genomes/seq/' + details['Genome'] + '/' + details['Genome'] + '.fa.fai',
+                        fastaURL: urls.fastaURL,
+                        indexURL: urls.indexURL,
                     },
                 }
 
