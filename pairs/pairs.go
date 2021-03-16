@@ -9,9 +9,11 @@ import (
 	"image/color"
 	"image/png"
 	"io"
+	"log"
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/biogo/hts/bgzf"
 )
@@ -50,10 +52,14 @@ type ChromPairChunk struct {
 }
 
 type File interface {
-	Index() Index
+	//Index() Index
 	Close()
 
 	Genome() string
+
+	ChromPairList() []string
+	Search(pairsQuery Query) ([]*Entry, error)
+
 	Image(query Query, numBins uint64) ([]uint32, error)
 
 	Chromsizes() map[string]Chromsize
@@ -211,19 +217,120 @@ type bgzfFile struct {
 
 	bgzfReader *bgzf.Reader
 
-	index *BGZFIndex
+	//index *BGZFIndex
+	index *indexHeader
+
+	mu sync.Mutex
 }
 
-func (file bgzfFile) Index() Index {
-	return file.index
-}
+//func (file bgzfFile) Index() Index {
+//	return file.index
+//}
 
 func (file bgzfFile) Close() {
-	file.index.mu.Lock()
+	file.mu.Lock()
 	file.bgzfReader.Close()
-	file.index.mu.Unlock()
+	file.mu.Unlock()
 
 	file.baseFile.Close()
+}
+
+func (file bgzfFile) ChromPairList() []string {
+	var pairs []string
+
+	for _, value := range file.index.TargetNames {
+		pairs = append(pairs, value)
+	}
+
+	return pairs
+}
+
+type fileChunk struct {
+	Start bgzf.Offset
+	End   bgzf.Offset
+}
+
+func (file *bgzfFile) Query(query Query, entryFunction func(entry *Entry)) error {
+	var err error
+
+	// Create the reverse query to make searching easier
+	revQuery := query.Reverse()
+	chunks := file.index.getChunksFromQuery(query)
+
+	// Merge together chunks (skipping) they follow on from one another to
+	// avoid seeking, then read in necessary number of lines to find desired data points
+	//seekRequired := true
+	var bufReader *bufio.Reader
+	var lineData []byte
+	var entry *Entry
+
+	//fmt.Printf("About to process chunks %v\n", chunks)
+
+	file.mu.Lock()
+
+	for _, chunk := range chunks {
+		err = file.bgzfReader.Seek(chunk.Start)
+		if err != nil {
+			return err
+		}
+
+		bufReader = bufio.NewReader(file.bgzfReader)
+
+		finished := false
+
+		// Skip the first partial line, this should be captured by the previous chunk
+		//lineData, err = bufReader.ReadBytes('\n')
+		//if err != nil {
+		//	return err
+		//}
+
+		for !finished {
+			lineData, err = bufReader.ReadBytes('\n')
+			if err != nil {
+				return err
+			}
+
+			// Skip all comments
+			for lineData[0] == '#' {
+				lineData, err = bufReader.ReadBytes('\n')
+				if err != nil {
+					return err
+				}
+			}
+
+			entry, err = parseEntry(string(lineData))
+			if err != nil {
+				fmt.Printf("Problem parsing entry: %s\n", string(lineData))
+				return err
+			}
+
+			// Check that the data fits in the requested window
+			if entry.IsInRange(query) || entry.IsInRange(revQuery) {
+				entryFunction(entry)
+			}
+
+			if file.bgzfReader.LastChunk().End.File > chunk.End.File {
+				finished = true
+				break
+			}
+		}
+	}
+
+	file.mu.Unlock()
+
+	return err
+}
+
+func (file *bgzfFile) Search(query Query) ([]*Entry, error) {
+	var err error
+
+	var pairs []*Entry
+
+	err = file.Query(query, func(entry *Entry) {
+		pairs = append(pairs, entry)
+	})
+
+	return pairs, err
 }
 
 func (file bgzfFile) Image(query Query, numBins uint64) ([]uint32, error) {
@@ -237,7 +344,7 @@ func (file bgzfFile) Image(query Query, numBins uint64) ([]uint32, error) {
 
 	var xPos, yPos uint64
 
-	err := file.index.Query(query, func(entry *Entry) {
+	err := file.Query(query, func(entry *Entry) {
 		if entry.SourceChrom != query.SourceChrom {
 			xPos = (entry.TargetPosition - query.SourceStart) / binSizeX
 			yPos = (entry.SourcePosition - query.TargetStart) / binSizeY
@@ -328,13 +435,82 @@ type indexHeader struct {
 
 	Conf indexConf
 
+	TargetNames map[int]string
+	BinIndex    map[string]map[uint32]binDetails
+	LinearIndex map[string][]uint64
+
 	//TName map[string]string
 	//Index
+}
+
+func (index indexHeader) getChunksFromQuery(query Query) []fileChunk {
+	// TODO: Check validity of search (e.g. start < end)
+
+	var chunkstoLoad []fileChunk
+
+	chromPairName := query.SourceChrom + string(index.Conf.RegionSplitCharacter) + query.TargetChrom
+
+	if _, ok := index.BinIndex[chromPairName]; ok {
+		startBin := query.SourceStart >> TAD_LIDX_SHIFT
+		endBin := query.SourceEnd >> TAD_LIDX_SHIFT
+
+		startLocation := index.LinearIndex[chromPairName][startBin]
+		endLocation := index.LinearIndex[chromPairName][endBin]
+
+		startBlock := getBGZFOffset(startLocation)
+		endBlock := getBGZFOffset(endLocation)
+
+		chunkstoLoad = append(chunkstoLoad, fileChunk{Start: startBlock, End: endBlock})
+	}
+
+	// Process the inverse chrom pair
+	chromPairName = query.TargetChrom + string(index.Conf.RegionSplitCharacter) + query.SourceChrom
+	if _, ok := index.BinIndex[chromPairName]; ok {
+		startBin := query.TargetStart >> TAD_LIDX_SHIFT
+		endBin := query.TargetEnd >> TAD_LIDX_SHIFT
+
+		startLocation := index.LinearIndex[chromPairName][startBin]
+		endLocation := index.LinearIndex[chromPairName][endBin]
+
+		startBlock := getBGZFOffset(startLocation)
+		endBlock := getBGZFOffset(endLocation)
+
+		newChunk := fileChunk{Start: startBlock, End: endBlock}
+
+		if len(chunkstoLoad) == 0 {
+			chunkstoLoad = append(chunkstoLoad, newChunk)
+		} else {
+			updated := false
+			if newChunk.Start.File < chunkstoLoad[0].Start.File && (newChunk.End.File >= chunkstoLoad[0].Start.File && newChunk.End.File <= chunkstoLoad[0].End.File) {
+				chunkstoLoad[0].Start = newChunk.Start
+				updated = true
+			}
+			if newChunk.End.File > chunkstoLoad[0].End.File && (newChunk.Start.File >= chunkstoLoad[0].Start.File && newChunk.Start.File <= chunkstoLoad[0].End.File) {
+				chunkstoLoad[0].End = newChunk.End
+				updated = true
+			}
+
+			if !updated {
+				chunkstoLoad = append(chunkstoLoad, newChunk)
+			}
+		}
+	}
+
+	fmt.Println(chunkstoLoad)
+
+	// // Sort the chunks to load by File position
+	// sort.Slice(chunkstoLoad, func(i, j int) bool {
+	// 	return chunkstoLoad[i].StartChunk.Begin.File < chunkstoLoad[j].StartChunk.Begin.File
+	// })
+
+	return chunkstoLoad
 }
 
 type binDetails struct {
 	BinNumber uint32
 	NumChunks int32
+
+	Chunks []chunkDetails
 }
 
 type chunkDetails struct {
@@ -342,15 +518,15 @@ type chunkDetails struct {
 	ChunkEnd   uint64
 }
 
-func ParseIndex(filename string) error {
+func ParseIndex(filename string) (*indexHeader, error) {
 	indexFile, err := os.Open(filename)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	indexReader, err := bgzf.NewReader(indexFile, 0)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	//magicBytes := make([]byte, 4)
@@ -358,58 +534,120 @@ func ParseIndex(filename string) error {
 
 	//bufReader := bufio.NewReader(indexReader)
 	var header indexHeader
-	binary.Read(indexReader, binary.LittleEndian, &header)
+	header.TargetNames = make(map[int]string)
+	header.BinIndex = make(map[string]map[uint32]binDetails)
+	header.LinearIndex = make(map[string][]uint64)
+	binary.Read(indexReader, binary.LittleEndian, &header.Magic)
+	binary.Read(indexReader, binary.LittleEndian, &header.NumSequences)
+	binary.Read(indexReader, binary.LittleEndian, &header.LineCount)
+
+	binary.Read(indexReader, binary.LittleEndian, &header.Conf)
 
 	//fmt.Println(string(magicBytes))
-	fmt.Println(header)
-	fmt.Println(string(header.Magic[:]))
+	//fmt.Println(header)
+	//fmt.Println(string(header.Magic[:]))
 
-	fmt.Println(string(header.Conf.Delimiter))
-	fmt.Println(string(header.Conf.RegionSplitCharacter))
-	fmt.Println(string(header.Conf.MetaChar))
+	//fmt.Println(string(header.Conf.Delimiter))
+	//fmt.Println(string(header.Conf.RegionSplitCharacter))
+	//fmt.Println(string(header.Conf.MetaChar))
 
 	var length int32
 	binary.Read(indexReader, binary.LittleEndian, &length)
 
-	fmt.Println(length)
+	//fmt.Println(length)
 	buf := make([]byte, length)
 	binary.Read(indexReader, binary.LittleEndian, &buf)
 
-	fmt.Println(string(buf))
+	//fmt.Println(string(buf))
+	lastIndex := 0
+	targetNameIndex := 0
+	for i := 0; i < len(buf); i++ {
+		if buf[i] == 0 {
+			header.TargetNames[targetNameIndex] = string(buf[lastIndex:i])
 
-	//	for NumSequences
-	var numBins int32
-	var numIntervals int32
-	binary.Read(indexReader, binary.LittleEndian, &numBins)
+			header.BinIndex[header.TargetNames[targetNameIndex]] = make(map[uint32]binDetails)
 
-	fmt.Println(numBins)
-
-	for binIndex := int32(0); binIndex < numBins; binIndex++ {
-		var details binDetails
-		binary.Read(indexReader, binary.LittleEndian, &details)
-
-		if binIndex < 100 {
-			fmt.Println(details)
-		}
-
-		for chunkIndex := int32(0); chunkIndex < details.NumChunks; chunkIndex++ {
-			var chunk chunkDetails
-			binary.Read(indexReader, binary.LittleEndian, &chunk)
-
-			//fmt.Println(chunk)
+			lastIndex = i + 1
+			targetNameIndex++
 		}
 	}
+	//fmt.Println(header.TargetNames)
 
-	binary.Read(indexReader, binary.LittleEndian, &numIntervals)
+	//fmt.Println(header.NumSequences)
 
-	fmt.Printf("Num intervals: %d [%d]\n", numIntervals, numBins)
-	intervalOffsets := make([]uint64, numIntervals)
-	binary.Read(indexReader, binary.LittleEndian, &intervalOffsets)
+	for sequenceIndex := 0; sequenceIndex < int(header.NumSequences); sequenceIndex++ {
+		sequenceName := header.TargetNames[sequenceIndex]
 
-	fmt.Println(intervalOffsets)
+		var numBins int32
+		var numIntervals int32
+		binary.Read(indexReader, binary.LittleEndian, &numBins)
 
-	return nil
+		for binIndex := int32(0); binIndex < numBins; binIndex++ {
+			var details binDetails
+
+			binary.Read(indexReader, binary.LittleEndian, &details.BinNumber)
+			binary.Read(indexReader, binary.LittleEndian, &details.NumChunks)
+			details.Chunks = make([]chunkDetails, details.NumChunks)
+
+			for chunkIndex := int32(0); chunkIndex < details.NumChunks; chunkIndex++ {
+				binary.Read(indexReader, binary.LittleEndian, &details.Chunks[chunkIndex])
+			}
+
+			header.BinIndex[sequenceName][details.BinNumber] = details
+		}
+
+		binary.Read(indexReader, binary.LittleEndian, &numIntervals)
+
+		intervalOffsets := make([]uint64, numIntervals)
+		binary.Read(indexReader, binary.LittleEndian, &intervalOffsets)
+
+		header.LinearIndex[sequenceName] = intervalOffsets
+	}
+
+	log.Println("Finished reading .px2 header")
+
+	// sequenceName := "1|1"
+
+	// startBin := 1000000 >> TAD_LIDX_SHIFT
+	// endBin := 1500000 >> TAD_LIDX_SHIFT
+
+	// fmt.Println(header.BinIndex[sequenceName][uint32(startBin)])
+	// fmt.Println(header.LinearIndex[sequenceName][startBin])
+
+	// fmt.Println(bgzfReader.LastChunk())
+
+	// startLocation := header.LinearIndex[sequenceName][startBin]
+	// endLocation := header.LinearIndex[sequenceName][endBin]
+
+	// startBlock := getBGZFOffset(startLocation)
+	// endBlock := getBGZFOffset(endLocation)
+	// fmt.Printf("Trying %v -> %v\n", startBlock, endBlock)
+	// err = bgzfReader.Seek(startBlock)
+	// fmt.Println(err)
+
+	// bufReader := bufio.NewReader(bgzfReader)
+
+	// lineData, err := bufReader.ReadBytes('\n')
+	// curEntry, err := parseEntry(string(lineData))
+
+	// for curEntry.SourcePosition < 1500000 {
+	// 	//fmt.Println(string(lineData))
+
+	// 	lineData, err = bufReader.ReadBytes('\n')
+	// 	curEntry, err = parseEntry(string(lineData))
+	// }
+
+	return &header, err
 }
+
+func getBGZFOffset(location uint64) bgzf.Offset {
+	blockOffset := uint16(location & 0xFFFF)
+	blockAddress := int64(location >> 16)
+
+	return bgzf.Offset{File: int64(blockAddress), Block: uint16(blockOffset)}
+}
+
+const TAD_LIDX_SHIFT = 15
 
 func ParseBGZF(filename string) (File, error) {
 
@@ -428,161 +666,166 @@ func ParseBGZF(filename string) (File, error) {
 
 	bufReader := bufio.NewReader(pairsFile.bgzfReader)
 
-	firstEntry, err := pairsFile.parseHeader(bufReader)
+	_, err = pairsFile.parseHeader(bufReader)
 	if err != nil {
 		return nil, err
 	}
 
-	ParseIndex(strings.Replace(filename, ".gz", ".gz.px2", 1))
+	log.Println("Finished parsing header, reading index...")
+
+	pairsFile.index, err = ParseIndex(strings.Replace(filename, ".gz", ".gz.px2", 1))
+	if err != nil {
+		return nil, err
+	}
 	//return &pairsFile, nil
 
-	fmt.Println("Finished parsing header, creating index...")
+	// fmt.Println("Finished parsing header, creating index...")
 
-	maxLinesPerIndex := 100000
-	//numBins := uint64(500)
+	// maxLinesPerIndex := 100000
+	// //numBins := uint64(500)
 
-	//imageData := make([]uint32, numBins*numBins)
+	// //imageData := make([]uint32, numBins*numBins)
 
-	pairsFile.index = new(BGZFIndex)
-	pairsFile.index.mu.Lock()
-	pairsFile.index.reader = pairsFile.bgzfReader
+	// pairsFile.index = new(BGZFIndex)
+	// pairsFile.index.mu.Lock()
+	// pairsFile.index.reader = pairsFile.bgzfReader
 
-	pairsFile.index.ChromPairStart = make(map[string]bgzf.Chunk)
-	pairsFile.index.ChromPairEnd = make(map[string]bgzf.Chunk)
-	pairsFile.index.ChromPairChunks = make(map[string][]*ChromPairChunk)
-	pairsFile.index.ChromPairCounts = make(map[string]uint64)
+	// pairsFile.index.ChromPairStart = make(map[string]bgzf.Chunk)
+	// pairsFile.index.ChromPairEnd = make(map[string]bgzf.Chunk)
+	// pairsFile.index.ChromPairChunks = make(map[string][]*ChromPairChunk)
+	// pairsFile.index.ChromPairCounts = make(map[string]uint64)
 
-	/*lineData, err := bufReader.ReadBytes('\n')
-	if err != nil {
-		fmt.Println("Failed to read from buffer")
-		return nil, err
-	}
-	firstNonComment := string(lineData)
+	// /*lineData, err := bufReader.ReadBytes('\n')
+	// if err != nil {
+	// 	fmt.Println("Failed to read from buffer")
+	// 	return nil, err
+	// }
+	// firstNonComment := string(lineData)
 
-	firstEntry, err := parseEntry(firstNonComment)
-	if err != nil {
-		return nil, err
-	}*/
+	// firstEntry, err := parseEntry(firstNonComment)
+	// if err != nil {
+	// 	return nil, err
+	// }*/
 
-	pairsFile.index.DataStart = pairsFile.bgzfReader.LastChunk()
-	pairsFile.index.ChromPairStart[firstEntry.ChromPairName()] = pairsFile.bgzfReader.LastChunk()
+	// pairsFile.index.DataStart = pairsFile.bgzfReader.LastChunk()
+	// pairsFile.index.ChromPairStart[firstEntry.ChromPairName()] = pairsFile.bgzfReader.LastChunk()
 
-	lastEntry := firstEntry.ChromPairName()
+	// lastEntry := firstEntry.ChromPairName()
 
-	curChromPairChunk := &ChromPairChunk{}
-	pairsFile.index.ChromPairChunks[firstEntry.ChromPairName()] = append(pairsFile.index.ChromPairChunks[firstEntry.ChromPairName()], curChromPairChunk)
-	curChromPairChunk.StartChunk = pairsFile.bgzfReader.LastChunk()
-	//curChromPairChunk.StartEntry = firstEntry
-	curChromPairChunk.MinX = firstEntry.SourcePosition
-	curChromPairChunk.MaxX = firstEntry.SourcePosition
-	curChromPairChunk.EndChunk = pairsFile.bgzfReader.LastChunk()
-	//curChromPairChunk.EndEntry = firstEntry
-	curChromPairChunk.MinY = firstEntry.TargetPosition
-	curChromPairChunk.MaxY = firstEntry.TargetPosition
+	// curChromPairChunk := &ChromPairChunk{}
+	// pairsFile.index.ChromPairChunks[firstEntry.ChromPairName()] = append(pairsFile.index.ChromPairChunks[firstEntry.ChromPairName()], curChromPairChunk)
+	// curChromPairChunk.StartChunk = pairsFile.bgzfReader.LastChunk()
+	// //curChromPairChunk.StartEntry = firstEntry
+	// curChromPairChunk.MinX = firstEntry.SourcePosition
+	// curChromPairChunk.MaxX = firstEntry.SourcePosition
+	// curChromPairChunk.EndChunk = pairsFile.bgzfReader.LastChunk()
+	// //curChromPairChunk.EndEntry = firstEntry
+	// curChromPairChunk.MinY = firstEntry.TargetPosition
+	// curChromPairChunk.MaxY = firstEntry.TargetPosition
 
-	//binSizeX := (pairsFile.chromsizes[firstEntry.SourceChrom].Length / numBins) + 1
-	//binSizeY := (pairsFile.chromsizes[firstEntry.TargetChrom].Length / numBins) + 1
-	//imageIndex := int(firstEntry.TargetPosition/binSizeY)*int(numBins) + int(firstEntry.SourcePosition/binSizeX)
-	//imageData[imageIndex]++
-	//imageIndex = int(firstEntry.SourcePosition/binSizeX)*int(numBins) + int(firstEntry.TargetPosition/binSizeY)
-	//imageData[imageIndex]++
+	// //binSizeX := (pairsFile.chromsizes[firstEntry.SourceChrom].Length / numBins) + 1
+	// //binSizeY := (pairsFile.chromsizes[firstEntry.TargetChrom].Length / numBins) + 1
+	// //imageIndex := int(firstEntry.TargetPosition/binSizeY)*int(numBins) + int(firstEntry.SourcePosition/binSizeX)
+	// //imageData[imageIndex]++
+	// //imageIndex = int(firstEntry.SourcePosition/binSizeX)*int(numBins) + int(firstEntry.TargetPosition/binSizeY)
+	// //imageData[imageIndex]++
 
-	// Already looked at the first line (above) so start at 1
-	lineCount := 1
-	totalLineCount := uint64(1)
+	// // Already looked at the first line (above) so start at 1
+	// lineCount := 1
+	// totalLineCount := uint64(1)
 
-	for {
-		lineData, err := bufReader.ReadBytes('\n')
-		if err != nil {
-			if err == io.EOF {
-				//fmt.Println("Finished reading data")
-				break
-			}
-			return nil, err
-		}
+	// for {
+	// 	lineData, err := bufReader.ReadBytes('\n')
+	// 	if err != nil {
+	// 		if err == io.EOF {
+	// 			//fmt.Println("Finished reading data")
+	// 			break
+	// 		}
+	// 		return nil, err
+	// 	}
 
-		lineToProcess := string(lineData[:len(lineData)-1])
-		curEntry, err := parseEntry(lineToProcess)
-		if err != nil {
-			return nil, err
-		}
+	// 	lineToProcess := string(lineData[:len(lineData)-1])
+	// 	curEntry, err := parseEntry(lineToProcess)
+	// 	if err != nil {
+	// 		return nil, err
+	// 	}
 
-		/*if curEntry.SourceChrom == "chr3R" && curEntry.SourcePosition > 19843050 && curEntry.TargetPosition <= 20585520 {
-			fmt.Println(curEntry)
-			fmt.Println(curChromPairChunk)
-			fmt.Println(pairsFile.index.ChromPairChunks[curEntry.ChromPairName()])
-		}*/
+	// 	/*if curEntry.SourceChrom == "chr3R" && curEntry.SourcePosition > 19843050 && curEntry.TargetPosition <= 20585520 {
+	// 		fmt.Println(curEntry)
+	// 		fmt.Println(curChromPairChunk)
+	// 		fmt.Println(pairsFile.index.ChromPairChunks[curEntry.ChromPairName()])
+	// 	}*/
 
-		// Check if the new line is describing a different source and target chromosome
-		if lastEntry != curEntry.ChromPairName() {
-			lineCount = 0
-			totalLineCount = 0
+	// 	// Check if the new line is describing a different source and target chromosome
+	// 	if lastEntry != curEntry.ChromPairName() {
+	// 		lineCount = 0
+	// 		totalLineCount = 0
 
-			pairsFile.index.ChromPairEnd[lastEntry] = pairsFile.bgzfReader.LastChunk()
-			pairsFile.index.ChromPairCounts[lastEntry] = totalLineCount
-			pairsFile.index.ChromPairStart[curEntry.ChromPairName()] = pairsFile.bgzfReader.LastChunk()
+	// 		pairsFile.index.ChromPairEnd[lastEntry] = pairsFile.bgzfReader.LastChunk()
+	// 		pairsFile.index.ChromPairCounts[lastEntry] = totalLineCount
+	// 		pairsFile.index.ChromPairStart[curEntry.ChromPairName()] = pairsFile.bgzfReader.LastChunk()
 
-			//outputImage(imageData, int(numBins), lastEntry)
-			//imageData = make([]uint32, numBins*numBins)
-			//binSizeX = (pairsFile.chromsizes[curEntry.SourceChrom].Length / numBins) + 1
-			//binSizeY = (pairsFile.chromsizes[curEntry.TargetChrom].Length / numBins) + 1
-		}
+	// 		//outputImage(imageData, int(numBins), lastEntry)
+	// 		//imageData = make([]uint32, numBins*numBins)
+	// 		//binSizeX = (pairsFile.chromsizes[curEntry.SourceChrom].Length / numBins) + 1
+	// 		//binSizeY = (pairsFile.chromsizes[curEntry.TargetChrom].Length / numBins) + 1
+	// 	}
 
-		// Starting a new chunk when lineCount reset to 0 (either because new source/target or too many lines)
-		if lineCount == 0 {
-			curChromPairChunk = &ChromPairChunk{}
-			pairsFile.index.ChromPairChunks[curEntry.ChromPairName()] = append(pairsFile.index.ChromPairChunks[curEntry.ChromPairName()], curChromPairChunk)
+	// 	// Starting a new chunk when lineCount reset to 0 (either because new source/target or too many lines)
+	// 	if lineCount == 0 {
+	// 		curChromPairChunk = &ChromPairChunk{}
+	// 		pairsFile.index.ChromPairChunks[curEntry.ChromPairName()] = append(pairsFile.index.ChromPairChunks[curEntry.ChromPairName()], curChromPairChunk)
 
-			curChromPairChunk.StartChunk = pairsFile.bgzfReader.LastChunk()
-			//curChromPairChunk.StartEntry = curEntry
-			curChromPairChunk.MinX = curEntry.SourcePosition
-			curChromPairChunk.MaxX = curEntry.SourcePosition
-			curChromPairChunk.EndChunk = pairsFile.bgzfReader.LastChunk()
-			//curChromPairChunk.EndEntry = curEntry
-			curChromPairChunk.MinY = curEntry.TargetPosition
-			curChromPairChunk.MaxY = curEntry.TargetPosition
-		}
+	// 		curChromPairChunk.StartChunk = pairsFile.bgzfReader.LastChunk()
+	// 		//curChromPairChunk.StartEntry = curEntry
+	// 		curChromPairChunk.MinX = curEntry.SourcePosition
+	// 		curChromPairChunk.MaxX = curEntry.SourcePosition
+	// 		curChromPairChunk.EndChunk = pairsFile.bgzfReader.LastChunk()
+	// 		//curChromPairChunk.EndEntry = curEntry
+	// 		curChromPairChunk.MinY = curEntry.TargetPosition
+	// 		curChromPairChunk.MaxY = curEntry.TargetPosition
+	// 	}
 
-		// Update the line count
-		lineCount++
-		totalLineCount++
+	// 	// Update the line count
+	// 	lineCount++
+	// 	totalLineCount++
 
-		// Update the latest 'end' chunk found and the current line count
-		curChromPairChunk.NumberLines = lineCount
-		curChromPairChunk.EndChunk = pairsFile.bgzfReader.LastChunk()
+	// 	// Update the latest 'end' chunk found and the current line count
+	// 	curChromPairChunk.NumberLines = lineCount
+	// 	curChromPairChunk.EndChunk = pairsFile.bgzfReader.LastChunk()
 
-		if curChromPairChunk.MinX > curEntry.SourcePosition {
-			curChromPairChunk.MinX = curEntry.SourcePosition
-		}
-		if curChromPairChunk.MaxX < curEntry.SourcePosition {
-			curChromPairChunk.MaxX = curEntry.SourcePosition
-		}
-		if curChromPairChunk.MinY > curEntry.TargetPosition {
-			curChromPairChunk.MinY = curEntry.TargetPosition
-		}
-		if curChromPairChunk.MaxY < curEntry.TargetPosition {
-			curChromPairChunk.MaxY = curEntry.TargetPosition
-		}
-		//curChromPairChunk.EndEntry = curEntry
+	// 	if curChromPairChunk.MinX > curEntry.SourcePosition {
+	// 		curChromPairChunk.MinX = curEntry.SourcePosition
+	// 	}
+	// 	if curChromPairChunk.MaxX < curEntry.SourcePosition {
+	// 		curChromPairChunk.MaxX = curEntry.SourcePosition
+	// 	}
+	// 	if curChromPairChunk.MinY > curEntry.TargetPosition {
+	// 		curChromPairChunk.MinY = curEntry.TargetPosition
+	// 	}
+	// 	if curChromPairChunk.MaxY < curEntry.TargetPosition {
+	// 		curChromPairChunk.MaxY = curEntry.TargetPosition
+	// 	}
+	// 	//curChromPairChunk.EndEntry = curEntry
 
-		//imageIndex = int(curEntry.TargetPosition/binSizeY)*int(numBins) + int(curEntry.SourcePosition/binSizeX)
-		//imageData[imageIndex]++
-		//imageIndex = int(curEntry.SourcePosition/binSizeX)*int(numBins) + int(curEntry.TargetPosition/binSizeY)
-		//imageData[imageIndex]++
+	// 	//imageIndex = int(curEntry.TargetPosition/binSizeY)*int(numBins) + int(curEntry.SourcePosition/binSizeX)
+	// 	//imageData[imageIndex]++
+	// 	//imageIndex = int(curEntry.SourcePosition/binSizeX)*int(numBins) + int(curEntry.TargetPosition/binSizeY)
+	// 	//imageData[imageIndex]++
 
-		// If we have too many lines, then start a new indexed chunk on the next line
-		if lineCount >= maxLinesPerIndex {
-			lineCount = 0
-		}
+	// 	// If we have too many lines, then start a new indexed chunk on the next line
+	// 	if lineCount >= maxLinesPerIndex {
+	// 		lineCount = 0
+	// 	}
 
-		lastEntry = curEntry.ChromPairName()
-	}
+	// 	lastEntry = curEntry.ChromPairName()
+	// }
 
-	pairsFile.index.ChromPairEnd[lastEntry] = pairsFile.bgzfReader.LastChunk()
-	pairsFile.index.ChromPairCounts[lastEntry] = totalLineCount
+	// pairsFile.index.ChromPairEnd[lastEntry] = pairsFile.bgzfReader.LastChunk()
+	// pairsFile.index.ChromPairCounts[lastEntry] = totalLineCount
 
-	pairsFile.index.mu.Unlock()
-	fmt.Println("Finished creating index")
+	// pairsFile.index.mu.Unlock()
+	// fmt.Println("Finished creating index")
 
 	//a, err := pairsFile.Index.Search(bReader, PairsQuery{SourceChrom: "chr2L", SourceStart: 12000000, SourceEnd: 15000000, TargetChrom: "chr2L", TargetStart: 10000000, TargetEnd: 15000000})
 

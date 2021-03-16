@@ -300,7 +300,7 @@ func GetPoints(w http.ResponseWriter, r *http.Request) {
 
 	fmt.Printf("Processing Search query %v\n", pairsQuery)
 
-	points, err := pairsFile.Index().Search(pairsQuery)
+	points, err := pairsFile.Search(pairsQuery)
 	if err != nil {
 		fmt.Println(err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -366,7 +366,7 @@ func GetVoronoi(w http.ResponseWriter, r *http.Request) {
 
 	pairsQuery := pairs.Query{SourceChrom: sourceChrom, SourceStart: uint64(minX), SourceEnd: uint64(maxX), TargetChrom: targetChrom, TargetStart: uint64(minY), TargetEnd: uint64(maxY)}
 
-	points, err := pairsFile.Index().Search(pairsQuery)
+	points, err := pairsFile.Search(pairsQuery)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -598,7 +598,7 @@ func GetVoronoiAndImage(w http.ResponseWriter, r *http.Request) {
 	//var result *voronoi.Int16VoronoiResult
 	var result *voronoi.Voronoi
 	if sumPoints < opts.MaximumVoronoiPoints {
-		points, err := pairsFile.Index().Search(pairsQuery)
+		points, err := pairsFile.Search(pairsQuery)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
