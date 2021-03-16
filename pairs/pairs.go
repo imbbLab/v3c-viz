@@ -481,11 +481,11 @@ func (index indexHeader) getChunksFromQuery(query Query) []fileChunk {
 			chunkstoLoad = append(chunkstoLoad, newChunk)
 		} else {
 			updated := false
-			if newChunk.Start.File < chunkstoLoad[0].Start.File && (newChunk.End.File >= chunkstoLoad[0].Start.File && newChunk.End.File <= chunkstoLoad[0].End.File) {
+			if newChunk.Start.File <= chunkstoLoad[0].Start.File && (newChunk.End.File >= chunkstoLoad[0].Start.File && newChunk.Start.File <= chunkstoLoad[0].End.File) {
 				chunkstoLoad[0].Start = newChunk.Start
 				updated = true
 			}
-			if newChunk.End.File > chunkstoLoad[0].End.File && (newChunk.Start.File >= chunkstoLoad[0].Start.File && newChunk.Start.File <= chunkstoLoad[0].End.File) {
+			if newChunk.End.File >= chunkstoLoad[0].End.File && (newChunk.Start.File >= chunkstoLoad[0].End.File && newChunk.End.File <= chunkstoLoad[0].Start.File) {
 				chunkstoLoad[0].End = newChunk.End
 				updated = true
 			}
