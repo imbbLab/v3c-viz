@@ -357,7 +357,10 @@ func (file bgzfFile) Image(query Query, numBins uint64) ([]uint32, error) {
 
 	var xPos, yPos uint64
 
+	pointCounter := 0
+
 	err := file.Query(query, func(entry *Entry) {
+		pointCounter++
 		if entry.SourceChrom != query.SourceChrom {
 			xPos = (entry.TargetPosition - query.SourceStart) / binSizeX
 			yPos = (entry.SourcePosition - query.TargetStart) / binSizeY
@@ -382,6 +385,8 @@ func (file bgzfFile) Image(query Query, numBins uint64) ([]uint32, error) {
 			}
 		}
 	})
+
+	fmt.Printf("Image query finished having processed %d points\n", pointCounter)
 
 	return imageData, err
 }
@@ -466,6 +471,7 @@ func (index indexHeader) getChunksFromQuery(query Query) []fileChunk {
 	if _, ok := index.BinIndex[chromPairName]; ok {
 		startBin := query.SourceStart >> TAD_LIDX_SHIFT
 		endBin := query.SourceEnd >> TAD_LIDX_SHIFT
+		endBin += 1
 
 		if endBin >= uint64(len(index.LinearIndex[chromPairName])) {
 			endBin = uint64(len(index.LinearIndex[chromPairName]) - 1)
@@ -489,6 +495,7 @@ func (index indexHeader) getChunksFromQuery(query Query) []fileChunk {
 	if _, ok := index.BinIndex[chromPairName]; ok {
 		startBin := query.TargetStart >> TAD_LIDX_SHIFT
 		endBin := query.TargetEnd >> TAD_LIDX_SHIFT
+		endBin += 1
 
 		if endBin >= uint64(len(index.LinearIndex[chromPairName])) {
 			endBin = uint64(len(index.LinearIndex[chromPairName]) - 1)
