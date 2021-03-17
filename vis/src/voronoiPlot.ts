@@ -209,33 +209,38 @@ export class VoronoiPlot extends Axis {
         if(this.colourScale && this.scale) {
             let axisCanvas = this.getAxisCanvas();
             
+            let binSizeX = (this.maxViewX-this.minViewX) / this.axisWidth
+            let binSizeY = (this.maxViewY-this.minViewY) / this.axisHeight
+
             for (let i = 0; i < this.voronoi.polygons.length; i++) {
                 let points = this.voronoi.polygons[i].points
                 voronoiCanvasCTX.fillStyle = this.colourScale(this.scale(Math.log(this.voronoi.polygons[i].area)));
 
                 voronoiCanvasCTX.beginPath();
-                //voronoiCanvasCTX.moveTo(points[0], points[1])
-                //for (let j = 2; j < points.length; j += 2) {
-                //    voronoiCanvasCTX.lineTo(points[j], points[j + 1])
-                //}
-                voronoiCanvasCTX.moveTo(points[0].x, points[0].y)
+                voronoiCanvasCTX.moveTo((points[0].x - this.minViewX)/binSizeX, (points[0].y - this.minViewY) / binSizeY)
                 for (let j = 1; j < points.length; j++) {
-                    voronoiCanvasCTX.lineTo(points[j].x, points[j].y)
+                    voronoiCanvasCTX.lineTo((points[j].x - this.minViewX)/binSizeX, (points[j].y - this.minViewY) / binSizeY)
                 }
-
-                //voronoiCanvasCTX.moveTo(((points[0]['X'] - minX) / (maxX - minX)) * axisCanvas.width, ((points[0]['Y'] - minY) / (maxY - minY)) * axisCanvas.height)
-                //for(let j = 1; j < points.length; j++) {
-                //    voronoiCanvasCTX.lineTo(((points[j]['X'] - minX) / (maxX - minX)) * axisCanvas.width, ((points[j]['Y'] - minY) / (maxY - minY)) * axisCanvas.height)
-                //}
-
-                //voronoiCanvasCTX.lineTo(((points[0]['X'] - minX) / (maxX - minX)) * axisCanvas.width, ((points[0]['Y'] - minY) / (maxY - minY)) * axisCanvas.height)
-                voronoiCanvasCTX.closePath();
-                //this.voronoi.renderCell(i, voronoiCanvasCTX);
-                //console.log('rgb(100, 100, ' + Math.round(255*(area / maxArea))  + ')');            
+                voronoiCanvasCTX.closePath();         
                 voronoiCanvasCTX.fill();
 
                 if(this.displayVoronoiEdges) {
                     voronoiCanvasCTX.stroke();
+                }
+
+                // Need to draw the other part of the voronoi as we only kept one part of triangle
+                if(this.sourceChrom == this.targetChrom) {
+                    voronoiCanvasCTX.beginPath();
+                    voronoiCanvasCTX.moveTo((points[0].y - this.minViewX)/binSizeX, (points[0].x - this.minViewY) / binSizeY)
+                    for (let j = 1; j < points.length; j++) {
+                        voronoiCanvasCTX.lineTo((points[j].y - this.minViewX)/binSizeX, (points[j].x - this.minViewY) / binSizeY)
+                    }
+                    voronoiCanvasCTX.closePath();         
+                    voronoiCanvasCTX.fill();
+    
+                    if(this.displayVoronoiEdges) {
+                        voronoiCanvasCTX.stroke();
+                    }
                 }
             }
 

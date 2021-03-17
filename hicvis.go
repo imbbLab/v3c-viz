@@ -388,34 +388,47 @@ func GetVoronoi(w http.ResponseWriter, r *http.Request) {
 	w.Write(bytes)
 }
 
-func performVoronoi(points []*pairs.Entry, query pairs.Query, smoothingIterations int, numPixelsX, numPixelsY int) (*voronoi.Voronoi, error) {
+func boundingPolygonFromQuery(query pairs.Query) voronoi.Polygon {
+	sourceLength := float64(pairsFile.Chromsizes()[query.SourceChrom].Length)
+	targetLength := float64(pairsFile.Chromsizes()[query.TargetChrom].Length)
 
+	bounds := voronoi.Rect(float64(query.SourceStart)/sourceLength, float64(query.TargetStart)/targetLength, float64(query.SourceEnd)/sourceLength, float64(query.TargetEnd)/targetLength)
+
+	boundingPolygon := voronoi.Polygon{Points: []delaunay.Point{{X: bounds.Min.X, Y: bounds.Min.Y}, {X: bounds.Max.X, Y: bounds.Min.Y}, {X: bounds.Max.X, Y: bounds.Max.Y}, {X: bounds.Min.X, Y: bounds.Max.Y}}}
+
+	if query.SourceChrom == query.TargetChrom {
+		// Clip with triangle
+		triangle := voronoi.Polygon{Points: []delaunay.Point{{X: 0, Y: 0}, {X: 1, Y: 1}, {X: 0, Y: 1}}}
+
+		boundingPolygon = voronoi.SutherlandHodgman(boundingPolygon, triangle)
+	}
+
+	return boundingPolygon
+}
+
+func performVoronoi(points []*pairs.Entry, query pairs.Query, smoothingIterations int, numPixelsX, numPixelsY int) (*voronoi.Voronoi, error) {
 	// Normalisation options for voronoi calculation:
 	// 1) No normalisation
 	// 2) Normalise to chromosomes
 	// 3) Normalise to view (current method used in javascript version)
 
+	// Normalise to chromosome length seems to be the most appropriate and provides the best looking voronoi diagrams.
+	// If this is not done, then the comparison of chromosomes of different lengths produces distorted looking voronoi diagrams
+
 	var dPoints []delaunay.Point
+	revQuery := query.Reverse()
 
-	// Add in ghost points to help with the generation of voronoi cells
-	//dPoints = append(dPoints, delaunay.Point{X: -float64(pairsFile.Chromsizes()[sourceChrom].Length), Y: -float64(pairsFile.Chromsizes()[targetChrom].Length)})
-	//dPoints = append(dPoints, delaunay.Point{X: float64(2 * pairsFile.Chromsizes()[sourceChrom].Length), Y: -float64(pairsFile.Chromsizes()[targetChrom].Length)})
-	//dPoints = append(dPoints, delaunay.Point{X: float64(2 * pairsFile.Chromsizes()[sourceChrom].Length), Y: float64(2 * pairsFile.Chromsizes()[targetChrom].Length)})
-	//dPoints = append(dPoints, delaunay.Point{X: -float64(pairsFile.Chromsizes()[sourceChrom].Length), Y: float64(2 * pairsFile.Chromsizes()[targetChrom].Length)})
-
-	//dPoints = append(dPoints, delaunay.Point{X: -float64(pairsFile.Chromsizes()[sourceChrom].Length), Y: float64(maxY+minY) / 2})
-	//dPoints = append(dPoints, delaunay.Point{X: float64(2 * pairsFile.Chromsizes()[sourceChrom].Length), Y: float64(maxY+minY) / 2})
-	//dPoints = append(dPoints, delaunay.Point{X: float64(maxX+minX) / 2, Y: -float64(pairsFile.Chromsizes()[targetChrom].Length)})
-	//dPoints = append(dPoints, delaunay.Point{X: float64(maxX+minX) / 2, Y: float64(2 * pairsFile.Chromsizes()[targetChrom].Length)})
-
+	// Check whether the data point is within the query range to avoid processing unnecessary points.
+	// When source == target, then don't need to (and shouldn't) check the reverse query as this is mirrored around line x = y
 	for _, point := range points {
-		if query.SourceChrom == point.SourceChrom && query.TargetChrom == point.TargetChrom {
+		if point.IsInRange(query) {
 			dPoints = append(dPoints, delaunay.Point{X: float64(point.SourcePosition), Y: float64(point.TargetPosition)})
-		}
-		if query.TargetChrom == point.SourceChrom && query.SourceChrom == point.TargetChrom {
+		} else if query.SourceChrom != query.TargetChrom && point.IsInRange(revQuery) {
 			dPoints = append(dPoints, delaunay.Point{X: float64(point.TargetPosition), Y: float64(point.SourcePosition)})
 		}
 	}
+
+	// TODO: Apply normalisation in for loop above rather than in voronoi.FromPoints function
 
 	start := time.Now()
 	fmt.Printf("Starting vornoi calculation with %d points\n", len(dPoints))
@@ -433,10 +446,12 @@ func performVoronoi(points []*pairs.Entry, query pairs.Query, smoothingIteration
 
 	sourceLength := float64(pairsFile.Chromsizes()[query.SourceChrom].Length)
 	targetLength := float64(pairsFile.Chromsizes()[query.TargetChrom].Length)
-	bounds := voronoi.Rect(float64(query.SourceStart)/sourceLength, float64(query.TargetStart)/targetLength, float64(query.SourceEnd)/sourceLength, float64(query.TargetEnd)/targetLength)
+	//bounds := voronoi.Rect(float64(query.SourceStart)/sourceLength, float64(query.TargetStart)/targetLength, float64(query.SourceEnd)/sourceLength, float64(query.TargetEnd)/targetLength)
 	normalisation := voronoi.Rect(0, 0, sourceLength, targetLength)
 
-	vor, err := voronoi.FromPoints(dPoints, bounds, normalisation, smoothingIterations)
+	boundingPolygon := boundingPolygonFromQuery(query)
+
+	vor, err := voronoi.FromPoints(dPoints, boundingPolygon, normalisation, smoothingIterations)
 	elapsed := time.Since(start)
 	//fmt.Println(triangulation)
 	fmt.Printf("Finishing voronoi calculation: %s\n", elapsed)
@@ -595,6 +610,29 @@ func GetVoronoiAndImage(w http.ResponseWriter, r *http.Request) {
 		sumPoints += int(count)
 	}
 
+	fmt.Println(pairsQuery)
+
+	// If looking at intrachromosomal interactions then data is stored in upper triangle form, so modify query to cover full area
+	if sourceChrom == targetChrom {
+		if pairsQuery.TargetStart < pairsQuery.SourceStart {
+			temp := pairsQuery.TargetStart
+			pairsQuery.TargetStart = pairsQuery.SourceStart
+			pairsQuery.SourceStart = temp
+
+			//temp = pairsQuery.TargetEnd
+			//pairsQuery.TargetEnd = pairsQuery.SourceEnd
+			//pairsQuery.SourceEnd = temp
+		}
+
+		if pairsQuery.TargetEnd < pairsQuery.SourceEnd {
+			temp := pairsQuery.TargetEnd
+			pairsQuery.TargetEnd = pairsQuery.SourceEnd
+			pairsQuery.SourceEnd = temp
+		}
+	}
+
+	fmt.Println(pairsQuery)
+
 	//var result *voronoi.Int16VoronoiResult
 	var result *voronoi.Voronoi
 	if sumPoints < opts.MaximumVoronoiPoints {
@@ -617,10 +655,19 @@ func GetVoronoiAndImage(w http.ResponseWriter, r *http.Request) {
 				index := y*numBins + x
 
 				if overviewImage[index] > 0 {
+					sourcePos := uint64(math.Floor((float64(x)/float64(numBins))*float64(maxX-minX))) + uint64(minX)
+					targetPos := uint64(math.Floor((float64(y)/float64(numBins))*float64(maxY-minY))) + uint64(minY)
+
+					if sourceChrom == targetChrom && sourcePos > targetPos {
+						temp := targetPos
+						targetPos = sourcePos
+						sourcePos = temp
+					}
+
 					points = append(points, &pairs.Entry{SourceChrom: sourceChrom,
-						SourcePosition: uint64(math.Floor((float64(x)/float64(numBins))*float64(maxX-minX))) + uint64(minX),
+						SourcePosition: sourcePos,
 						TargetChrom:    targetChrom,
-						TargetPosition: uint64(math.Floor((float64(y)/float64(numBins))*float64(maxY-minY))) + uint64(minY)})
+						TargetPosition: targetPos})
 				}
 			}
 		}
@@ -632,8 +679,8 @@ func GetVoronoiAndImage(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	binSizeX := float64(maxX-minX) / float64(numPixelsX)
-	binSizeY := float64(maxY-minY) / float64(numPixelsY)
+	//binSizeX := float64(maxX-minX) / float64(numPixelsX)
+	//binSizeY := float64(maxY-minY) / float64(numPixelsY)
 
 	voronoiBuffer := new(bytes.Buffer)
 	err = binary.Write(voronoiBuffer, binary.BigEndian, uint32(len(result.Polygons)))
@@ -665,20 +712,20 @@ func GetVoronoiAndImage(w http.ResponseWriter, r *http.Request) {
 		}
 
 		cendroid := result.Polygons[polyIndex].Centroid()
-		err = binary.Write(voronoiBuffer, binary.BigEndian, (cendroid.X-float64(minX))/binSizeX)
+		err = binary.Write(voronoiBuffer, binary.BigEndian, cendroid.X) //(cendroid.X-float64(minX))/binSizeX)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		err = binary.Write(voronoiBuffer, binary.BigEndian, (cendroid.Y-float64(minY))/binSizeY)
+		err = binary.Write(voronoiBuffer, binary.BigEndian, cendroid.Y) //(cendroid.Y-float64(minY))/binSizeY)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
 		for index := range result.Polygons[polyIndex].Points {
-			result.Polygons[polyIndex].Points[index].X = (result.Polygons[polyIndex].Points[index].X - float64(minX)) / binSizeX
-			result.Polygons[polyIndex].Points[index].Y = (result.Polygons[polyIndex].Points[index].Y - float64(minY)) / binSizeY
+			//result.Polygons[polyIndex].Points[index].X = (result.Polygons[polyIndex].Points[index].X - float64(minX)) / binSizeX
+			//result.Polygons[polyIndex].Points[index].Y = (result.Polygons[polyIndex].Points[index].Y - float64(minY)) / binSizeY
 
 			err = binary.Write(voronoiBuffer, binary.BigEndian, result.Polygons[polyIndex].Points[index].X)
 			if err != nil {

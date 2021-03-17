@@ -39,13 +39,15 @@ type Voronoi struct {
 //	return delaunay.Point{X: point.X / float64(sourceChrom.Length), Y: point.Y / float64(targetChrom.Length)}
 //}
 
-func FromPoints(data []delaunay.Point, bounds Rectangle, normalisation Rectangle, smoothingIterations int) (vor *Voronoi, err error) {
+func FromPoints(data []delaunay.Point, boundingPolygon Polygon, normalisation Rectangle, smoothingIterations int) (vor *Voronoi, err error) {
 	if len(data) < 1 {
 		return &Voronoi{}, nil
 	}
 
 	var totalPoints []delaunay.Point
 	var triangulation *delaunay.Triangulation
+
+	bounds := boundingPolygon.BoundingBox()
 
 	fixedPoint1 := delaunay.Point{X: bounds.Min.X - bounds.Width(), Y: bounds.Min.Y + bounds.Height()/2}
 	fixedPoint2 := delaunay.Point{X: bounds.Max.X + bounds.Width(), Y: bounds.Min.Y + bounds.Height()/2}
@@ -99,7 +101,7 @@ func FromPoints(data []delaunay.Point, bounds Rectangle, normalisation Rectangle
 		midPoint = time.Now()
 		fmt.Printf("Triangulation: %s\n", elapsed)
 
-		vor = calculateVoronoi(triangulation, bounds)
+		vor = calculateVoronoi(triangulation, boundingPolygon)
 		elapsed = time.Since(midPoint)
 		midPoint = time.Now()
 		fmt.Printf("Voronoi: %s\n", elapsed)
@@ -152,7 +154,7 @@ func pointNormalisation(point delaunay.Point, bounds Rectangle) delaunay.Point {
 	return delaunay.Point{X: (point.X - bounds.Min.X) / bounds.Width(), Y: (point.Y - bounds.Min.Y) / bounds.Height()}
 }
 
-func calculateVoronoi(triangulation *delaunay.Triangulation, bounds Rectangle) *Voronoi {
+func calculateVoronoi(triangulation *delaunay.Triangulation, boundingPolygon Polygon) *Voronoi {
 	// See https://mapbox.github.io/delaunator/ for information
 
 	indexMap := make(map[int]int)
@@ -164,7 +166,14 @@ func calculateVoronoi(triangulation *delaunay.Triangulation, bounds Rectangle) *
 		}
 	}
 
-	clipArea := Polygon{Points: []delaunay.Point{{X: bounds.Min.X, Y: bounds.Min.Y}, {X: bounds.Max.X, Y: bounds.Min.Y}, {X: bounds.Max.X, Y: bounds.Max.Y}, {X: bounds.Min.X, Y: bounds.Max.Y}}}
+	// var clipArea Polygon
+
+	// if !clipTriangle {
+	// 	clipArea = Polygon{Points: []delaunay.Point{{X: bounds.Min.X, Y: bounds.Min.Y}, {X: bounds.Max.X, Y: bounds.Min.Y}, {X: bounds.Max.X, Y: bounds.Max.Y}, {X: bounds.Min.X, Y: bounds.Max.Y}}}
+	// } else {
+	// 	// Upper left triangle
+	// 	clipArea = Polygon{Points: []delaunay.Point{{X: bounds.Min.X, Y: bounds.Min.Y}, {X: bounds.Max.X, Y: bounds.Max.Y}, {X: bounds.Min.X, Y: bounds.Max.Y}}}
+	// }
 
 	var voronoi Voronoi
 	polygons := make([]*Polygon, len(triangulation.Points))
@@ -199,7 +208,7 @@ func calculateVoronoi(triangulation *delaunay.Triangulation, bounds Rectangle) *
 
 			//polygon.calculateArea()
 			//area := polygon.Area
-			polygon = SutherlandHodgman(polygon, clipArea)
+			polygon = SutherlandHodgman(polygon, boundingPolygon)
 
 			polygon.calculateArea()
 			polygon.DataPoint = polygon.Centroid()

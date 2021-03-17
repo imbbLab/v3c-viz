@@ -23,6 +23,35 @@ func (polygon *Polygon) calculateArea() {
 	polygon.Area /= 2
 }
 
+func (polygon Polygon) BoundingBox() Rectangle {
+	var bounds Rectangle
+
+	for index, point := range polygon.Points {
+		if index == 0 {
+			bounds.Min.X = point.X
+			bounds.Max.X = point.X
+
+			bounds.Min.Y = point.Y
+			bounds.Max.Y = point.Y
+		} else {
+			if bounds.Min.X > point.X {
+				bounds.Min.X = point.X
+			}
+			if bounds.Max.X < point.X {
+				bounds.Max.X = point.X
+			}
+			if bounds.Min.Y > point.Y {
+				bounds.Min.Y = point.Y
+			}
+			if bounds.Max.Y < point.Y {
+				bounds.Max.Y = point.Y
+			}
+		}
+	}
+
+	return bounds
+}
+
 func (polygon *Polygon) Centroid() delaunay.Point {
 	i := 0
 	n := len(polygon.Points)
