@@ -269,6 +269,17 @@ func (file *bgzfFile) Query(query Query, entryFunction func(entry *Entry)) error
 	file.mu.Lock()
 
 	for _, chunk := range chunks {
+		defer func() {
+			if x := recover(); x != nil {
+				// recovering from a panic; x contains whatever was passed to panic()
+				log.Printf("run time panic: %v", x)
+				log.Printf("%v Start [%v]\n", chunk, file.bgzfReader)
+
+				// if you just want to log the panic, panic again
+				panic(x)
+			}
+		}()
+
 		err = file.bgzfReader.Seek(chunk.Start)
 		if err != nil {
 			return err
@@ -309,7 +320,7 @@ func (file *bgzfFile) Query(query Query, entryFunction func(entry *Entry)) error
 				entryFunction(entry)
 			}
 
-			if file.bgzfReader.LastChunk().End.File > chunk.End.File {
+			if file.bgzfReader.LastChunk().Begin.File > chunk.End.File {
 				finished = true
 				break
 			}
