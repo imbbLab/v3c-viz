@@ -15,6 +15,7 @@ import (
 	"strings"
 	"sync"
 
+	//"github.com/biogo/hts/bgzf"
 	"github.com/biogo/hts/bgzf"
 )
 
@@ -227,7 +228,7 @@ type bgzfFile struct {
 //	return file.index
 //}
 
-func (file bgzfFile) Close() {
+func (file *bgzfFile) Close() {
 	file.mu.Lock()
 	file.bgzfReader.Close()
 	file.mu.Unlock()
@@ -320,6 +321,7 @@ func (file *bgzfFile) Query(query Query, entryFunction func(entry *Entry)) error
 				entryFunction(entry)
 			}
 
+			// If we've gone past the end of our query region, then stop
 			if file.bgzfReader.LastChunk().Begin.File > chunk.End.File {
 				finished = true
 				break
@@ -465,6 +467,13 @@ func (index indexHeader) getChunksFromQuery(query Query) []fileChunk {
 		startBin := query.SourceStart >> TAD_LIDX_SHIFT
 		endBin := query.SourceEnd >> TAD_LIDX_SHIFT
 
+		if endBin >= uint64(len(index.LinearIndex[chromPairName])) {
+			endBin = uint64(len(index.LinearIndex[chromPairName]) - 1)
+		}
+
+		for ; index.LinearIndex[chromPairName][startBin] == 0; startBin++ {
+		}
+
 		startLocation := index.LinearIndex[chromPairName][startBin]
 		endLocation := index.LinearIndex[chromPairName][endBin]
 
@@ -476,9 +485,17 @@ func (index indexHeader) getChunksFromQuery(query Query) []fileChunk {
 
 	// Process the inverse chrom pair
 	chromPairName = query.TargetChrom + string(index.Conf.RegionSplitCharacter) + query.SourceChrom
+
 	if _, ok := index.BinIndex[chromPairName]; ok {
 		startBin := query.TargetStart >> TAD_LIDX_SHIFT
 		endBin := query.TargetEnd >> TAD_LIDX_SHIFT
+
+		if endBin >= uint64(len(index.LinearIndex[chromPairName])) {
+			endBin = uint64(len(index.LinearIndex[chromPairName]) - 1)
+		}
+
+		for ; index.LinearIndex[chromPairName][startBin] == 0; startBin++ {
+		}
 
 		startLocation := index.LinearIndex[chromPairName][startBin]
 		endLocation := index.LinearIndex[chromPairName][endBin]
@@ -688,6 +705,13 @@ func ParseBGZF(filename string) (File, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	// for i := 0; i < 10; i++ {
+	// 	go func(i int) {
+	// 		pairsFile.Query(Query{SourceChrom: "1", TargetChrom: "1", SourceStart: uint64(i) * 1e5, SourceEnd: uint64(i) * 1.1e5, TargetStart: uint64(i) * 1e5, TargetEnd: uint64(i) * 1.1e5}, func(entry *Entry) {})
+	// 	}(i)
+	// }
+
 	//return &pairsFile, nil
 
 	// fmt.Println("Finished parsing header, creating index...")
