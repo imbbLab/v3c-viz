@@ -6,7 +6,7 @@ import (
 	"sort"
 	"sync"
 
-	"github.com/biogo/hts/bgzf"
+	"github.com/imbbLab/hicvis/pairs/bgzf"
 )
 
 type Query struct {

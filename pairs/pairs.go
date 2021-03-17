@@ -16,7 +16,7 @@ import (
 	"sync"
 
 	//"github.com/biogo/hts/bgzf"
-	"github.com/biogo/hts/bgzf"
+	"github.com/imbbLab/hicvis/pairs/bgzf"
 )
 
 type Order int

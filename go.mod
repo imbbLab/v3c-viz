@@ -11,4 +11,5 @@ require (
 	github.com/pzsz/voronoi v0.0.0-20130609164533-4314be88c79f // indirect
 	github.com/tidwall/buntdb v1.2.0
 	golang.org/x/sys v0.0.0-20210216224549-f992740a1bac // indirect
+	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
 )
