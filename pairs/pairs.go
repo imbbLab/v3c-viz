@@ -346,12 +346,13 @@ func (file *bgzfFile) Search(query Query) ([]*Entry, error) {
 	return pairs, err
 }
 
-func (file bgzfFile) Image(query Query, numBins uint64) ([]uint32, error) {
+func (file *bgzfFile) Image(query Query, numBins uint64) ([]uint32, error) {
 	fmt.Printf("Processing Image query %v\n", query)
 	imageData := make([]uint32, numBins*numBins)
 
-	binSizeX := ((query.SourceEnd - query.SourceStart) / numBins) + 1
-	binSizeY := ((query.TargetEnd - query.TargetStart) / numBins) + 1
+	// Convert to float to make sure that when
+	binSizeX := (float64(query.SourceEnd-query.SourceStart) / float64(numBins)) //+ 1
+	binSizeY := (float64(query.TargetEnd-query.TargetStart) / float64(numBins)) //+ 1
 
 	sameChrom := query.SourceChrom == query.TargetChrom
 
@@ -362,13 +363,13 @@ func (file bgzfFile) Image(query Query, numBins uint64) ([]uint32, error) {
 	err := file.Query(query, func(entry *Entry) {
 		pointCounter++
 		if entry.SourceChrom != query.SourceChrom {
-			xPos = (entry.TargetPosition - query.SourceStart) / binSizeX
-			yPos = (entry.SourcePosition - query.TargetStart) / binSizeY
+			xPos = uint64(float64(entry.TargetPosition-query.SourceStart) / binSizeX)
+			yPos = uint64(float64(entry.SourcePosition-query.TargetStart) / binSizeY)
 		} else {
-			xPos = (entry.SourcePosition - query.SourceStart) / binSizeX
-			yPos = (entry.TargetPosition - query.TargetStart) / binSizeY
+			xPos = uint64(float64(entry.SourcePosition-query.SourceStart) / binSizeX)
+			yPos = uint64(float64(entry.TargetPosition-query.TargetStart) / binSizeY)
 		}
-
+		//fmt.Printf("(%d)[%f, %f]%v -> (%d, %d)\n", numBins, binSizeX, binSizeY, entry, xPos, yPos)
 		if xPos >= 0 && yPos >= 0 && xPos < numBins && yPos < numBins {
 			imageIndex := int(yPos)*int(numBins) + int(xPos)
 			imageData[imageIndex]++
@@ -376,8 +377,8 @@ func (file bgzfFile) Image(query Query, numBins uint64) ([]uint32, error) {
 
 		// Check if reverse is within view, as we only store diagonal
 		if sameChrom {
-			xPos = (entry.TargetPosition - query.SourceStart) / binSizeX
-			yPos = (entry.SourcePosition - query.TargetStart) / binSizeY
+			xPos = uint64(float64(entry.TargetPosition-query.SourceStart) / binSizeX)
+			yPos = uint64(float64(entry.SourcePosition-query.TargetStart) / binSizeY)
 
 			if xPos >= 0 && yPos >= 0 && xPos < numBins && yPos < numBins {
 				imageIndex := int(yPos)*int(numBins) + int(xPos)

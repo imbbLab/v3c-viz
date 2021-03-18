@@ -11,17 +11,17 @@ type Polygon struct {
 	Clipped   bool
 }
 
-func (polygon *Polygon) calculateArea() {
-	polygon.Area = 0
-	j := len(polygon.Points) - 1
+// func (polygon *Polygon) calculateArea() {
+// 	polygon.Area = 0
+// 	j := len(polygon.Points) - 1
 
-	for i := 0; i < len(polygon.Points); i++ {
-		polygon.Area += polygon.Points[j].X*polygon.Points[i].Y - polygon.Points[j].Y*polygon.Points[i].X
-		j = i
-	}
+// 	for i := 0; i < len(polygon.Points); i++ {
+// 		polygon.Area += polygon.Points[j].X*polygon.Points[i].Y - polygon.Points[j].Y*polygon.Points[i].X
+// 		j = i
+// 	}
 
-	polygon.Area /= 2
-}
+// 	polygon.Area /= 2
+// }
 
 func (polygon Polygon) BoundingBox() Rectangle {
 	var bounds Rectangle
@@ -52,32 +52,102 @@ func (polygon Polygon) BoundingBox() Rectangle {
 	return bounds
 }
 
+func centroid3(p1, p2, p3 delaunay.Point) delaunay.Point {
+	return delaunay.Point{X: p1.X + p2.X + p3.X, Y: p1.Y + p2.Y + p3.Y}
+}
+
+func calcArea2(p1, p2, p3 delaunay.Point) float64 {
+	return (p2.X-p1.X)*(p3.Y-p1.Y) -
+		(p3.X-p1.X)*(p2.Y-p1.Y)
+}
+
 func (polygon *Polygon) Centroid() delaunay.Point {
-	i := 0
-	n := len(polygon.Points)
+	var centroid delaunay.Point
+	var areasum2 float64
 
-	if n < 1 {
-		return delaunay.Point{}
+	if len(polygon.Points) < 1 {
+		return centroid
 	}
 
-	var a delaunay.Point
-	var c, x, y, k float64
-	b := polygon.Points[n-1]
+	areaBasePoint := polygon.Points[0]
+	for i := 0; i < len(polygon.Points)-1; i++ {
+		triangleCent3 := centroid3(areaBasePoint, polygon.Points[i], polygon.Points[i+1])
+		area2 := calcArea2(areaBasePoint, polygon.Points[i], polygon.Points[i+1])
 
-	for i < n {
-		a = b
-		b = polygon.Points[i]
-		c = a.X*b.Y - b.X*a.Y
-		k += c
-		x += (a.X + b.X) * c
-		y += (a.Y + b.Y) * c
+		centroid.X += area2 * triangleCent3.X
+		centroid.Y += area2 * triangleCent3.Y
 
-		i++
+		areasum2 += area2
 	}
 
-	k *= 3
+	centroid.X = centroid.X / 3 / areasum2
+	centroid.Y = centroid.Y / 3 / areasum2
 
-	return delaunay.Point{X: x / k, Y: y / k}
+	polygon.Area = areasum2 / 2
+
+	return centroid
+
+	// signedArea := 0.0
+	// x0 := 0.0 // Current vertex X
+	// y0 := 0.0 // Current vertex Y
+	// x1 := 0.0 // Next vertex X
+	// y1 := 0.0 // Next vertex Y
+	// a := 0.0  // Partial signed area
+
+	// // For all vertices except last
+	// for i := 0; i < len(polygon.Points)-1; i++ {
+	// 	x0 = math.Round(polygon.Points[i].X)
+	// 	y0 = math.Round(polygon.Points[i].Y)
+	// 	x1 = math.Round(polygon.Points[i+1].X)
+	// 	y1 = math.Round(polygon.Points[i+1].Y)
+	// 	a = x0*y1 - x1*y0
+	// 	signedArea += a
+	// 	centroid.X += (x0 + x1) * a
+	// 	centroid.Y += (y0 + y1) * a
+	// }
+
+	// // Do last vertex separately to avoid performing an expensive
+	// // modulus operation in each iteration.
+	// x0 = math.Round(polygon.Points[len(polygon.Points)-1].X)
+	// y0 = math.Round(polygon.Points[len(polygon.Points)-1].Y)
+	// x1 = math.Round(polygon.Points[0].X)
+	// y1 = math.Round(polygon.Points[0].Y)
+	// a = x0*y1 - x1*y0
+	// signedArea += a
+	// centroid.X += (x0 + x1) * a
+	// centroid.Y += (y0 + y1) * a
+
+	// signedArea *= 0.5
+	// centroid.X /= (6.0 * signedArea)
+	// centroid.Y /= (6.0 * signedArea)
+
+	// return centroid
+
+	// i := 0
+	// n := len(polygon.Points)
+
+	// if n < 1 {
+	// 	return delaunay.Point{}
+	// }
+
+	// var a delaunay.Point
+	// var c, x, y, k float64
+	// b := polygon.Points[n-1]
+
+	// for i < n {
+	// 	a = b
+	// 	b = polygon.Points[i]
+	// 	c = a.X*b.Y - b.X*a.Y
+	// 	k += c
+	// 	x += (a.X + b.X) * c
+	// 	y += (a.Y + b.Y) * c
+
+	// 	i++
+	// }
+
+	// k *= 3
+
+	// return delaunay.Point{X: x / k, Y: y / k}
 }
 
 func inside(p, p1, p2 delaunay.Point) bool {

@@ -6,7 +6,6 @@ import (
 	"log"
 	"math"
 	"sync"
-	"time"
 
 	"github.com/fogleman/delaunay"
 )
@@ -65,12 +64,13 @@ func FromPoints(data []delaunay.Point, boundingPolygon Polygon, normalisation Re
 	for index := range data {
 		//totalPoints[index] = pointNormalisation(totalPoints[index], normalisation)
 		totalPoints = append(totalPoints, pointNormalisation(data[index], normalisation))
+		//totalPoints = append(totalPoints, data[index])
 		//dPoints[index] = chromNormalisation(dPoints[index], pairsFile.Chromsizes()[sourceChrom], pairsFile.Chromsizes()[targetChrom])
 	}
 
-	start := time.Now()
-	midPoint := start
-	var elapsed time.Duration
+	//start := time.Now()
+	//midPoint := start
+	//var elapsed time.Duration
 
 	for i := 0; i <= smoothingIterations; i++ {
 		defer func() {
@@ -90,21 +90,21 @@ func FromPoints(data []delaunay.Point, boundingPolygon Polygon, normalisation Re
 				err = errors.New("error when performing voronoi")
 			}
 		}()
-		midPoint = time.Now()
-		fmt.Println("Starting triangulation...")
+		//midPoint = time.Now()
+
 		triangulation, err = delaunay.Triangulate(totalPoints)
 		if err != nil {
 			return nil, err
 		}
 
-		elapsed = time.Since(midPoint)
-		midPoint = time.Now()
-		fmt.Printf("Triangulation: %s\n", elapsed)
+		//elapsed = time.Since(midPoint)
+		//midPoint = time.Now()
+		//fmt.Printf("Triangulation: %s\n", elapsed)
 
 		vor = calculateVoronoi(triangulation, boundingPolygon)
-		elapsed = time.Since(midPoint)
-		midPoint = time.Now()
-		fmt.Printf("Voronoi: %s\n", elapsed)
+		//elapsed = time.Since(midPoint)
+		//midPoint = time.Now()
+		//fmt.Printf("Voronoi: %s\n", elapsed)
 
 		if i+1 <= smoothingIterations {
 			totalPoints = nil
@@ -124,9 +124,6 @@ func FromPoints(data []delaunay.Point, boundingPolygon Polygon, normalisation Re
 				}
 			}
 		}
-
-		elapsed = time.Since(midPoint)
-		fmt.Printf("Reset: %s\n", elapsed)
 	}
 
 	// Scale the points back to original space
@@ -140,8 +137,8 @@ func FromPoints(data []delaunay.Point, boundingPolygon Polygon, normalisation Re
 		}
 	}
 
-	elapsed = time.Since(start)
-	fmt.Printf("Total voronoi: %s\n", elapsed)
+	//elapsed = time.Since(start)
+	//fmt.Printf("Total voronoi: %s\n", elapsed)
 
 	return vor, nil
 }
@@ -200,7 +197,7 @@ func calculateVoronoi(triangulation *delaunay.Triangulation, boundingPolygon Pol
 			}
 
 			if len(polygon.Points) < 3 {
-				log.Printf("We have a problem polygon: %v\n", polygon)
+				log.Printf("We have a problem polygon: %v [%v]\n", polygon, triangulation.Points[p])
 				return
 			}
 
@@ -210,7 +207,7 @@ func calculateVoronoi(triangulation *delaunay.Triangulation, boundingPolygon Pol
 			//area := polygon.Area
 			polygon = SutherlandHodgman(polygon, boundingPolygon)
 
-			polygon.calculateArea()
+			//polygon.calculateArea()
 			polygon.DataPoint = polygon.Centroid()
 			polygons[p] = &polygon
 

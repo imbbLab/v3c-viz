@@ -10,6 +10,7 @@ import (
 	"compress/flate"
 	"compress/gzip"
 	"io"
+	"log"
 	"runtime"
 	"sync"
 )
@@ -447,6 +448,10 @@ func (bg *Reader) Seek(off Offset) error {
 	rs, ok := bg.r.(io.ReadSeeker)
 	if !ok {
 		return ErrNotASeeker
+	}
+
+	if bg.current == nil {
+		log.Printf("Seek() has been called where bg.current == nil")
 	}
 
 	if bg.current == nil || off.File != bg.current.Base() || !bg.current.hasData() {

@@ -245,12 +245,17 @@ export class VoronoiPlot extends Axis {
             }
 
             voronoiCanvasCTX.fillStyle = 'rgb(0, 0, 0)'
-
+            
             if(this.displayCentroid) {
                 if (this.displayVoronoiPoints) {
                     for (let i = 0; i < this.voronoi.polygons.length; i++) {
-                        voronoiCanvasCTX.fillRect(this.voronoi.polygons[i].centroid.x-1, this.voronoi.polygons[i].centroid.y-1, 2, 2);
+                        //voronoiCanvasCTX.fillRect(this.voronoi.polygons[i].centroid.x-1, this.voronoi.polygons[i].centroid.y-1, 2, 2);
+                        voronoiCanvasCTX.fillRect(((this.voronoi.polygons[i].centroid.x - this.minViewX)/binSizeX), ((this.voronoi.polygons[i].centroid.y - this.minViewY) / binSizeY), 2, 2);
                    //     voronoiCanvasCTX.fillRect(this.polygons[i]['DataPoint'][0], this.polygons[i]['DataPoint'][1], 2, 2);
+
+                   if(this.sourceChrom == this.targetChrom) {
+                    voronoiCanvasCTX.fillRect(((this.voronoi.polygons[i].centroid.y - this.minViewX)/binSizeX), ((this.voronoi.polygons[i].centroid.x - this.minViewY) / binSizeY), 2, 2);
+                   }
                     }
                 }
             }
