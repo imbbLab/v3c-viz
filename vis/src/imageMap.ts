@@ -28,19 +28,13 @@ export class ImageMap extends Axis {
     setNumberBins(numBins: number) {
         this.numBins = numBins;
 
-        this.buffer = new Uint8ClampedArray(numBins * numBins * 4)
-
-        var axisCanvas = this.getAxisCanvas();
-        var axisCanvasCTX = <CanvasRenderingContext2D>axisCanvas.getContext('2d');
-        this.iData = axisCanvasCTX.createImageData(this.numBins, this.numBins);
-        this.iData.data.set(this.buffer);
 
         //this.updateView(this.minDataX, this.maxDataX, this.minDataY, this.maxDataY);
     }
 
     constructor(numBins: number, voronoiPlot: VoronoiPlot) {
         super(<HTMLCanvasElement>document.getElementById("image-canvas"))
-        
+
         this.imageData = new Uint32Array();
         this.buffer = new Uint8ClampedArray();
 
@@ -109,11 +103,11 @@ export class ImageMap extends Axis {
         // set our buffer as source
         //       
 
-        for (var y = 0; y < this.numBins; ++y) {
-            for (var x = 0; x < this.numBins; ++x) {
-                clamped[0] = this.imageData[y * this.numBins + x] / this.imageThreshold * 255;
+        for (var y = 0; y < this.iData.height; ++y) {
+            for (var x = 0; x < this.iData.width; ++x) {
+                clamped[0] = this.imageData[y * this.iData.width + x] / this.imageThreshold * 255;
 
-                var pos = (y * this.numBins + x) * 4; // position in buffer based on x and y
+                var pos = (y * this.iData.width + x) * 4; // position in buffer based on x and y
                 this.iData.data[pos] = clamped[0];           // some R value [0, 255]
                 this.iData.data[pos + 1] = clamped[0];           // some G value
                 this.iData.data[pos + 2] = clamped[0];           // some B value
@@ -164,6 +158,17 @@ export class ImageMap extends Axis {
 
     async updateFromArray(imageData: Uint32Array) {
         this.imageData = imageData;
+
+
+        // Check whether the size of buffers are correct
+        if(this.iData.width != this.numBins || this.iData.height != this.numBins) {
+            this.buffer = new Uint8ClampedArray(this.numBins * this.numBins * 4)
+
+            var axisCanvas = this.getAxisCanvas();
+            var axisCanvasCTX = <CanvasRenderingContext2D>axisCanvas.getContext('2d');
+            this.iData = axisCanvasCTX.createImageData(this.numBins, this.numBins);
+            this.iData.data.set(this.buffer);
+        }
 
         let maxIntensity = 0;
         let countNotZero = 0;

@@ -57,6 +57,8 @@ export abstract class Axis {
 
     axisOffsetX = 30;
     axisOffsetY = 30;
+    marginX = 30;
+    marginY = 30;
 
     numTicks = 5;
     tickDecimalPlaces = 2;
@@ -72,8 +74,8 @@ export abstract class Axis {
     // Contacts
     interactions: Interaction[]
 
-    axisWidth = 500;
-    axisHeight = 500;
+    axisWidth: number = 0;
+    axisHeight: number = 0;
 
     mouseDown = false;
     lastMousePos: Coordinate = { x: 0, y: 0 };
@@ -283,11 +285,11 @@ export abstract class Axis {
         this.canvas.width = width;
         this.canvas.height = height;
 
-        this.axisWidth = this.canvas.width - this.axisOffsetX * 1.7;
-        this.axisHeight = this.canvas.height - this.axisOffsetY * 1.7;
+        this.axisWidth = this.canvas.width - this.axisOffsetX - this.marginX;
+        this.axisHeight = this.canvas.height - this.axisOffsetY - this.marginY;
 
-        this.axisCanvas.width = this.axisWidth;
-        this.axisCanvas.height = this.axisHeight;
+        this.axisCanvas.width = Math.max(this.axisWidth, this.axisHeight);
+        this.axisCanvas.height = Math.max(this.axisWidth, this.axisHeight);
     }
 
 
@@ -454,10 +456,17 @@ export abstract class Axis {
             mouseY = canvasCoord.y - (this.canvas.height - this.axisHeight - this.axisOffsetY);
         }
 
+        if(this.intrachromosomeView) {
+            return {
+                x: mouseX / this.axisWidth,
+                y: mouseY / this.axisWidth // Assume that we always have a square axis as in triangle view
+            };
+        } 
+
         return {
             x: mouseX / this.axisWidth,
-            y: mouseY / this.axisHeight
-        };
+            y: mouseY / this.axisHeight 
+        };  
     }
 
     getAxisCanvas() {

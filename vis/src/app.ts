@@ -45,6 +45,7 @@ var intrachromosomeView = false
 var displayImageMap = true;
 var igvHeight = 230;
 var viewWidth = 400;
+var viewHeight = 400;
 
 let hideButton = <HTMLInputElement>document.getElementById('hideButton');
 hideButton.addEventListener('click', (event) => {
@@ -164,15 +165,25 @@ function reposition() {
     let maxWidth = window.innerWidth;
     let maxHeight = window.innerHeight;
 
-    maxWidth -= igvHeight;
+    if(!intrachromosomeView) {
+        maxWidth -= igvHeight;
+    } else {
+        maxWidth -= 20
+    }
     maxHeight -= igvHeight;
 
-    viewWidth = Math.min(maxHeight, maxWidth / numDisplayedViews);
+    if(intrachromosomeView) {
+        viewWidth = maxWidth / 2;
+        viewHeight = viewWidth/2;
+    } else {
+        viewWidth = Math.min(maxHeight, maxWidth);
+        viewHeight = viewWidth
+    }
 
-    imageMap.setDimensions(viewWidth, viewWidth)
+    imageMap.setDimensions(viewWidth, viewHeight)
     imageMap.redraw();
 
-    geneBrowserBelow.style.top = viewWidth + "px";
+    geneBrowserBelow.style.top = viewHeight + "px";
     geneBrowserBelow.style.left = (imageMap.axisOffsetX - 10) + (viewWidth * (numDisplayedViews - 1)) + "px";
     geneBrowserBelow.style.width = imageMap.axisWidth + "px"
 
@@ -180,20 +191,20 @@ function reposition() {
         geneBrowserRight.style.display = "none";
     } else {
         geneBrowserRight.style.display = "block";
-        geneBrowserRight.style.top = (viewWidth - (imageMap.axisOffsetX - 10)) + "px";
+        geneBrowserRight.style.top = (viewHeight - (imageMap.axisOffsetX - 10)) + "px";
         geneBrowserRight.style.left = (viewWidth * numDisplayedViews) + "px";
     }
 
     voronoiCanvasDiv.style.left = (viewWidth * (numDisplayedViews - 1)) + "px";
-    voronoiMap.setDimensions(viewWidth, viewWidth)
+    voronoiMap.setDimensions(viewWidth, viewHeight)
     voronoiMap.redraw();
 
 
     let hideButton = <HTMLInputElement>document.getElementById('hideButton');
-    hideButton.style.top = viewWidth + "px";
+    hideButton.style.top = viewHeight + "px";
 
     let controls = <HTMLDivElement>document.getElementById('controls');
-    controls.style.top = (viewWidth + 50) + "px";
+    controls.style.top = (viewHeight + 50) + "px";
 
     let voronoiControls = <HTMLDivElement>document.getElementById('voronoi-controls');
     voronoiControls.style.left = Math.max(voronoiMap.axisOffsetX, viewWidth - 250) + "px";

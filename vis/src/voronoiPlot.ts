@@ -96,11 +96,11 @@ export class VoronoiPlot extends Axis {
 
 
     getVoronoiDrawWidth() {
-        return Math.min(this.axisWidth, this.voronoiCanvas.width)
+        return this.voronoiCanvas.width //Math.max(this.axisWidth, this.voronoiCanvas.width)
     }
 
     getVoronoiDrawHeight() {
-        return Math.min(this.axisHeight, this.voronoiCanvas.height)
+        return this.voronoiCanvas.height //Math.max(this.axisHeight, this.voronoiCanvas.height)
     }
 
     colours = 100
@@ -160,8 +160,8 @@ export class VoronoiPlot extends Axis {
 
         //if(this.polygons && this.colourScale && this.scale) {
         if(this.colourScale && this.scale) {
-            let binSizeX = (this.maxViewX-this.minViewX) / this.axisWidth
-            let binSizeY = (this.maxViewY-this.minViewY) / this.axisHeight
+            let binSizeX = (this.maxViewX-this.minViewX) / this.getVoronoiDrawWidth()
+            let binSizeY = (this.maxViewY-this.minViewY) / this.getVoronoiDrawHeight()
 
             for (let i = 0; i < this.voronoi.polygons.length; i++) {
                 let points = this.voronoi.polygons[i].points
@@ -237,6 +237,7 @@ export class VoronoiPlot extends Axis {
         } else {
             axisCanvasCTX.imageSmoothingEnabled = false;
         }
+        //if()
         axisCanvasCTX.drawImage(this.voronoiCanvas, 0, 0, this.getVoronoiDrawWidth(), this.getVoronoiDrawHeight(),
             0, 0, this.axisCanvas.width, this.axisCanvas.height);
 
