@@ -65,6 +65,7 @@ var opts struct {
 	InteractFile         string `short:"i" long:"interact" description:"Interact file to visualise" required:"false"`
 	MaximumVoronoiPoints int    `long:"maxpoints" description:"Maximum points to calculate voronoi" default:"100000"`
 	Port                 string `short:"p" long:"port" description:"Port used for the server" default:"5002"`
+	Server               bool   `long:"server" description:"Start just the server and don't automatically open the browser" default:"false"`
 }
 
 // open opens the specified URL in the default browser of the user.
@@ -194,7 +195,9 @@ func main() {
 		log.Fatal(err)
 	}
 
-	open("http://localhost" + location)
+	if !opts.Server {
+		open("http://localhost" + location)
+	}
 
 	startServer(listener)
 }
@@ -393,6 +396,7 @@ func boundingPolygonFromQuery(query pairs.Query) voronoi.Polygon {
 	targetLength := float64(pairsFile.Chromsizes()[query.TargetChrom].Length)
 
 	bounds := voronoi.Rect(float64(query.SourceStart)/sourceLength, float64(query.TargetStart)/targetLength, float64(query.SourceEnd)/sourceLength, float64(query.TargetEnd)/targetLength)
+	//bounds := voronoi.Rect(float64(query.SourceStart), float64(query.TargetStart), float64(query.SourceEnd), float64(query.TargetEnd))
 
 	boundingPolygon := voronoi.Polygon{Points: []delaunay.Point{{X: bounds.Min.X, Y: bounds.Min.Y}, {X: bounds.Max.X, Y: bounds.Min.Y}, {X: bounds.Max.X, Y: bounds.Max.Y}, {X: bounds.Min.X, Y: bounds.Max.Y}}}
 
@@ -532,9 +536,22 @@ func SetInteract(w http.ResponseWriter, r *http.Request) {
 	interactFile = new(interact.InteractFile)
 	interactFile.Interactions = make(map[string][]interact.Interaction)
 
-	for _, interaction := range interactions.Interactions {
-		interactFile.Interactions[interaction.ChromPairName()] = append(interactFile.Interactions[interaction.ChromPairName()], interaction)
+	// Make sure that interactions include 'chr'
+	for index, interaction := range interactions.Interactions {
+		if !strings.Contains(interactions.Interactions[index].SourceChrom, "chr") {
+			interactions.Interactions[index].SourceChrom = "chr" + interaction.SourceChrom
+		}
+
+		if !strings.Contains(interactions.Interactions[index].TargetChrom, "chr") {
+			interactions.Interactions[index].TargetChrom = "chr" + interaction.TargetChrom
+		}
+
+		chromPairName := interactions.Interactions[index].ChromPairName()
+
+		interactFile.Interactions[chromPairName] = append(interactFile.Interactions[chromPairName], interactions.Interactions[index])
 	}
+
+	fmt.Println(interactFile.Interactions)
 }
 
 func GetVoronoiAndImage(w http.ResponseWriter, r *http.Request) {
@@ -631,12 +648,13 @@ func GetVoronoiAndImage(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	fmt.Println(pairsQuery)
+	//fmt.Println(pairsQuery)
 
 	//var result *voronoi.Int16VoronoiResult
 	var result *voronoi.Voronoi
 	if sumPoints < opts.MaximumVoronoiPoints {
 		points, err := pairsFile.Search(pairsQuery)
+
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
