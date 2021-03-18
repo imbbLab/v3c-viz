@@ -333,6 +333,14 @@ export abstract class Axis {
     sourceChrom: Chromosome = new Chromosome("", 0)
     targetChrom: Chromosome = new Chromosome("", 0)
 
+    intrachromosomeView: boolean = false
+
+    setIntrachromosomeView(value: boolean) {
+        this.intrachromosomeView = value;
+
+        this.redraw();
+    }
+
     setChromPair(sourceChrom: Chromosome, targetChrom: Chromosome) {
         this.sourceChrom = sourceChrom;
         this.targetChrom = targetChrom;
@@ -472,39 +480,41 @@ export abstract class Axis {
         }
 
         // Draw y-axis ticks
-        for (let i = 0; i < this.numTicks; i++) {
-            ctx.save();
+        if(!this.intrachromosomeView) {
+            for (let i = 0; i < this.numTicks; i++) {
+                ctx.save();
 
-            let curTickPct = i * tickPct;
-            let xPos = this.axisOffsetX;
-            let yPos = this.canvas.height - this.axisOffsetY - (this.axisHeight * curTickPct);
+                let curTickPct = i * tickPct;
+                let xPos = this.axisOffsetX;
+                let yPos = this.canvas.height - this.axisOffsetY - (this.axisHeight * curTickPct);
 
-            var yPosition = 0;
-            
-            if(this.originLocation == OriginLocation.BottomLeft) {
-                yPosition = this.minViewY + yDiff * curTickPct;
-            } else if(this.originLocation == OriginLocation.TopLeft) {
-                yPosition = this.maxViewY - yDiff * curTickPct;
+                var yPosition = 0;
+                
+                if(this.originLocation == OriginLocation.BottomLeft) {
+                    yPosition = this.minViewY + yDiff * curTickPct;
+                } else if(this.originLocation == OriginLocation.TopLeft) {
+                    yPosition = this.maxViewY - yDiff * curTickPct;
+                }
+
+                ctx.translate(xPos, yPos);
+                ctx.rotate(-Math.PI / 2);
+
+                ctx.beginPath();
+                ctx.moveTo(0, 0);
+                ctx.lineTo(0, -10);
+                ctx.stroke();
+
+                // TODO: Ideally would check the number of digits to display
+                if (i == 0 && yPosition > 100) {
+                    ctx.fillText("" + yPosition.toFixed(this.tickDecimalPlaces), this.axisOffsetX/2, -this.axisOffsetY/2-10);
+                } else if(i == this.numTicks-1 && yPosition > 100) {
+                    ctx.fillText("" + yPosition.toFixed(this.tickDecimalPlaces), -this.axisOffsetX/2, -this.axisOffsetY/2-10);
+                } else {
+                    ctx.fillText("" + yPosition.toFixed(this.tickDecimalPlaces), 0, -this.axisOffsetY/2-10);
+                }
+
+                ctx.restore();
             }
-
-            ctx.translate(xPos, yPos);
-            ctx.rotate(-Math.PI / 2);
-
-            ctx.beginPath();
-            ctx.moveTo(0, 0);
-            ctx.lineTo(0, -10);
-            ctx.stroke();
-
-            // TODO: Ideally would check the number of digits to display
-            if (i == 0 && yPosition > 100) {
-                ctx.fillText("" + yPosition.toFixed(this.tickDecimalPlaces), this.axisOffsetX/2, -this.axisOffsetY/2-10);
-            } else if(i == this.numTicks-1 && yPosition > 100) {
-                ctx.fillText("" + yPosition.toFixed(this.tickDecimalPlaces), -this.axisOffsetX/2, -this.axisOffsetY/2-10);
-            } else {
-                ctx.fillText("" + yPosition.toFixed(this.tickDecimalPlaces), 0, -this.axisOffsetY/2-10);
-            }
-
-            ctx.restore();
         }
 
         ctx.restore();

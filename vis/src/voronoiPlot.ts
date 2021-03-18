@@ -212,33 +212,35 @@ export class VoronoiPlot extends Axis {
             let binSizeX = (this.maxViewX-this.minViewX) / this.axisWidth
             let binSizeY = (this.maxViewY-this.minViewY) / this.axisHeight
 
+            //voronoiCanvasCTX.save()
+
             for (let i = 0; i < this.voronoi.polygons.length; i++) {
                 let points = this.voronoi.polygons[i].points
                 voronoiCanvasCTX.fillStyle = this.colourScale(this.scale(Math.log(this.voronoi.polygons[i].area)));
 
                 voronoiCanvasCTX.beginPath();
-                voronoiCanvasCTX.moveTo((points[0].x - this.minViewX)/binSizeX, (points[0].y - this.minViewY) / binSizeY)
+                voronoiCanvasCTX.moveTo((points[0].x - this.minViewX) / binSizeX, (points[0].y - this.minViewY) / binSizeY)
                 for (let j = 1; j < points.length; j++) {
-                    voronoiCanvasCTX.lineTo((points[j].x - this.minViewX)/binSizeX, (points[j].y - this.minViewY) / binSizeY)
+                    voronoiCanvasCTX.lineTo((points[j].x - this.minViewX) / binSizeX, (points[j].y - this.minViewY) / binSizeY)
                 }
-                voronoiCanvasCTX.closePath();         
+                voronoiCanvasCTX.closePath();
                 voronoiCanvasCTX.fill();
 
-                if(this.displayVoronoiEdges) {
+                if (this.displayVoronoiEdges) {
                     voronoiCanvasCTX.stroke();
                 }
 
                 // Need to draw the other part of the voronoi as we only kept one part of triangle
-                if(this.sourceChrom == this.targetChrom) {
+                if (this.sourceChrom == this.targetChrom) {
                     voronoiCanvasCTX.beginPath();
-                    voronoiCanvasCTX.moveTo((points[0].y - this.minViewX)/binSizeX, (points[0].x - this.minViewY) / binSizeY)
+                    voronoiCanvasCTX.moveTo((points[0].y - this.minViewX) / binSizeX, (points[0].x - this.minViewY) / binSizeY)
                     for (let j = 1; j < points.length; j++) {
-                        voronoiCanvasCTX.lineTo((points[j].y - this.minViewX)/binSizeX, (points[j].x - this.minViewY) / binSizeY)
+                        voronoiCanvasCTX.lineTo((points[j].y - this.minViewX) / binSizeX, (points[j].x - this.minViewY) / binSizeY)
                     }
-                    voronoiCanvasCTX.closePath();         
+                    voronoiCanvasCTX.closePath();
                     voronoiCanvasCTX.fill();
-    
-                    if(this.displayVoronoiEdges) {
+
+                    if (this.displayVoronoiEdges) {
                         voronoiCanvasCTX.stroke();
                     }
                 }
@@ -259,6 +261,8 @@ export class VoronoiPlot extends Axis {
                     }
                 }
             }
+
+            //voronoiCanvasCTX.restore()
         }
 
         this.redraw()
@@ -568,12 +572,23 @@ export class VoronoiPlot extends Axis {
         var axisCanvas = this.getAxisCanvas();
         var axisCanvasCTX = <CanvasRenderingContext2D>axisCanvas.getContext('2d');
         axisCanvasCTX.clearRect(0, 0, this.axisCanvas.width, this.axisCanvas.height);
-        axisCanvasCTX.imageSmoothingEnabled = false;
+        
+
+        axisCanvasCTX.save();
+
+        if (this.intrachromosomeView) {
+            axisCanvasCTX.rotate(-45*Math.PI/180)
+            axisCanvasCTX.scale(1/Math.sqrt(2), 1/Math.sqrt(2))
+            axisCanvasCTX.imageSmoothingEnabled = true;
+        } else {
+            axisCanvasCTX.imageSmoothingEnabled = false;
+        }
         axisCanvasCTX.drawImage(this.voronoiCanvas, 0, 0, this.getVoronoiDrawWidth(), this.getVoronoiDrawHeight(),
             0, 0, this.axisCanvas.width, this.axisCanvas.height);
 
         this.drawContacts();
 
+        axisCanvasCTX.restore();
 
 
         /*axisCanvasCTX.save();

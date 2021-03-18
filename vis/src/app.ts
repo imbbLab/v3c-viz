@@ -13,7 +13,6 @@ import { Rectangle } from "./axis";
 
 
 import * as d3 from 'd3';
-import { area } from "d3";
 import { start } from "node:repl";
 
 //import igv = require('igv');
@@ -27,17 +26,8 @@ import { start } from "node:repl";
 
 
 
-//http://localhost:5001/points?xStart=1000000&xEnd=1100000&yStart=1000000&yEnd=1100000
-
-var xStart = 8e4
-var xEnd = 3e6
-var yStart = 8e4
-var yEnd = 3e6
-
 var numBins = 500;
 
-let points: Uint32Array;
-let normPoints: Array<number[]>;
 
 var voronoiMap: VoronoiPlot;
 var imageMap: ImageMap;
@@ -49,6 +39,8 @@ var targetChrom: Chromosome;
 
 var bottomBrowser: igv.IGVBrowser;
 var rightBrowser: igv.IGVBrowser;
+
+var intrachromosomeView = false
 
 var displayImageMap = true;
 var igvHeight = 230;
@@ -66,6 +58,22 @@ hideButton.addEventListener('click', (event) => {
 
     reposition();
 });
+
+let viewChangeButton = <HTMLInputElement>document.getElementById('viewChangeButton');
+viewChangeButton.addEventListener('click', (event) => {
+    intrachromosomeView = !intrachromosomeView
+
+    if(intrachromosomeView) {
+        viewChangeButton.value = "Full view"
+    } else {
+        viewChangeButton.value = "Triangle view"
+    }
+
+    reposition();
+
+    voronoiMap.setIntrachromosomeView(intrachromosomeView);
+    imageMap.setIntrachromosomeView(intrachromosomeView);
+})
 
 let saveButton = <HTMLInputElement>document.getElementById('saveButton');
 saveButton.addEventListener('click', (event) => {
@@ -167,8 +175,14 @@ function reposition() {
     geneBrowserBelow.style.top = viewWidth + "px";
     geneBrowserBelow.style.left = (imageMap.axisOffsetX - 10) + (viewWidth * (numDisplayedViews - 1)) + "px";
     geneBrowserBelow.style.width = imageMap.axisWidth + "px"
-    geneBrowserRight.style.top = (viewWidth - (imageMap.axisOffsetX - 10)) + "px";
-    geneBrowserRight.style.left = (viewWidth * numDisplayedViews) + "px";
+
+    if(intrachromosomeView) {
+        geneBrowserRight.style.display = "none";
+    } else {
+        geneBrowserRight.style.display = "block";
+        geneBrowserRight.style.top = (viewWidth - (imageMap.axisOffsetX - 10)) + "px";
+        geneBrowserRight.style.left = (viewWidth * numDisplayedViews) + "px";
+    }
 
     voronoiCanvasDiv.style.left = (viewWidth * (numDisplayedViews - 1)) + "px";
     voronoiMap.setDimensions(viewWidth, viewWidth)
@@ -341,19 +355,34 @@ function requestViewUpdate(request: ViewRequest) {
 
         if (xRequest && yRequest) {
             let newSourceChrom = getChromosomeFromMap(chromosomes, xRequest.locus.chr)
-            let newTargetChrom = getChromosomeFromMap(chromosomes, yRequest.locus.chr)
+            var newTargetChrom: Chromosome
 
             let startX = xRequest.locus.start
             let endX = xRequest.locus.end
 
-            let startY = yRequest.locus.start
-            let endY = yRequest.locus.end
+            var startY: number
+            var endY: number
+
+            if(intrachromosomeView) {
+                newTargetChrom = newSourceChrom
+                startY = startX
+                endY = endX
+            } else {
+                newTargetChrom = getChromosomeFromMap(chromosomes, yRequest.locus.chr)
+                startY = yRequest.locus.start
+                endY = yRequest.locus.end
+            }
 
             if (startX < 0) {
                 startX = 0;
             }
             if (startY < 0) {
                 startY = 0;
+            }
+
+            if(isNaN(startY) || isNaN(endY)) {
+                startY = startX
+                endY = endX
             }
 
             if (sourceChrom != newSourceChrom || targetChrom != newTargetChrom) {

@@ -4,12 +4,12 @@ import { VoronoiPlot } from './voronoiPlot'
 
 export class ImageMap extends Axis {
     //numBinsForDensity = 300;
-    isImageLocked = false;
-    imageCanvas: HTMLCanvasElement;
-    imageCTX: CanvasRenderingContext2D;
+    //isImageLocked = false;
+    //imageCanvas: HTMLCanvasElement;
+    //imageCTX: CanvasRenderingContext2D;
     //imageDiv : HTMLDivElement;
 
-    numPointsLabel: HTMLLabelElement
+    //numPointsLabel: HTMLLabelElement
 
     // Editable options
     numBins = 200;
@@ -21,7 +21,7 @@ export class ImageMap extends Axis {
     imageData: Uint32Array
     buffer: Uint8ClampedArray
     iData: ImageData
-
+    bitmapData: ImageBitmap | undefined
 
     //axis: Axis;
 
@@ -42,12 +42,12 @@ export class ImageMap extends Axis {
         super(<HTMLCanvasElement>document.getElementById("image-canvas"))
 
         //this.imageDiv = <HTMLDivElement>document.getElementById("image-div");
-        this.imageCanvas = <HTMLCanvasElement>document.getElementById("image-canvas");
-        this.imageCTX = <CanvasRenderingContext2D>this.imageCanvas.getContext('2d')
-        this.imageCTX.imageSmoothingEnabled = false;
+//        this.imageCanvas = <HTMLCanvasElement>document.getElementById("image-canvas");
+//        this.imageCTX = <CanvasRenderingContext2D>this.imageCanvas.getContext('2d')
+//        this.imageCTX.imageSmoothingEnabled = false;
 
         // Set up the controls
-        this.numPointsLabel = document.createElement('label');
+//        this.numPointsLabel = document.createElement('label');
         //this.imageDiv.appendChild(this.numPointsLabel);
         this.imageData = new Uint32Array();
         this.buffer = new Uint8ClampedArray();
@@ -57,8 +57,8 @@ export class ImageMap extends Axis {
         var axisCanvasCTX = <CanvasRenderingContext2D>this.getAxisCanvas().getContext('2d');
         this.iData = axisCanvasCTX.createImageData(this.numBins, this.numBins);
 
-        this.setNumberBins(numBins);
 
+        this.setNumberBins(numBins);
 
         /*fetch('./details')
             .then(
@@ -135,13 +135,13 @@ export class ImageMap extends Axis {
         });
     }*/
 
-    lockImage() {
-        this.isImageLocked = true;
-    }
+    // lockImage() {
+    //     this.isImageLocked = true;
+    // }
 
-    unlockImage() {
-        this.isImageLocked = false;
-    }
+    // unlockImage() {
+    //     this.isImageLocked = false;
+    // }
 
     setPercentile(percentile: number) {
         this.percentile = percentile;
@@ -188,40 +188,52 @@ export class ImageMap extends Axis {
             }
         }
 
-        this.redraw();
+        this.updateBitmap();
     }
 
-    redraw() {
-
-        // update canvas with new data
-        //ctx.putImageData(idata, 0, 0);
+    updateBitmap() {
         createImageBitmap(this.iData).then(bitmapData => {
-            var axisCanvas = this.getAxisCanvas();
-            var axisCanvasCTX = <CanvasRenderingContext2D>axisCanvas.getContext('2d');
-            axisCanvasCTX.imageSmoothingEnabled = false;
+            this.bitmapData = bitmapData;
 
-            //axisCanvasCTX.save();
-            //if(this.originLocation == OriginLocation.TopLeft) {
-            //    axisCanvasCTX.translate(0, axisCanvas.height);
-            //    axisCanvasCTX.scale(1, -1);
-            //}
-            axisCanvasCTX.drawImage(bitmapData, 0, 0, axisCanvas.width, axisCanvas.height);
-            //axisCanvasCTX.restore();
-
-            this.drawContacts();
-
-            this.tickDecimalPlaces = 0;
-
-            this.drawAxisCanvas();
-
+            this.redraw();
         });
     }
 
-    requestView(sourceChrom: Chromosome, targetChrom: Chromosome, minX: number, maxX: number, minY: number, maxY: number) {
-        this.setChromPair(sourceChrom, targetChrom)
+    redraw() {
+        // update canvas with new data
+        //ctx.putImageData(idata, 0, 0);
 
-        this.loadDensityImage(sourceChrom, targetChrom, minX, maxX, minY, maxY)
+        var axisCanvas = this.getAxisCanvas();
+        var axisCanvasCTX = <CanvasRenderingContext2D>axisCanvas.getContext('2d');
+        axisCanvasCTX.clearRect(0, 0, axisCanvas.width, axisCanvas.height);
+
+        axisCanvasCTX.save();
+
+        if (this.intrachromosomeView) {
+            axisCanvasCTX.rotate(-45 * Math.PI / 180)
+            axisCanvasCTX.scale(1 / Math.sqrt(2), 1 / Math.sqrt(2))
+            axisCanvasCTX.imageSmoothingEnabled = true;
+        } else {
+            axisCanvasCTX.imageSmoothingEnabled = false;
+        }
+        if (this.bitmapData) {
+            axisCanvasCTX.drawImage(this.bitmapData, 0, 0, this.bitmapData.width, this.bitmapData.height,
+                0, 0, axisCanvas.width, axisCanvas.height);
+        }
+
+        this.drawContacts();
+        axisCanvasCTX.restore();
+
+        this.tickDecimalPlaces = 0;
+
+        this.drawAxisCanvas();
     }
+
+    // requestView(sourceChrom: Chromosome, targetChrom: Chromosome, minX: number, maxX: number, minY: number, maxY: number) {
+    //     this.setChromPair(sourceChrom, targetChrom)
+
+    //     this.loadDensityImage(sourceChrom, targetChrom, minX, maxX, minY, maxY)
+    // }
 
     async updateFromArray(imageData: Uint32Array) {
         this.imageData = imageData;
@@ -267,36 +279,36 @@ export class ImageMap extends Axis {
         this.redraw();
 
 
-        this.unlockImage();
+//        this.unlockImage();
     }
 
-    loadDensityImage(sourceChrom: Chromosome, targetChrom: Chromosome, startX: number, endX: number, startY: number, endY: number) {
-        this.lockImage();
+    // loadDensityImage(sourceChrom: Chromosome, targetChrom: Chromosome, startX: number, endX: number, startY: number, endY: number) {
+    //     this.lockImage();
 
-        var self = this;
+    //     var self = this;
 
-        fetch('./densityImage?numBins=' + this.numBins + '&sourceChrom=' + this.sourceChrom.name + '&targetChrom=' + this.targetChrom.name + '&xStart=' + startX + '&xEnd=' + endX + '&yStart=' + startY + '&yEnd=' + endY)
-            .then(
-                (response) => {
-                    if (response.status !== 200) {
-                        console.log('Looks like there was a problem. Status Code: ' +
-                            response.status);
-                        return;
-                    }
-
-
-                    // Examine the text in the response
-                    response.arrayBuffer().then((byteBuffer) => {
-                        self.updateFromArray(new Uint32Array(byteBuffer));
-                        //console.log(this.imageData);
+    //     fetch('./densityImage?numBins=' + this.numBins + '&sourceChrom=' + this.sourceChrom.name + '&targetChrom=' + this.targetChrom.name + '&xStart=' + startX + '&xEnd=' + endX + '&yStart=' + startY + '&yEnd=' + endY)
+    //         .then(
+    //             (response) => {
+    //                 if (response.status !== 200) {
+    //                     console.log('Looks like there was a problem. Status Code: ' +
+    //                         response.status);
+    //                     return;
+    //                 }
 
 
+    //                 // Examine the text in the response
+    //                 response.arrayBuffer().then((byteBuffer) => {
+    //                     self.updateFromArray(new Uint32Array(byteBuffer));
+    //                     //console.log(this.imageData);
 
-                    });
-                }
-            )
-            .catch(function (err) {
-                console.log('Fetch Error :-S', err);
-            });
-    }
+
+
+    //                 });
+    //             }
+    //         )
+    //         .catch(function (err) {
+    //             console.log('Fetch Error :-S', err);
+    //         });
+    // }
 }
