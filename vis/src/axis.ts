@@ -1,5 +1,5 @@
 import { callbackify } from "util";
-import {Chromosome, Interaction} from "./chromosome"
+import { Chromosome, Interaction } from "./chromosome"
 
 export interface Coordinate {
     x: number;
@@ -39,8 +39,8 @@ export abstract class Axis {
     originLocation: OriginLocation = OriginLocation.BottomLeft;
     yAxisLocation: YAxisLocation = YAxisLocation.Right;
 
-    doubleClickEventListeners: {():void}[] = []
-    regionSelectEventListeners: {(region: Rectangle):void}[] = []
+    doubleClickEventListeners: { (): void }[] = []
+    regionSelectEventListeners: { (region: Rectangle): void }[] = []
 
     canvas: HTMLCanvasElement;
     axisCanvas: HTMLCanvasElement;
@@ -116,26 +116,8 @@ export abstract class Axis {
                     ctx.lineWidth = 2;
                     ctx.stroke();
                 } else {
-                    // Reset the image
-                    self.drawAxisCanvas();
-
-                    ctx.beginPath();
-                    ctx.moveTo(self.axisOffsetX, mousePos.y);
-                    ctx.lineTo(mousePos.x, mousePos.y);
-                    ctx.lineTo(mousePos.x, self.canvas.height - self.axisOffsetX);
-                    ctx.strokeStyle = 'red';
-                    ctx.lineWidth = 2;
-                    ctx.stroke();
-
-                    let vertline = (<HTMLDivElement>document.getElementById('vertline'))
-                    vertline.style.height = (window.innerHeight - event.pageY - self.axisOffsetY) + "px";
-                    vertline.style.top = (event.pageY + 5) + "px";
-                    vertline.style.left = event.pageX + "px";
-
-                    let horline = (<HTMLDivElement>document.getElementById('horline'))
-                    horline.style.width = (window.innerWidth - event.pageX - 5) + "px";
-                    horline.style.top = event.pageY + "px";
-                    horline.style.left = (event.pageX + 5) + "px";
+                        // Reset the image
+                        self.drawAxisCanvas();
                 }
 
                 // Always draw the box, even when zooming
@@ -144,24 +126,90 @@ export abstract class Axis {
 
                 let margin = 5;
 
-                ctx.fillStyle = "lightblue";
-                ctx.fillRect(mousePos.x + margin, mousePos.y - boxHeight / 2, boxWidth, boxHeight);
-
                 let xDiff = self.maxViewX - self.minViewX;
                 let yDiff = self.maxViewY - self.minViewY;
-                var xPosition = (self.minViewX + axisPos.x * xDiff);
-                var yPosition = (self.minViewY + axisPos.y * yDiff);
+                var xPosition: number
+                var yPosition: number;
 
-                ctx.font = "19px Arial";
-                ctx.fillStyle = "black";
-                ctx.textBaseline = "middle";
-                ctx.textAlign = "left";
-                ctx.fillText("" + xPosition.toFixed(0) + ", " + yPosition.toFixed(0), mousePos.x + margin * 2, mousePos.y);
+                var displayText = true
+
+                if (self.intrachromosomeView) {
+                    xPosition = self.minViewX + ((axisPos.x - axisPos.y) * xDiff)
+                    yPosition = self.minViewX + ((axisPos.x + axisPos.y) * xDiff)
+
+                    if (xPosition < self.minViewX || xPosition > self.maxViewX || yPosition < self.minViewX || yPosition > self.maxViewX) {
+                        displayText = false
+                    }
+                } else {
+                    xPosition = self.minViewX + axisPos.x * xDiff
+                    yPosition = self.minViewY + axisPos.y * yDiff
+                }
+
+                if (displayText) {
+                    ctx.fillStyle = "lightblue";
+                    ctx.fillRect(mousePos.x + margin, mousePos.y - boxHeight / 2, boxWidth, boxHeight);
+
+                    ctx.font = "19px Arial";
+                    ctx.fillStyle = "black";
+                    ctx.textBaseline = "middle";
+                    ctx.textAlign = "left";
+                    ctx.fillText("" + xPosition.toFixed(0) + ", " + yPosition.toFixed(0), mousePos.x + margin * 2, mousePos.y);
+
+                    if (!self.mouseDown) {
+
+                        if(self.intrachromosomeView) {
+                            let minCanvasX = self.axisOffsetX + (axisPos.x - axisPos.y)*self.axisWidth;
+                            let maxCanvasX = self.axisOffsetX + (axisPos.x + axisPos.y)*self.axisWidth;
+
+                            ctx.beginPath();
+                            ctx.moveTo(minCanvasX, self.canvas.height - self.axisOffsetY);
+                            ctx.lineTo(mousePos.x, mousePos.y);
+                            ctx.lineTo(maxCanvasX, self.canvas.height - self.axisOffsetY);
+                            ctx.strokeStyle = 'red';
+                            ctx.lineWidth = 2;
+                            ctx.stroke();
+
+                            let canvasLocation = self.canvas.getBoundingClientRect();
+
+                            let vertline = (<HTMLDivElement>document.getElementById('vertline'))
+                            vertline.style.width = "1px"
+                            vertline.style.height = (window.innerHeight - canvasLocation.bottom) + "px";
+                            vertline.style.top = (canvasLocation.bottom - self.axisOffsetY) + "px";
+                            vertline.style.left = (canvasLocation.left + minCanvasX) + "px";
+
+                            let horline = (<HTMLDivElement>document.getElementById('horline'))
+                            horline.style.width = "1px"
+                            horline.style.height = (window.innerHeight - canvasLocation.bottom) + "px";
+                            horline.style.top = (canvasLocation.bottom - self.axisOffsetY) + "px";
+                            horline.style.left = (canvasLocation.left + maxCanvasX) + "px";
+                        } else {
+                            ctx.beginPath();
+                            ctx.moveTo(self.axisOffsetX, mousePos.y);
+                            ctx.lineTo(mousePos.x, mousePos.y);
+                            ctx.lineTo(mousePos.x, self.canvas.height - self.axisOffsetY);
+                            ctx.strokeStyle = 'red';
+                            ctx.lineWidth = 2;
+                            ctx.stroke();
+
+                            let vertline = (<HTMLDivElement>document.getElementById('vertline'))
+                            vertline.style.height = (window.innerHeight - event.pageY - self.axisOffsetY) + "px";
+                            vertline.style.width = "1px"
+                            vertline.style.top = (event.pageY + 5) + "px";
+                            vertline.style.left = event.pageX + "px";
+
+                            let horline = (<HTMLDivElement>document.getElementById('horline'))
+                            horline.style.width = (window.innerWidth - event.pageX - 5) + "px";
+                            horline.style.height = "1px"
+                            horline.style.top = event.pageY + "px";
+                            horline.style.left = (event.pageX + 5) + "px";
+                        }
+                    }
+                }
             }
         });
 
         this.canvas.addEventListener('dblclick', () => {
-            for(let callback of this.doubleClickEventListeners) {
+            for (let callback of this.doubleClickEventListeners) {
                 callback();
             }
             //this.updateView(this.minDataX, this.maxDataX, this.minDataY, this.maxDataY);
@@ -193,16 +241,16 @@ export abstract class Axis {
                 let minY = Math.min(startAxisPos.y, endAxisPos.y) * yDiff + self.minViewY;
                 let maxY = Math.max(startAxisPos.y, endAxisPos.y) * yDiff + self.minViewY;
 
-                if(minX < self.minViewX) {
+                if (minX < self.minViewX) {
                     minX = self.minViewX
                 }
-                if(minY < self.minViewY) {
+                if (minY < self.minViewY) {
                     minY = self.minViewY
                 }
 
-                let region: Rectangle = {min: {x: minX, y: minY}, max: {x:maxX, y:maxY}}
+                let region: Rectangle = { min: { x: minX, y: minY }, max: { x: maxX, y: maxY } }
 
-                for(let callback of self.regionSelectEventListeners) {
+                for (let callback of self.regionSelectEventListeners) {
                     callback(region)
                 }
                 //self.updateView(minX, maxX, minY, maxY)
@@ -223,11 +271,11 @@ export abstract class Axis {
         });
     }
 
-    addDoubleClickEventListener(callback: {():void}) {
+    addDoubleClickEventListener(callback: { (): void }) {
         this.doubleClickEventListeners.push(callback);
     }
 
-    addRegionSelectEventListener(callback: {(region: Rectangle):void}) {
+    addRegionSelectEventListener(callback: { (region: Rectangle): void }) {
         this.regionSelectEventListeners.push(callback);
     }
 
@@ -243,7 +291,7 @@ export abstract class Axis {
     }
 
 
-//    abstract updateView(minX: number, maxX: number, minY: number, maxY: number): void;
+    //    abstract updateView(minX: number, maxX: number, minY: number, maxY: number): void;
 
     protected drawContacts() {
         var axisCanvas = this.getAxisCanvas();
@@ -264,22 +312,22 @@ export abstract class Axis {
         axisCanvasCTX.fillStyle = "#" + this.contactFillColour.toString(16);//"rgba(0, 0, 255, 0.75)";
         for (let i = 0; i < this.interactions.length; i++) {
             var x, y
-            
-            if((this.interactions[i].sourceChrom == this.sourceChrom && this.interactions[i].targetChrom == this.targetChrom)) {
+
+            if ((this.interactions[i].sourceChrom == this.sourceChrom && this.interactions[i].targetChrom == this.targetChrom)) {
                 x = this.interactions[i].sourceStart;
                 y = this.interactions[i].targetStart;
 
                 if (x >= this.minViewX && x <= this.maxDataX && y >= this.minViewY && y <= this.maxViewY) {
                     x = (x - startX) * xScaleFactor;
                     y = (y - startY) * yScaleFactor;
-    
+
                     let halfWidth = 250 * xScaleFactor;
                     let halfHeight = 250 * yScaleFactor;
-    
+
                     // Make sure it is visible
                     halfWidth = Math.max(halfWidth, this.contactSize);
                     halfHeight = Math.max(halfHeight, this.contactSize);
-    
+
                     axisCanvasCTX.beginPath();
                     axisCanvasCTX.rect(x - halfWidth, y - halfHeight, halfWidth * 2, halfHeight * 2);
                     if (this.contactFill) {
@@ -287,23 +335,23 @@ export abstract class Axis {
                     }
                     axisCanvasCTX.stroke();
                 }
-            } 
-            
-            if(this.interactions[i].sourceChrom == this.targetChrom && this.interactions[i].targetChrom == this.sourceChrom)  {
+            }
+
+            if (this.interactions[i].sourceChrom == this.targetChrom && this.interactions[i].targetChrom == this.sourceChrom) {
                 y = this.interactions[i].sourceStart;
                 x = this.interactions[i].targetStart;
 
                 if (x >= this.minViewX && x <= this.maxDataX && y >= this.minViewY && y <= this.maxViewY) {
                     x = (x - startX) * xScaleFactor;
                     y = (y - startY) * yScaleFactor;
-    
+
                     let halfWidth = 250 * xScaleFactor;
                     let halfHeight = 250 * yScaleFactor;
-    
+
                     // Make sure it is visible
                     halfWidth = Math.max(halfWidth, this.contactSize);
                     halfHeight = Math.max(halfHeight, this.contactSize);
-    
+
                     axisCanvasCTX.beginPath();
                     axisCanvasCTX.rect(x - halfWidth, y - halfHeight, halfWidth * 2, halfHeight * 2);
                     if (this.contactFill) {
@@ -311,7 +359,7 @@ export abstract class Axis {
                     }
                     axisCanvasCTX.stroke();
                 }
-            }            
+            }
         }
         axisCanvasCTX.restore();
     }
@@ -350,9 +398,9 @@ export abstract class Axis {
         this.minDataY = 0
         this.maxDataY = targetChrom.length
 
-//        this.updateView(0, sourceChrom.length, 0, targetChrom.length)
+        //        this.updateView(0, sourceChrom.length, 0, targetChrom.length)
     }
-    
+
 
     addContactMenu(gui: dat.GUI) {
         //gui.add(this, 'originLocation', {"Top Left": OriginLocation.TopLeft, "Bottom Left": OriginLocation.BottomLeft}).name("Origin Location").onChange((value) => {
@@ -399,10 +447,10 @@ export abstract class Axis {
     getAxisCoord(canvasCoord: Coordinate): Coordinate {
         var mouseX = canvasCoord.x - this.axisOffsetX;
         var mouseY = 0;
-        
-        if(this.originLocation == OriginLocation.BottomLeft) {
+
+        if (this.originLocation == OriginLocation.BottomLeft) {
             mouseY = (this.canvas.height - this.axisOffsetY) - canvasCoord.y;
-        } else if(this.originLocation == OriginLocation.TopLeft) {
+        } else if (this.originLocation == OriginLocation.TopLeft) {
             mouseY = canvasCoord.y - (this.canvas.height - this.axisHeight - this.axisOffsetY);
         }
 
@@ -426,7 +474,7 @@ export abstract class Axis {
         this.drawTicks();
 
         ctx.save();
-        if(this.originLocation == OriginLocation.BottomLeft) {
+        if (this.originLocation == OriginLocation.BottomLeft) {
             ctx.transform(1, 0, 0, -1, 0, this.canvas.height)
         }
         ctx.drawImage(this.axisCanvas, this.axisOffsetX, this.axisOffsetY);
@@ -471,16 +519,16 @@ export abstract class Axis {
 
             // TODO: Ideally would check the number of digits to display
             if (i == 0 && xPosition > 100) {
-                ctx.fillText("" + xPosition.toFixed(this.tickDecimalPlaces), xPos + this.axisOffsetX/2, yPos + this.axisOffsetY/2);
-            } else if(i == this.numTicks-1 && xPosition > 100) {
-                ctx.fillText("" + xPosition.toFixed(this.tickDecimalPlaces), xPos - this.axisOffsetX/2, yPos + this.axisOffsetY/2);
+                ctx.fillText("" + xPosition.toFixed(this.tickDecimalPlaces), xPos + this.axisOffsetX / 2, yPos + this.axisOffsetY / 2);
+            } else if (i == this.numTicks - 1 && xPosition > 100) {
+                ctx.fillText("" + xPosition.toFixed(this.tickDecimalPlaces), xPos - this.axisOffsetX / 2, yPos + this.axisOffsetY / 2);
             } else {
-                ctx.fillText("" + xPosition.toFixed(this.tickDecimalPlaces), xPos, yPos + this.axisOffsetY/2);
+                ctx.fillText("" + xPosition.toFixed(this.tickDecimalPlaces), xPos, yPos + this.axisOffsetY / 2);
             }
         }
 
         // Draw y-axis ticks
-        if(!this.intrachromosomeView) {
+        if (!this.intrachromosomeView) {
             for (let i = 0; i < this.numTicks; i++) {
                 ctx.save();
 
@@ -489,10 +537,10 @@ export abstract class Axis {
                 let yPos = this.canvas.height - this.axisOffsetY - (this.axisHeight * curTickPct);
 
                 var yPosition = 0;
-                
-                if(this.originLocation == OriginLocation.BottomLeft) {
+
+                if (this.originLocation == OriginLocation.BottomLeft) {
                     yPosition = this.minViewY + yDiff * curTickPct;
-                } else if(this.originLocation == OriginLocation.TopLeft) {
+                } else if (this.originLocation == OriginLocation.TopLeft) {
                     yPosition = this.maxViewY - yDiff * curTickPct;
                 }
 
@@ -506,11 +554,11 @@ export abstract class Axis {
 
                 // TODO: Ideally would check the number of digits to display
                 if (i == 0 && yPosition > 100) {
-                    ctx.fillText("" + yPosition.toFixed(this.tickDecimalPlaces), this.axisOffsetX/2, -this.axisOffsetY/2-10);
-                } else if(i == this.numTicks-1 && yPosition > 100) {
-                    ctx.fillText("" + yPosition.toFixed(this.tickDecimalPlaces), -this.axisOffsetX/2, -this.axisOffsetY/2-10);
+                    ctx.fillText("" + yPosition.toFixed(this.tickDecimalPlaces), this.axisOffsetX / 2, -this.axisOffsetY / 2 - 10);
+                } else if (i == this.numTicks - 1 && yPosition > 100) {
+                    ctx.fillText("" + yPosition.toFixed(this.tickDecimalPlaces), -this.axisOffsetX / 2, -this.axisOffsetY / 2 - 10);
                 } else {
-                    ctx.fillText("" + yPosition.toFixed(this.tickDecimalPlaces), 0, -this.axisOffsetY/2-10);
+                    ctx.fillText("" + yPosition.toFixed(this.tickDecimalPlaces), 0, -this.axisOffsetY / 2 - 10);
                 }
 
                 ctx.restore();
