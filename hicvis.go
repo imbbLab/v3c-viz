@@ -1,9 +1,7 @@
 package main
 
 import (
-	"bufio"
 	"bytes"
-	"encoding/base64"
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
@@ -15,14 +13,12 @@ import (
 	"os"
 	"os/exec"
 	"path"
-	"regexp"
 	"runtime"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/jessevdk/go-flags"
-	"github.com/tidwall/buntdb"
 
 	"github.com/gorilla/mux"
 
@@ -33,30 +29,8 @@ import (
 	"github.com/fogleman/delaunay"
 )
 
-//type Bucket {
-//}
-
-type chromDatabase struct {
-	db               *buntdb.DB
-	chromosomeName   string
-	chromosomeLength uint32
-	overviewImage    []uint32
-	oNumBins         uint32
-}
-
-/*type Database struct {
-	db *bolt.DB
-
-	bucketSize uint32
-
-	minValue uint32
-	maxValue uint32
-}*/
-
-var db *chromDatabase
 var interactFile *interact.InteractFile
-
-var numPixelsInOverviewImage uint32 = 200
+var pairsFile pairs.File
 
 var opts struct {
 	// Example of a required flag
@@ -65,7 +39,7 @@ var opts struct {
 	InteractFile         string `short:"i" long:"interact" description:"Interact file to visualise" required:"false"`
 	MaximumVoronoiPoints int    `long:"maxpoints" description:"Maximum points to calculate voronoi" default:"100000"`
 	Port                 string `short:"p" long:"port" description:"Port used for the server" default:"5002"`
-	Server               bool   `long:"server" description:"Start just the server and don't automatically open the browser" default:"false"`
+	Server               bool   `long:"server" description:"Start just the server and don't automatically open the browser"`
 }
 
 // open opens the specified URL in the default browser of the user.
@@ -87,30 +61,6 @@ func open(url string) error {
 	return exec.Command(cmd, args...).Start()
 }
 
-// func main() {
-// 	_, err := flags.Parse(&opts)
-
-// 	if err != nil {
-// 		log.Fatal(err)
-// 		return
-// 	}
-
-// 	location := ":" + opts.Port
-
-// 	listener, err := net.Listen("tcp", location)
-// 	if err != nil {
-// 		log.Fatal(err)
-// 	}
-
-// 	// The browser can connect now because the listening socket is open.
-
-// 	open("http://localhost" + location)
-
-// 	server.Start(listener)
-// }
-
-var pairsFile pairs.File
-
 func main() {
 	_, err := flags.Parse(&opts)
 
@@ -119,7 +69,7 @@ func main() {
 		return
 	}
 
-	pairsFile, err = pairs.Parse(opts.DataFile) //"/home/alan/Documents/Chung/Data_Dm/Lib001.U_dedup.pairs.gz")
+	pairsFile, err = pairs.Parse(opts.DataFile)
 	if err != nil {
 		log.Fatal(err)
 		return
@@ -131,62 +81,11 @@ func main() {
 		return
 	}
 
-	//fmt.Println(pairsFile.Chromosomes())
-
-	// a, err := pairsFile.Index().Search(pairs.Query{SourceChrom: "chr3R", SourceStart: 3000000, SourceEnd: 3500000, TargetChrom: "chr3R", TargetStart: 3000000, TargetEnd: 3500000})
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-	// fmt.Println(len(a))
-
-	// a, err = pairsFile.Index().Search(pairs.Query{SourceChrom: "chr2R", SourceStart: 1, SourceEnd: 35069853, TargetChrom: "chr3R", TargetStart: 1, TargetEnd: 35069853})
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-	// fmt.Println(len(a))
-
-	//a, err := pairsFile.Index().Search(pairs.Query{SourceChrom: "chr2L", SourceStart: 12000000, SourceEnd: 15000000, TargetChrom: "chr2L", TargetStart: 10000000, TargetEnd: 15000000})
-	//a, err := performVoronoi(pairs.Query{"chr2R", 17953378, 18042126, "chr3R", 1122462, 4463714}, 1, 700, 700)
-	//if err != nil {
-	//	log.Fatal(err)
-	//}
-	//fmt.Println(len(a.Points))
-
-	//"/home/alan/Documents/Work/Alisa/Data_Dm/All_chr4.pairs"
-
 	// Process interact file
 	interactFile, err = interact.Parse(opts.InteractFile)
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	/*db, err = createDB("/home/alan/Documents/Chung/Data_Dm/All_chr4.pairs")
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	//fmt.Println(db)
-
-	maxValue := uint32(0)
-
-	for i := 0; i < len(db.overviewImage); i++ {
-		if db.overviewImage[i] > maxValue {
-			maxValue = db.overviewImage[i]
-		}
-	}
-
-	//fmt.Println(maxValue)
-
-	img := image.NewGray(image.Rect(0, 0, int(numPixelsInOverviewImage), int(numPixelsInOverviewImage)))
-	for y := 0; y < int(numPixelsInOverviewImage); y++ {
-		for x := 0; x < int(numPixelsInOverviewImage); x++ {
-			pos := (y * int(numPixelsInOverviewImage)) + x
-			img.Set(x, y, color.Gray{uint8(db.overviewImage[pos] * 10)})
-		}
-	}
-
-	f, _ := os.Create("image.png")
-	png.Encode(f, img)*/
 
 	location := ":" + opts.Port
 
@@ -257,47 +156,6 @@ func GetPoints(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-
-	/*
-		var pointData []uint32
-
-		db.db.View(func(tx *buntdb.Tx) error {
-			tx.Intersects(db.chromosomeName, fmt.Sprintf("[%d %d],[%d %d]", minX, minY, maxX, maxY), func(key, val string) bool {
-				points := strings.Split(val[1:len(val)-1], " ")
-
-				xPos, err := strconv.Atoi(points[0])
-				if err != nil {
-					return false
-				}
-				yPos, err := strconv.Atoi(points[1])
-				if err != nil {
-					return false
-				}
-
-				pointData = append(pointData, uint32(xPos), uint32(yPos))
-				return true
-			})
-			return nil
-		})
-
-		db.db.View(func(tx *buntdb.Tx) error {
-			tx.Intersects(db.chromosomeName, fmt.Sprintf("[%d %d],[%d %d]", minY, minX, maxY, maxX), func(key, val string) bool {
-				points := strings.Split(val[1:len(val)-1], " ")
-
-				yPos, err := strconv.Atoi(points[0])
-				if err != nil {
-					return false
-				}
-				xPos, err := strconv.Atoi(points[1])
-				if err != nil {
-					return false
-				}
-
-				pointData = append(pointData, uint32(xPos), uint32(yPos))
-				return true
-			})
-			return nil
-		})*/
 
 	pairsQuery := pairs.Query{SourceChrom: sourceChrom, SourceStart: uint64(minX), SourceEnd: uint64(maxX), TargetChrom: targetChrom, TargetStart: uint64(minY), TargetEnd: uint64(maxY)}
 
@@ -763,19 +621,17 @@ func GetVoronoiAndImage(w http.ResponseWriter, r *http.Request) {
 	w.Write(buf.Bytes())
 	w.Write(voronoiBuffer.Bytes())
 
-	return
+	// bytes, err := json.Marshal(struct {
+	// 	Voronoi *voronoi.Voronoi //*voronoi.Int16VoronoiResult
+	// 	Image   string
+	// }{Voronoi: result,
+	// 	Image: base64.StdEncoding.EncodeToString(buf.Bytes())}) //voronoi) //
+	// if err != nil {
+	// 	http.Error(w, err.Error(), http.StatusInternalServerError)
+	// 	return
+	// }
 
-	bytes, err := json.Marshal(struct {
-		Voronoi *voronoi.Voronoi //*voronoi.Int16VoronoiResult
-		Image   string
-	}{Voronoi: result,
-		Image: base64.StdEncoding.EncodeToString(buf.Bytes())}) //voronoi) //
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	w.Write(bytes)
+	// w.Write(bytes)
 
 }
 
@@ -946,118 +802,4 @@ func startServer(listener net.Listener) {
 	router.PathPrefix("/").Handler(http.FileServer(http.Dir("./static/")))
 
 	log.Fatal(http.Serve(listener, router))
-}
-
-func (cdb *chromDatabase) createOverviewImage(numBins uint32) {
-	cdb.oNumBins = numBins
-	cdb.overviewImage = make([]uint32, cdb.oNumBins*cdb.oNumBins)
-
-	binSizeX := ((cdb.chromosomeLength) / cdb.oNumBins) + 1
-	binSizeY := ((cdb.chromosomeLength) / cdb.oNumBins) + 1
-
-	db.db.View(func(tx *buntdb.Tx) error {
-		tx.Intersects(db.chromosomeName, "[-inf -inf],[inf inf]", func(key, val string) bool {
-			points := strings.Split(val[1:len(val)-1], " ")
-
-			xPos, err := strconv.Atoi(points[0])
-			if err != nil {
-				return false
-			}
-			yPos, err := strconv.Atoi(points[1])
-			if err != nil {
-				return false
-			}
-
-			xPos = (xPos) / int(binSizeX)
-			yPos = (yPos) / int(binSizeY)
-
-			cdb.overviewImage[(yPos*int(cdb.oNumBins))+xPos]++
-			cdb.overviewImage[(xPos*int(cdb.oNumBins))+yPos]++
-			return true
-		})
-		return nil
-	})
-}
-
-func createDB(filename string) (*chromDatabase, error) {
-	var cdb chromDatabase
-	var err error
-
-	// Figure out which chromosome it is from the filename
-	r := regexp.MustCompile(`[A-z_]*chr(?P<chr>[A-Z0-9]+).pairs`)
-	matches := r.FindStringSubmatch(filename)
-	cdb.chromosomeName = "chr" + matches[1]
-
-	fmt.Println(cdb.chromosomeName)
-
-	file, err := os.Open(filename)
-	if err != nil {
-		return nil, err
-	}
-	defer file.Close()
-
-	scanner := bufio.NewScanner(file)
-	searchString := "#chromsize: " + matches[1]
-
-	// Find the line in the pairs file which indicates the length of the chromosome
-	for scanner.Scan() {
-		line := scanner.Text()
-
-		if strings.HasPrefix(line, searchString) {
-			splitStrings := strings.SplitAfter(line, searchString)
-			chromosomeLength, err := strconv.Atoi(strings.TrimSpace((splitStrings[1])))
-			if err != nil {
-				return nil, err
-			}
-			cdb.chromosomeLength = uint32(chromosomeLength)
-		}
-
-		if strings.HasPrefix(line, "#columns") {
-			break
-		}
-	}
-
-	// Open the data.db file. It will be created if it doesn't exist.
-	cdb.db, err = buntdb.Open(":memory:")
-
-	cdb.oNumBins = numPixelsInOverviewImage
-	cdb.overviewImage = make([]uint32, cdb.oNumBins*cdb.oNumBins)
-	oImageBinSize := (cdb.chromosomeLength / cdb.oNumBins) + 1
-
-	cdb.db.CreateSpatialIndex(cdb.chromosomeName, cdb.chromosomeName+":*:pos", buntdb.IndexRect)
-
-	cdb.db.Update(func(tx *buntdb.Tx) error {
-		i := 0
-
-		for scanner.Scan() {
-			line := scanner.Text()
-			if line[0] == '#' {
-				continue
-			}
-
-			fields := strings.Fields(line)
-			sourcePos, err := strconv.Atoi(fields[2])
-			if err != nil {
-				log.Fatal(err)
-			}
-			targetPos, err := strconv.Atoi(fields[4])
-			if err != nil {
-				log.Fatal(err)
-			}
-
-			xPos := uint32(sourcePos) / oImageBinSize
-			yPos := uint32(targetPos) / oImageBinSize
-			cdb.overviewImage[(yPos*cdb.oNumBins)+xPos]++
-			cdb.overviewImage[(xPos*cdb.oNumBins)+yPos]++
-
-			tx.Set(fmt.Sprintf("%s:%d:pos", cdb.chromosomeName, i), fmt.Sprintf("[%d %d]", sourcePos, targetPos), nil)
-			i++
-			//tx.Set(fmt.Sprintf("%s:%d:pos", cdb.chromosomeName, i), fmt.Sprintf("[%d %d]", targetPos, sourcePos), nil)
-			//i++
-		}
-
-		return nil
-	})
-
-	return &cdb, err
 }

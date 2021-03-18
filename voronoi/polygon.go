@@ -222,7 +222,7 @@ func SutherlandHodgman(subjectPolygon Polygon, clipPolygon Polygon) Polygon {
 				counter++
 
 				// Case 4: Both vertices are outside
-			} else if !inside(s, cp1, cp2) && !inside(e, cp1, cp2) {
+				//} else if !inside(s, cp1, cp2) && !inside(e, cp1, cp2) {
 				// No vertices are added to the output list
 			}
 		}

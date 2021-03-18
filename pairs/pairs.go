@@ -162,7 +162,7 @@ func (file *baseFile) parseHeader(reader *bufio.Reader) (*Entry, error) {
 	}
 
 	// TODO: Return error saying no first entry?
-	return nil, nil
+	//return nil, nil
 }
 
 /*func NewFile() *File {
@@ -236,7 +236,7 @@ func (file *bgzfFile) Close() {
 	file.baseFile.Close()
 }
 
-func (file bgzfFile) ChromPairList() []string {
+func (file *bgzfFile) ChromPairList() []string {
 	var pairs []string
 
 	for _, value := range file.index.TargetNames {
@@ -356,31 +356,31 @@ func (file *bgzfFile) Image(query Query, numBins uint64) ([]uint32, error) {
 
 	sameChrom := query.SourceChrom == query.TargetChrom
 
-	var xPos, yPos uint64
+	var xPos, yPos int64
 
 	pointCounter := 0
 
 	err := file.Query(query, func(entry *Entry) {
 		pointCounter++
 		if entry.SourceChrom != query.SourceChrom {
-			xPos = uint64(float64(entry.TargetPosition-query.SourceStart) / binSizeX)
-			yPos = uint64(float64(entry.SourcePosition-query.TargetStart) / binSizeY)
+			xPos = int64(float64(entry.TargetPosition-query.SourceStart) / binSizeX)
+			yPos = int64(float64(entry.SourcePosition-query.TargetStart) / binSizeY)
 		} else {
-			xPos = uint64(float64(entry.SourcePosition-query.SourceStart) / binSizeX)
-			yPos = uint64(float64(entry.TargetPosition-query.TargetStart) / binSizeY)
+			xPos = int64(float64(entry.SourcePosition-query.SourceStart) / binSizeX)
+			yPos = int64(float64(entry.TargetPosition-query.TargetStart) / binSizeY)
 		}
 		//fmt.Printf("(%d)[%f, %f]%v -> (%d, %d)\n", numBins, binSizeX, binSizeY, entry, xPos, yPos)
-		if xPos >= 0 && yPos >= 0 && xPos < numBins && yPos < numBins {
+		if xPos >= 0 && yPos >= 0 && xPos < int64(numBins) && yPos < int64(numBins) {
 			imageIndex := int(yPos)*int(numBins) + int(xPos)
 			imageData[imageIndex]++
 		}
 
 		// Check if reverse is within view, as we only store diagonal
 		if sameChrom {
-			xPos = uint64(float64(entry.TargetPosition-query.SourceStart) / binSizeX)
-			yPos = uint64(float64(entry.SourcePosition-query.TargetStart) / binSizeY)
+			xPos = int64(float64(entry.TargetPosition-query.SourceStart) / binSizeX)
+			yPos = int64(float64(entry.SourcePosition-query.TargetStart) / binSizeY)
 
-			if xPos >= 0 && yPos >= 0 && xPos < numBins && yPos < numBins {
+			if xPos >= 0 && yPos >= 0 && xPos < int64(numBins) && yPos < int64(numBins) {
 				imageIndex := int(yPos)*int(numBins) + int(xPos)
 				imageData[imageIndex]++
 			}
@@ -400,28 +400,28 @@ func EntriesToImage(entries []*Entry, query Query, numBins uint64) []uint32 {
 
 	sameChrom := query.SourceChrom == query.TargetChrom
 
-	var xPos, yPos uint64
+	var xPos, yPos int64
 
 	for _, entry := range entries {
 		if entry.SourceChrom != query.SourceChrom {
-			xPos = (entry.TargetPosition - query.SourceStart) / binSizeX
-			yPos = (entry.SourcePosition - query.TargetStart) / binSizeY
+			xPos = int64(float64(entry.TargetPosition-query.SourceStart) / float64(binSizeX))
+			yPos = int64(float64(entry.SourcePosition-query.TargetStart) / float64(binSizeY))
 		} else {
-			xPos = (entry.SourcePosition - query.SourceStart) / binSizeX
-			yPos = (entry.TargetPosition - query.TargetStart) / binSizeY
+			xPos = int64(float64(entry.SourcePosition-query.SourceStart) / float64(binSizeX))
+			yPos = int64(float64(entry.TargetPosition-query.TargetStart) / float64(binSizeY))
 		}
 
-		if xPos >= 0 && yPos >= 0 && xPos < numBins && yPos < numBins {
+		if xPos >= 0 && yPos >= 0 && xPos < int64(numBins) && yPos < int64(numBins) {
 			imageIndex := int(yPos)*int(numBins) + int(xPos)
 			imageData[imageIndex]++
 		}
 
 		// Check if reverse is within view, as we only store diagonal
 		if sameChrom {
-			xPos = (entry.TargetPosition - query.SourceStart) / binSizeX
-			yPos = (entry.SourcePosition - query.TargetStart) / binSizeY
+			xPos = int64(float64(entry.TargetPosition-query.SourceStart) / float64(binSizeX))
+			yPos = int64(float64(entry.SourcePosition-query.TargetStart) / float64(binSizeY))
 
-			if xPos >= 0 && yPos >= 0 && xPos < numBins && yPos < numBins {
+			if xPos >= 0 && yPos >= 0 && xPos < int64(numBins) && yPos < int64(numBins) {
 				imageIndex := int(yPos)*int(numBins) + int(xPos)
 				imageData[imageIndex]++
 			}
@@ -882,7 +882,7 @@ func ParsePlain(reader io.Reader) error {
 
 	// Advance to the first line
 	if !scanner.Scan() {
-		return errors.New("Invalid .pairs file: No data?")
+		return errors.New("invalid .pairs file: No data?")
 	}
 	firstLine := scanner.Text()
 	if !strings.Contains(firstLine, "## pairs format v1.0") {

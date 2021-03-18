@@ -11,8 +11,8 @@ func ConvertToint16(voronoi *Voronoi, bounds Rectangle, normalisation Rectangle,
 		return &result
 	}
 
-	xDim := bounds.Width()
-	yDim := bounds.Height()
+	//xDim := bounds.Width()
+	//yDim := bounds.Height()
 	//xDim := float64(maxX - minX)
 	//yDim := float64(maxY - minY)
 	for _, polygon := range voronoi.Polygons {
@@ -61,10 +61,10 @@ func ConvertToint16(voronoi *Voronoi, bounds Rectangle, normalisation Rectangle,
 		//maxPolyX = (maxPolyX - float64(minX)) / xDim * float64(numPixelsX)
 		//minPolyY = (minPolyY - float64(minY)) / yDim * float64(numPixelsY)
 		//maxPolyY = (maxPolyY - float64(minY)) / yDim * float64(numPixelsY)
-		minPolyX = (minPolyX - bounds.Min.X) / xDim * float64(numPixelsX)
-		maxPolyX = (maxPolyX - bounds.Min.X) / xDim * float64(numPixelsX)
-		minPolyY = (minPolyY - bounds.Min.Y) / yDim * float64(numPixelsY)
-		maxPolyY = (maxPolyY - bounds.Min.Y) / yDim * float64(numPixelsY)
+		//minPolyX = (minPolyX - bounds.Min.X) / xDim * float64(numPixelsX)
+		//maxPolyX = (maxPolyX - bounds.Min.X) / xDim * float64(numPixelsX)
+		//minPolyY = (minPolyY - bounds.Min.Y) / yDim * float64(numPixelsY)
+		//maxPolyY = (maxPolyY - bounds.Min.Y) / yDim * float64(numPixelsY)
 
 		// TODO: Remove duplicates in .Points and .TwoPoints
 		//result.Polygons = append(result.Polygons, polygonToint16(polygon, bounds, normalisation, numPixelsX, numPixelsY))
