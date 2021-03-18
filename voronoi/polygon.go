@@ -52,11 +52,12 @@ func (polygon Polygon) BoundingBox() Rectangle {
 	return bounds
 }
 
-func centroid3(p1, p2, p3 delaunay.Point) delaunay.Point {
+// triangleCentroid3 calculates the 3x centroid (sum instead of mean) - i.e. to get the actual centroid, must divide by 3
+func triangleCentroid3(p1, p2, p3 delaunay.Point) delaunay.Point {
 	return delaunay.Point{X: p1.X + p2.X + p3.X, Y: p1.Y + p2.Y + p3.Y}
 }
 
-func calcArea2(p1, p2, p3 delaunay.Point) float64 {
+func triangleArea2(p1, p2, p3 delaunay.Point) float64 {
 	return (p2.X-p1.X)*(p3.Y-p1.Y) -
 		(p3.X-p1.X)*(p2.Y-p1.Y)
 }
@@ -71,8 +72,8 @@ func (polygon *Polygon) Centroid() delaunay.Point {
 
 	areaBasePoint := polygon.Points[0]
 	for i := 0; i < len(polygon.Points)-1; i++ {
-		triangleCent3 := centroid3(areaBasePoint, polygon.Points[i], polygon.Points[i+1])
-		area2 := calcArea2(areaBasePoint, polygon.Points[i], polygon.Points[i+1])
+		triangleCent3 := triangleCentroid3(areaBasePoint, polygon.Points[i], polygon.Points[i+1])
+		area2 := triangleArea2(areaBasePoint, polygon.Points[i], polygon.Points[i+1])
 
 		centroid.X += area2 * triangleCent3.X
 		centroid.Y += area2 * triangleCent3.Y
@@ -86,42 +87,6 @@ func (polygon *Polygon) Centroid() delaunay.Point {
 	polygon.Area = areasum2 / 2
 
 	return centroid
-
-	// signedArea := 0.0
-	// x0 := 0.0 // Current vertex X
-	// y0 := 0.0 // Current vertex Y
-	// x1 := 0.0 // Next vertex X
-	// y1 := 0.0 // Next vertex Y
-	// a := 0.0  // Partial signed area
-
-	// // For all vertices except last
-	// for i := 0; i < len(polygon.Points)-1; i++ {
-	// 	x0 = math.Round(polygon.Points[i].X)
-	// 	y0 = math.Round(polygon.Points[i].Y)
-	// 	x1 = math.Round(polygon.Points[i+1].X)
-	// 	y1 = math.Round(polygon.Points[i+1].Y)
-	// 	a = x0*y1 - x1*y0
-	// 	signedArea += a
-	// 	centroid.X += (x0 + x1) * a
-	// 	centroid.Y += (y0 + y1) * a
-	// }
-
-	// // Do last vertex separately to avoid performing an expensive
-	// // modulus operation in each iteration.
-	// x0 = math.Round(polygon.Points[len(polygon.Points)-1].X)
-	// y0 = math.Round(polygon.Points[len(polygon.Points)-1].Y)
-	// x1 = math.Round(polygon.Points[0].X)
-	// y1 = math.Round(polygon.Points[0].Y)
-	// a = x0*y1 - x1*y0
-	// signedArea += a
-	// centroid.X += (x0 + x1) * a
-	// centroid.Y += (y0 + y1) * a
-
-	// signedArea *= 0.5
-	// centroid.X /= (6.0 * signedArea)
-	// centroid.Y /= (6.0 * signedArea)
-
-	// return centroid
 
 	// i := 0
 	// n := len(polygon.Points)

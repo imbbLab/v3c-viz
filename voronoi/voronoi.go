@@ -163,15 +163,6 @@ func calculateVoronoi(triangulation *delaunay.Triangulation, boundingPolygon Pol
 		}
 	}
 
-	// var clipArea Polygon
-
-	// if !clipTriangle {
-	// 	clipArea = Polygon{Points: []delaunay.Point{{X: bounds.Min.X, Y: bounds.Min.Y}, {X: bounds.Max.X, Y: bounds.Min.Y}, {X: bounds.Max.X, Y: bounds.Max.Y}, {X: bounds.Min.X, Y: bounds.Max.Y}}}
-	// } else {
-	// 	// Upper left triangle
-	// 	clipArea = Polygon{Points: []delaunay.Point{{X: bounds.Min.X, Y: bounds.Min.Y}, {X: bounds.Max.X, Y: bounds.Max.Y}, {X: bounds.Min.X, Y: bounds.Max.Y}}}
-	// }
-
 	var voronoi Voronoi
 	polygons := make([]*Polygon, len(triangulation.Points))
 
@@ -201,21 +192,12 @@ func calculateVoronoi(triangulation *delaunay.Triangulation, boundingPolygon Pol
 				return
 			}
 
-			// Clip the polygon to the view
-
-			//polygon.calculateArea()
-			//area := polygon.Area
+			// Clip the polygon to the bounding polygon
 			polygon = SutherlandHodgman(polygon, boundingPolygon)
 
 			//polygon.calculateArea()
 			polygon.DataPoint = polygon.Centroid()
 			polygons[p] = &polygon
-
-			/*	if len(polygon.Points) > 0 {
-				polygon.calculateArea()
-				polygon.DataPoint = polygon.Centroid()
-				voronoi.Polygons = append(voronoi.Polygons, polygon)
-			}*/
 		}(p, edges)
 	}
 

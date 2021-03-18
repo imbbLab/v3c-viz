@@ -53,7 +53,7 @@ type BGZFIndex struct {
 	mu sync.Mutex
 }
 
-func (index BGZFIndex) ChromPairList() []string {
+func (index *BGZFIndex) ChromPairList() []string {
 	keys := make([]string, 0, len(index.ChromPairChunks))
 	for k := range index.ChromPairChunks {
 		keys = append(keys, k)
@@ -62,7 +62,7 @@ func (index BGZFIndex) ChromPairList() []string {
 	return keys
 }
 
-func (index BGZFIndex) getChunksFromQuery(query Query) []*ChromPairChunk {
+func (index *BGZFIndex) getChunksFromQuery(query Query) []*ChromPairChunk {
 	// TODO: Check validity of search (e.g. start < end)
 
 	var chunkstoLoad []*ChromPairChunk
