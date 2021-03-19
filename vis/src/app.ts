@@ -40,7 +40,21 @@ var targetChrom: Chromosome;
 var bottomBrowser: igv.IGVBrowser;
 var rightBrowser: igv.IGVBrowser;
 
-var intrachromosomeView = false
+// If parameters set as part of URL, then load that region of the chromosome, otherwise just load the whole of the first chromosome
+const queryString = window.location.search;
+const urlParams = new URLSearchParams(queryString);
+var intrachromosomeView: boolean = false
+
+let viewChangeButton = <HTMLInputElement>document.getElementById('viewChangeButton');
+
+const triangleViewParam = urlParams.get('triangleView')
+if(triangleViewParam) {
+    intrachromosomeView = triangleViewParam.localeCompare("true") == 0
+
+    if(intrachromosomeView) {
+        viewChangeButton.value = "Full view"
+    }
+}
 
 var displayImageMap = true;
 var igvHeight = 280;
@@ -60,7 +74,6 @@ hideButton.addEventListener('click', (event) => {
     reposition();
 });
 
-let viewChangeButton = <HTMLInputElement>document.getElementById('viewChangeButton');
 viewChangeButton.addEventListener('click', (event) => {
     intrachromosomeView = !intrachromosomeView
 
@@ -423,7 +436,7 @@ function requestViewUpdate(request: ViewRequest) {
             lastLocus.end = endX;
 
             // Update the URL to reflect the current view
-            let nextURL = window.location.href.split('?')[0] + "?srcChrom=" + sourceChrom.name + "&srcStart=" + startX + "&srcEnd=" + endX + "&tarChrom=" + targetChrom.name + "&tarStart=" + startY + "&tarEnd=" + endY
+            let nextURL = window.location.href.split('?')[0] + "?srcChrom=" + sourceChrom.name + "&srcStart=" + startX + "&srcEnd=" + endX + "&tarChrom=" + targetChrom.name + "&tarStart=" + startY + "&tarEnd=" + endY + "&triangleView=" + intrachromosomeView
             window.history.pushState({}, sourceChrom.nameWithChr() + ":" + startX + "-" + endX + " x " + targetChrom + ":" + startY + "-" + endY, nextURL);
 
             voronoiMap.setChromPair(sourceChrom, targetChrom);
@@ -701,9 +714,6 @@ fetch('./genomes.json').then((response) => {
                         var locusBottom: string
                         var locusRight: string
 
-                        // If parameters set as part of URL, then load that region of the chromosome, otherwise just load the whole of the first chromosome
-                        const queryString = window.location.search;
-                        const urlParams = new URLSearchParams(queryString);
 
                         const srcChrom = urlParams.get('srcChrom');
                         const tarChrom = urlParams.get('tarChrom');
@@ -711,6 +721,7 @@ fetch('./genomes.json').then((response) => {
                         const srcEnd = urlParams.get('srcEnd');
                         const tarStart = urlParams.get('tarStart');
                         const tarEnd = urlParams.get('tarEnd');
+
 
                         if (srcChrom && srcStart && srcEnd && tarChrom && tarStart && tarEnd) {
                             sourceChrom = getChromosomeFromMap(chromosomes, srcChrom)
@@ -1009,6 +1020,9 @@ fetch('./genomes.json').then((response) => {
 
                                 voronoiMap = new VoronoiPlot(belowBrowser, rightBrowser);
                                 imageMap = new ImageMap(numBins, voronoiMap);
+
+                                voronoiMap.setIntrachromosomeView(intrachromosomeView)
+                                imageMap.setIntrachromosomeView(intrachromosomeView)
 
                                 voronoiMap.addRegionSelectEventListener((region: Rectangle) => {
                                     belowBrowser.search(voronoiMap.sourceChrom.name + ":" + region.min.x + "-" + region.max.x);
