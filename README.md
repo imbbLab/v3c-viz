@@ -28,3 +28,9 @@ Optional additional command line controls which port is used for the server (cha
 ```
 ./hicvis -d path/to/data.gz -i path/to/contacts.interact -g dm6 -p 5002
 ```
+
+### Server mode
+hicvis can be started in server mode and will not automatically open the browser:
+```
+./hicvis -d path/to/data.gz -i path/to/contacts.interact -g dm6 --server
+```
