@@ -172,7 +172,7 @@ func (file *baseFile) parseHeader(reader *bufio.Reader) (*Entry, error) {
 	return &pairsFile
 }*/
 
-func outputImage(overviewImage []uint32, numBins int, name string) {
+func OutputImage(overviewImage []uint32, numBins int, name string) {
 	maxValue := uint32(0)
 
 	for i := 0; i < len(overviewImage); i++ {

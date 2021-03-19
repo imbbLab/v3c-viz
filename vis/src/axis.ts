@@ -123,7 +123,7 @@ export abstract class Axis {
                 }
 
                 // Always draw the box, even when zooming
-                let boxHeight = 30;
+                let boxHeight = 25;
                 let boxWidth = 175;
 
                 let margin = 5;
@@ -148,14 +148,17 @@ export abstract class Axis {
                 }
 
                 if (displayText) {
-                    ctx.fillStyle = "lightblue";
-                    ctx.fillRect(mousePos.x + margin, mousePos.y - boxHeight / 2, boxWidth, boxHeight);
+                    let textLength = Math.floor(Math.log10(xPosition+1)) + Math.floor(Math.log10(yPosition+1)) + 4
+                    boxWidth = textLength * 8 + margin*2
 
-                    ctx.font = "19px Arial";
+                    ctx.fillStyle = "lightblue";
+                    ctx.fillRect(mousePos.x + margin, mousePos.y - boxHeight, boxWidth, boxHeight);
+
+                    ctx.font = "15px Arial";
                     ctx.fillStyle = "black";
                     ctx.textBaseline = "middle";
                     ctx.textAlign = "left";
-                    ctx.fillText("" + xPosition.toFixed(0) + ", " + yPosition.toFixed(0), mousePos.x + margin * 2, mousePos.y);
+                    ctx.fillText("" + xPosition.toFixed(0) + ", " + yPosition.toFixed(0), mousePos.x + margin * 2, mousePos.y - margin*2);
 
                     if (!self.mouseDown) {
 
