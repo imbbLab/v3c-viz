@@ -3,7 +3,7 @@ import { Locus, Chromosome } from './chromosome'
 //import { Delaunay, Voronoi } from "d3-delaunay";
 import * as igv from 'igv';
 import * as d3 from 'd3';
-import { SVGRenderingContext2D } from '@mithrandirii/canvas2svg';
+import { SVGContext } from './canvas2svg';
 
 export class Point {
     x: number
@@ -122,8 +122,8 @@ export class VoronoiPlot extends Axis {
     smoothingRepetitions: number;
     omega: number;
 
-    belowBrowser: igv.IGVBrowser
-    rightBrowser: igv.IGVBrowser
+    belowBrowser: igv.Browser
+    rightBrowser: igv.Browser
 
     displayVoronoiEdges: boolean;
     displayCentroid: boolean = false;
@@ -141,7 +141,7 @@ export class VoronoiPlot extends Axis {
     voronoi: Voronoi;
     voronoiCanvas: HTMLCanvasElement;
 
-    constructor(belowBrowser: igv.IGVBrowser, rightBrowser: igv.IGVBrowser) {
+    constructor(belowBrowser: igv.Browser, rightBrowser: igv.Browser) {
         super(<HTMLCanvasElement>document.getElementById("voronoi-canvas"));
 
         //this.imageDiv = <HTMLDivElement>document.getElementById("figure-div");
@@ -231,7 +231,7 @@ export class VoronoiPlot extends Axis {
     }
 
 
-    drawVoronoi(voronoiCanvasCTX: CanvasRenderingContext2D | SVGRenderingContext2D, xOffset: number, yOffset: number, width: number, height: number, invertY: boolean, clipDiagonal: boolean) {
+    drawVoronoi(voronoiCanvasCTX: CanvasRenderingContext2D | SVGContext, xOffset: number, yOffset: number, width: number, height: number, invertY: boolean, clipDiagonal: boolean) {
         // Draw the polygons that are too small to be drawn with detail (between 1 and 2 pixels width/height)
         // If displaying edges, then display them with the same colour as the edges, otherwise same as the smallest value on colour scale
         if (this.displayVoronoiEdges || this.displayCentroid) {

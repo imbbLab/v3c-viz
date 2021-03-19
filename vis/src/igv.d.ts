@@ -1,15 +1,315 @@
 // igv.d.ts
 declare module 'igv' {
-    export interface ReferenceFrame {
-        chr: string;
-        start: string;
-        end: string;
-        label: string;
+  //////////////////////////
+  // browser.js
+  //////////////////////////
+  export class Browser {
+    config: any
+    guid: any
+    namespace: string
 
-        shiftPixels(x: number, y: number): boolean
-    }
+    parent: HTMLElement
 
-    export interface IIGVBrowserOptions {
+    $root: JQuery
+    $searchInput: JQuery
+    trackContainer: any
+
+    trackViews: TrackView[]
+    trackLabelsVisible: boolean
+    isCenterGuideVisible: boolean
+
+    sampleNamesVisible: boolean
+
+    cursorGuideVisible: boolean
+    constants: any
+
+    eventHandlers: any
+
+    $spinner: JQuery
+    $trackContainer: JQuery
+
+    dragObject: IGVObject
+    isScrolling: boolean
+    vpMouseDown: IGVMouseEvent
+
+    referenceFrameList: ReferenceFrame[]
+
+    constructor(options: any, parentDiv: HTMLElement)
+    initialize(options: any): void;
+    getSampleNameViewportWidth(): number
+    startSpinner(): void
+    stopSpinner(): void
+    isMultiLocusMode(): boolean
+    addTrackToFactory(name: string, track: Track): void
+    isMultiLocusWholeGenomeView(): boolean
+
+    toSVG(): Promise<string>
+    saveSVGtoFile(): Promise<null>
+
+    loadSession(options: any): Promise<any>
+    loadSessionObject(session: any): Promise<null>
+
+    loadGenome(idOrConfig: any, initialLocus: string, update: boolean): Promise<null>
+
+    updateUIWithReferenceFrameListChange(referenceFrameList: any): void
+    setTrackLabelName(trackView: TrackView, name: string): void
+
+    hideTrackLabels(): void
+    showTrackLabels(): void
+    hideCursorGuide(): void
+    showCursorGuide(): void
+    setCustomCursorGuideMouseHandler(mouseHandler: any): void
+    hideCenterGuide(): void
+    showCenterGuide(): void
+
+    loadTrackList(configList: any): Promise<any>
+    loadROI(config: any): Promise<any>
+    removeROI(roiToRemove: any): void
+    clearROIs(): void
+    loadTrack(config: any, noSpinner?: boolean): Promise<any>
+    createTrack(config: any): Promise<any>
+    addTrack(track: Track): Promise<any>
+    reorderTracks(): void
+    getTrackOrder(): any
+    removeTrackByName(name: string): void
+    removeTrack(track: Track): void
+    removeAllTracks(): void
+    findTracks(property: any, value: any): any
+    setTrackHeight(newHeight: number): void
+    visibilityChange(): Promise<null>
+
+    resize(): Promise<null>
+
+    updateViews(referenceFrame?: any, trackViews?: any, force?: boolean): Promise<null>
+
+    loadInProgress(): boolean
+    updateLocusSearchWidget(referenceFrameList: ReferenceFrame[]): void
+    _updateLocusSearchWidget(referenceFrameList: ReferenceFrame[]): void
+
+    getViewportContainerWidth(): number
+    computeViewportWidth(referenceFrameListLength: any, viewportContainerWidth: number): number
+    getViewportWidth(): number
+    minimumBases(): any
+    updateZoomSlider($slider: any): any
+    zoom(scaleFactor: number): void
+    zoomIn(): void
+    zoomOut(): void
+    zoomWithRangePercentage(percentage: number): void
+    zoomWithScaleFactor(scaleFactor: number, centerBPOrUndefined: any, viewportOrUndefined: Viewport | undefined): void
+    presentSplitScreenMultiLocusPanel(alignment: any, leftMatePairReferenceFrame: any): void
+    selectMultiLocusPanelWithReferenceFrame(referenceFrame: ReferenceFrame): void
+    removeMultiLocusPanelWithReferenceFrame(referenceFrame: ReferenceFrame, doResize: boolean): void
+    addMultiLocusPanelWithReferenceFrameIndex(referenceFrame: ReferenceFrame, index: number, viewportWidth: number): void
+    getViewportWithGUID(guid: any): number
+
+    goto(chr: string, start: number, end: number): Promise<any>
+    search(string: string, init?: boolean): Promise<any>
+    loadSampleInformation(url: any): void
+
+    on(eventName: string, fn: any): void
+    un(eventName: string, fn: any): void
+    off(eventName: string, fn: any): void
+
+    fireEvent(eventName: string, args?: any, thisObj?: any): void
+
+    dispose(): void
+    toJSON(): any
+
+    compressedSession(): string
+    sessionURL(): string
+    currentLoci(): any
+
+    mouseDownOnViewport(e: MouseEvent, viewport: any): void
+    cancelTrackPan(): void
+    startTrackDrag(trackView: any): void
+    updateTrackDrag(dragDestination: any): void
+    endTrackDrag(): void
+    addMouseHandlers(): void
+
+    getDriveFileInfo(googleDriveURL: any): Promise<any>
+
+    static uncompressSession(url: any): string
+  }
+
+  export function toggleTrackLabels(trackViews: any, isVisible: boolean): void
+  export function isLocusString(browser: Browser, locus: any): boolean
+  export function searchWebService(browser: Browser, locus: any, searchConfig: any): Promise<any>
+
+
+  //////////////////////////
+  // trackView.js
+  //////////////////////////
+  export class TrackView {
+    browser: Browser
+    track: Track
+
+    trackDiv: HTMLDivElement
+
+    namespace: string
+
+    $viewportContainer: JQuery
+    $axis: JQuery
+
+    viewports: Viewport[]
+
+    constructor(browser: Browser, $container: JQuery, track: Track)
+
+    populateViewportContainer(browser: Browser, referenceFrameList: any): void
+    renderSVGContext(context: SVGRenderingContext2D, options: any): void
+    attachScrollbar($track: JQuery, $viewportContainer: JQuery, viewports: any): void
+    removeViewportForReferenceFrame(referenceFrame: any): void
+    updateViewportForMultiLocus(): void
+    createAxis($viewportContainer: JQuery): void
+    dataRange(): any
+    setDataRange(min: number, max: number): void
+    presentColorPicker(option: any): void
+    setTrackHeight(newHeight: number, force: boolean): void
+
+    isLoading(): boolean
+    resize(viewportWidth: number): void
+    repaintViews(): void
+    repaintSamples(): void
+
+    updateViews(force: boolean): Promise<null>
+    getInViewFeatures(force: boolean): Promise<any>
+    checkContentHeight(): void
+    adjustTrackHeight(): void
+    resizeAxisCanvas($axis: JQuery, width: number, height: number): void
+    attachDragWidget($track: JQuery, $viewportContainer: JQuery): void
+    viewportsToReload(force: boolean): any
+    dispose(): void
+    scrollBy(delta: number): void
+    appendRightHandGutter($parent: JQuery): void
+    createTrackGearPopup($parent: JQuery): void
+    static computeViewportWidth(browser: Browser, viewportContainerWidth: number): void
+  }
+
+  //export function renderSVGAxis(context, track, axisCanvas, deltaX, deltaY);
+  export function setSampleNameViewportVisibility(browser: Browser): void
+  export function emptyViewportContainers(trackViews: TrackView[]): void
+  export function updateViewportShims(viewports: any, $viewportContainer: JQuery): void
+  //export function documentOffset(el)
+  export function maxViewportContentHeight(viewports: any): void
+
+
+  //////////////////////////
+  // track
+  //////////////////////////
+
+  export abstract class Track {
+    type: string
+    browser: Browser
+    removable: boolean
+    config: any
+    name: string
+    id: string
+    sequenceType: string
+    height: number
+    disableButtons: boolean
+    order: number
+    ignoreTrackMenu: boolean
+
+    reversed: boolean
+    frameTranslate: boolean
+    trackView: TrackView
+
+    constructor(config: any, browser: Browser)
+    draw(drawConfiguration: any): void
+    computePixelHeight(ignore: boolean): number
+  }
+
+  export class SequenceTrack extends Track {
+    constructor(config: any, browser: Browser)
+
+    menuItemList(): any
+    translateSequence(seq: any): any
+    getFeatures(chr: string, start: number, end: number, bpPerPixel: number): Promise<any>
+    supportsWholeGenome(): boolean
+    fillColor(index: number): any
+  }
+
+  //////////////////////////
+  // viewportBase.js
+  //////////////////////////
+  export abstract class ViewportBase {
+    guid: any
+    trackView: TrackView
+    referenceFrame: ReferenceFrame
+
+    browser: Browser
+
+    $viewport: JQuery
+    $content: JQuery
+    contentDiv: HTMLDivElement
+
+    $canvas: JQuery
+
+    canvas: HTMLCanvasElement
+    ctx: CanvasRenderingContext2D
+
+    messageDiv: HTMLDivElement
+
+    constructor(trackView: TrackView, $viewportContainer: JQuery, referenceFrame: ReferenceFrame, width: number)
+    initializationHelper(): void
+    showMessage(message: string): void
+    hideMessage(message: string): void
+    shift(): void
+    setTop(contentTop: number): void
+
+    loadFeatures(): Promise<any>
+    repaint(): Promise<any>
+    draw(drawConfiguration: any, features: any, roiFeatures: any): void
+    checkContentHeight(): void
+    getContentHeight(): number
+    setContentHeight(contentHeight: number): void
+    isLoading(): boolean
+
+    saveSVG(): void
+    renderSVGContext(context:SVGRenderingContext2D, offset: any): void
+    drawSVGWithContext(context: SVGRenderingContext2D): void
+    drawSVGWithContect(context: SVGRenderingContext2D): void
+
+    isVisible(): boolean
+    setWidth(width: number): void
+    getWidth(): number
+    getContentTop(): number
+    containsPosition(chr: any, position: any): boolean
+    dispose(): void
+  }
+
+  export class Viewport extends ViewportBase {
+    setTrackLabel(label: string): void
+    startSpinner(): void
+    stopSpinner(): void
+    checkZoomIn(): void
+    saveImage(): void
+
+    renderTrackLabelSVG(context: SVGRenderingContext2D): void
+    getCachedFeatures(): any
+    createZoomInNotice($parent: JQuery): void 
+    viewIsReady(): boolean
+    addMouseHandlers(): void
+  }
+
+
+  //////////////////////////
+  // rulerViewport.js
+  //////////////////////////
+  export class RulerViewport extends Viewport {
+
+  }
+
+
+  export interface ReferenceFrame {
+    chr: string;
+    start: string;
+    end: string;
+    label: string;
+
+    shiftPixels(x: number, y: number): boolean
+  }
+
+  export interface IIGVBrowserOptions {
     /**
      *  Zoom-in is clamped to this value
      *  @default 40
@@ -52,7 +352,7 @@ declare module 'igv' {
      * @default 1000
      */
     flanking?: number;
-  
+
     /**
      * Array of colors for the track color picker's
      * @default palette (e.g. ["#00A0B0", "#6A4A3C", "#CC333F", "#EB6841"])
@@ -63,7 +363,7 @@ declare module 'igv' {
      * @default null
      */
     search?: ISearch;
-  
+
     /**
      * Google API key. Optional
      */
@@ -74,7 +374,7 @@ declare module 'igv' {
      */
     doubleClickDelay?: number;
   }
-  
+
   export interface IReference {
     /**
      * UCSC or other id string. Optional but recommended.
@@ -105,7 +405,7 @@ declare module 'igv' {
      */
     indexed?: boolean;
   }
-  
+
   /**
    * The search object defines a webservice for fetching genomic location given a gene name or other symbol. The service should return a JSON object with the following structure. The results array is an array of objects with a chromosome, start, and end field. The names of these fields are specified in the configuration object.
    * <code>{  <resultsField> : <array of results> }</code>
@@ -141,15 +441,15 @@ declare module 'igv' {
      */
     endField?: string;
   }
-  
-  
+
+
   export interface ITrackDefaults {
     bam: {
       coverageThreshold?: number;
       coverageQualityWeight?: boolean;
       [key: string]: any;
     };
-  
+
     [key: string]: any;
   }
 
@@ -179,7 +479,7 @@ declare module 'igv' {
     controlCanvas: HTMLCanvasElement
 
     axisCanvas: HTMLCanvasElement
-    track: ITrack
+    track: Track
 
     scrollbar: TrackScrollbar
 
@@ -188,26 +488,28 @@ declare module 'igv' {
     updateViews(force: boolean): Promise<null>
 
     renderSVGContext(ctx: SVGRenderingContext2D, options: any): void
+    draw(drawConfiguration: any, features: any, roiFeatures: any): void
   }
 
-  export interface Viewport {
-    enableClick: boolean;
-    $viewport: JQuery
-    referenceFrame: ReferenceFrame
-    trackView: TrackView
-    canvas: HTMLCanvasElement
+  // export interface Viewport {
+  //   enableClick: boolean;
+  //   $viewport: JQuery
+  //   referenceFrame: ReferenceFrame
+  //   trackView: TrackView
+  //   canvas: HTMLCanvasElement
 
-    renderSVGContext(ctx: SVGRenderingContext2D, options: any): void
-  }
+  //   renderSVGContext(ctx: SVGRenderingContext2D, options: any): void
+
+  // }
 
   export interface IGVMouseEvent {
-      r: number
-      viewport: Viewport,
-      lastMouseX: number,
-      mouseDownX: number,
-      lastMouseY: number,
-      mouseDownY: number,
-      referenceFrame: ReferenceFrame
+    r: number
+    viewport: Viewport,
+    lastMouseX: number,
+    mouseDownX: number,
+    lastMouseY: number,
+    mouseDownY: number,
+    referenceFrame: ReferenceFrame
   }
 
   interface Constants {
@@ -244,31 +546,31 @@ declare module 'igv' {
     resize(): Promise<null>
 
     mouseDownOnViewport(event: JQuery.MouseDownEvent, viewport: Viewport): void
-  
+
     /**
      * Search by annotation symbol
      * @param {string} locusOrGene
      */
     search(locusOrGene: string): Promise<ReferenceFrame[]>;
-  
+
     /**
      * Zoom in by a factor of 2
      */
     zoomIn(): void;
-  
+
     /**
      * Zoom out by a factor of 2
      */
     zoomOut(): void;
 
-    on(name:string, callback:Function ):void;
+    on(name: string, callback: Function): void;
   }
-  
+
   export interface ICommonTrack {
     /**
      * Track type  No default. If not specified, type is inferred from file format
      */
-    type?: 'annotation'|'wig'|'alignment'|'variant'|'seg';
+    type?: 'annotation' | 'wig' | 'alignment' | 'variant' | 'seg';
     /**
      * Type of data source. Valid values are "file", "gcs" for Google Cloud Storage, and "ga4gh" for the Global Alliance API  "file"
      * @default file
@@ -331,7 +633,9 @@ declare module 'igv' {
     paintAxis?: any
     id?: string
   }
-  
+
+
+
   export interface IAnnotationTrack extends ICommonTrack {
     type?: 'annotation';
     /**
@@ -349,7 +653,7 @@ declare module 'igv' {
      * @default 15
      */
     squishedRowHeight?: number;
-  
+
     /**
      * For GFF/GTF file formats. Name of column 9 property to be used for feature label
      * @default Name
@@ -366,7 +670,7 @@ declare module 'igv' {
      */
     searchable?: boolean;
   }
-  
+
   export interface IWigTrack extends ICommonTrack {
     type?: 'wig';
     /**
@@ -384,7 +688,7 @@ declare module 'igv' {
      */
     max?: number;
   }
-  
+
   export interface IAlignmentTrack extends ICommonTrack {
     type?: 'alignment';
     /**
@@ -461,7 +765,7 @@ declare module 'igv' {
      */
     filter?: IAlignmentFilter;
   }
-  
+
   export interface IGA4GHAlignemntTrack extends IAlignmentTrack {
     sourceType: 'ga4gh';
     /**
@@ -473,9 +777,9 @@ declare module 'igv' {
      */
     readGroupSetIds: string;
   }
-  
+
   export interface IAlignmentFilter {
-  
+
     /**
      * filter alignments marked as failing vendor quality checks (bit 0x200)
      * @default true
@@ -502,7 +806,7 @@ declare module 'igv' {
      */
     mqThreshold?: number;
   }
-  
+
   export interface IVariantTrack extends ICommonTrack {
     /**
      * COLLAPSED => show variants only, SQUISHED and EXPANDED => show calls.
@@ -525,7 +829,7 @@ declare module 'igv' {
      */
     homrefColor?: string;
   }
-  
+
   export interface IGA4GHVariantTrack extends IVariantTrack {
     sourceType: 'ga4gh';
     /**
@@ -541,33 +845,33 @@ declare module 'igv' {
      */
     callSetIds?: string[];
   }
-  
+
   export interface ISegmentTrack extends ICommonTrack {
     type?: 'seg';
   }
-  
-  export type ITrack = IAlignmentTrack|IVariantTrack|IAnnotationTrack|IGA4GHAlignemntTrack|IGA4GHVariantTrack|IWigTrack|ISegmentTrack;
-  
-  
-  export function createBrowser(div: HTMLElement, options: IIGVBrowserOptions): Promise<IGVBrowser>;
-  
-  export const browser: IGVBrowser;
-  
 
-  
-   type SVGRenderingContext2D = CanvasRenderingContext2D & {
+  export type ITrack = IAlignmentTrack | IVariantTrack | IAnnotationTrack | IGA4GHAlignemntTrack | IGA4GHVariantTrack | IWigTrack | ISegmentTrack;
+
+
+  export function createBrowser(div: HTMLElement, options: IIGVBrowserOptions): Promise<Browser>;
+
+  export const browser: IGVBrowser;
+
+
+
+  type SVGRenderingContext2D = CanvasRenderingContext2D & {
     getSvg(): SVGSVGElement
     getSerializedSvg(fix_named_entities: boolean): string
     //drawImageSvg(image: SVGSVGElement, dx: number, dy: number, dw: number, dh: number): void
   }
 
-   type SVGRenderingOptions = {
-     ctx?: CanvasRenderingContext2D
-     width?: number
-     height?: number
-     enableMirroring?: boolean
-     document?: Document
+  type SVGRenderingOptions = {
+    ctx?: CanvasRenderingContext2D
+    width?: number
+    height?: number
+    enableMirroring?: boolean
+    document?: Document
   }
 
-   const ctx: {new (options?: SVGRenderingOptions): SVGRenderingContext2D}
+  const ctx: { new(options?: SVGRenderingOptions): SVGRenderingContext2D }
 }

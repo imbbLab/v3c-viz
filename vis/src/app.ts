@@ -36,8 +36,8 @@ var interactions: Map<string, Interaction[]> = new Map();
 var sourceChrom: Chromosome;
 var targetChrom: Chromosome;
 
-var bottomBrowser: igv.IGVBrowser;
-var rightBrowser: igv.IGVBrowser;
+var bottomBrowser: igv.Browser;
+var rightBrowser: igv.Browser;
 
 // If parameters set as part of URL, then load that region of the chromosome, otherwise just load the whole of the first chromosome
 const queryString = window.location.search;
@@ -216,19 +216,45 @@ saveButton.addEventListener('click', (event) => {
 
         // tracks -> SVG
         
+        downloadCanvasCTX.rotate(-10 * Math.PI / 180)
+        
         for (let trackView of bottomBrowser.trackViews) {
             let trackCanvas = trackView.viewports[0].canvas
 
-            if (trackCanvas && trackCanvas.width > 0) {
-                trackView.renderSVGContext(downloadCanvasCTX, { deltaX: voronoiMap.axisOffsetX, deltaY: -40 })
+            //if (trackCanvas && trackCanvas.width > 0) {
+            //    trackView.renderSVGContext(downloadCanvasCTX, { deltaX: voronoiMap.axisOffsetX, deltaY: -40 })
                 //lastY += trackView.viewports[0].canvas.height /2;
-            }
+            //}
             //renderSVGAxis(downloadCanvasCTX, trackView.track, trackView.axisCanvas, 0, 0)
-            //for (let viewport of trackView.viewports) {
-            //    viewport.renderSVGContext(downloadCanvasCTX, {deltaX: 0, deltaY: lastY})
+
+            //downloadCanvasCTX.translate(voronoiMap.axisWidth/2 + voronoiMap.axisOffsetX, -voronoiMap.axisOffsetY)
+            for (let viewport of trackView.viewports) {
+                const config =
+            {
+                downloadCanvasCTX,
+                viewport: this,
+                referenceFrame: viewport.referenceFrame,
+                top,
+                pixelTop: top,
+                pixelWidth: voronoiMap.axisWidth,
+                pixelHeight: voronoiMap.axisHeight,
+               // bpStart: start,
+               // bpEnd: start + (width * bpPerPixel),
+                //bpPerPixel,
+                viewportWidth: voronoiMap.axisWidth,
+                viewportContainerX: 0,
+                //viewportContainerWidth: bottomBrowser.getViewportContainerWidth(),
+                //selection: viewport.selection
+            };
+            downloadCanvasCTX.translate(0, 10)
+        console.log(viewport)
+        console.log(trackView.viewports[0])
+        viewport.renderTrackLabelSVG(downloadCanvasCTX);
+        //viewport.drawSVGWithContect(downloadCanvasCTX);
+        //        viewport.renderSVGContext(downloadCanvasCTX, {deltaX: 0, deltaY: 0})
             //    const { width } = viewport.$viewport.get(0).getBoundingClientRect()
             //delta.deltaX += width
-            //}
+            }
         }
 
         var mySerializedSVG = downloadCanvasCTX.getSerializedSvg(true);
@@ -237,7 +263,6 @@ saveButton.addEventListener('click', (event) => {
         link.setAttribute('download', 'voronoiImage.svg');
         link.setAttribute('href', "data:image/svg+xml;charset=utf-8," + encodeURIComponent(mySerializedSVG));
         link.click();
-        console.log(mySerializedSVG)
     }
 })
 
@@ -451,7 +476,7 @@ function binAreas(voronoi: Voronoi, binWidth: number, numBins: number, minMaxAre
     return areaBins
 }
 
-function getLocusFromBrowser(browser: igv.IGVBrowser): Locus {
+function getLocusFromBrowser(browser: igv.Browser): Locus {
     let value = browser.$searchInput.val();
     if (value) {
         let searchValue = <string>value.toString();
@@ -988,7 +1013,7 @@ fetch('./genomes.json').then((response) => {
 
 
 
-                        var promise: Promise<igv.IGVBrowser> = igv.createBrowser(<HTMLDivElement>document.getElementById('gene-browser-below'), optionsBottom);
+                        var promise: Promise<igv.Browser> = igv.createBrowser(<HTMLDivElement>document.getElementById('gene-browser-below'), optionsBottom);
                         promise.then(belowBrowser => {
                             bottomBrowser = belowBrowser;
                             // Override the method for updating search widget when resizing
@@ -1000,7 +1025,7 @@ fetch('./genomes.json').then((response) => {
 
                             }
 
-                            var promise: Promise<igv.IGVBrowser> = igv.createBrowser(<HTMLDivElement>document.getElementById('gene-browser-right'), optionsRight);
+                            var promise: Promise<igv.Browser> = igv.createBrowser(<HTMLDivElement>document.getElementById('gene-browser-right'), optionsRight);
                             promise.then(browser => {
                                 rightBrowser = browser;
                                 rightBrowser._updateLocusSearchWidget = rightBrowser.updateLocusSearchWidget;
