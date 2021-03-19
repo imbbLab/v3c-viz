@@ -1,5 +1,5 @@
-import { callbackify } from "util";
 import { Chromosome, Interaction } from "./chromosome"
+import { SVGContext } from "./canvas2svg"
 
 export interface Coordinate {
     x: number;
@@ -21,7 +21,7 @@ export class Rectangle {
 
     constructor(region: Rectangle) {
         this.region = region
-    }
+    } 
 }*/
 
 
@@ -483,7 +483,7 @@ export abstract class Axis {
         ctx.fillStyle = "lightgray";
         ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
-        this.drawTicks();
+        this.drawTicks(ctx);
 
         ctx.save();
         if (this.originLocation == OriginLocation.BottomLeft) {
@@ -493,13 +493,13 @@ export abstract class Axis {
         ctx.restore();
     }
 
-    drawTicks() {
-        var ctx = <CanvasRenderingContext2D>this.canvas.getContext('2d');
+    drawTicks(ctx: CanvasRenderingContext2D | SVGContext) {
+        //var ctx = <CanvasRenderingContext2D>this.canvas.getContext('2d');
         ctx.save();
 
-        ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-        ctx.fillStyle = "lightgray";
-        ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+        //ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        //ctx.fillStyle = "lightgray";
+        //ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
         // Draw ticks on axis
         ctx.font = "14px Arial";

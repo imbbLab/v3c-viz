@@ -178,11 +178,16 @@ declare module 'igv' {
 
     controlCanvas: HTMLCanvasElement
 
+    axisCanvas: HTMLCanvasElement
+    track: ITrack
+
     scrollbar: TrackScrollbar
 
     scrollBy(amount: number): void
     resize(size: number): void
     updateViews(force: boolean): Promise<null>
+
+    renderSVGContext(ctx: SVGRenderingContext2D, options: any): void
   }
 
   export interface Viewport {
@@ -191,6 +196,8 @@ declare module 'igv' {
     referenceFrame: ReferenceFrame
     trackView: TrackView
     canvas: HTMLCanvasElement
+
+    renderSVGContext(ctx: SVGRenderingContext2D, options: any): void
   }
 
   export interface IGVMouseEvent {
@@ -319,6 +326,10 @@ declare module 'igv' {
      * Maximum window size in base pairs for which indexed annotations or variants are displayed  1 MB for variants, 30 KB for alignments, whole chromosome for other track types
      */
     visibilityWindow?: number;
+
+
+    paintAxis?: any
+    id?: string
   }
   
   export interface IAnnotationTrack extends ICommonTrack {
@@ -542,4 +553,21 @@ declare module 'igv' {
   
   export const browser: IGVBrowser;
   
+
+  
+   type SVGRenderingContext2D = CanvasRenderingContext2D & {
+    getSvg(): SVGSVGElement
+    getSerializedSvg(fix_named_entities: boolean): string
+    //drawImageSvg(image: SVGSVGElement, dx: number, dy: number, dw: number, dh: number): void
+  }
+
+   type SVGRenderingOptions = {
+     ctx?: CanvasRenderingContext2D
+     width?: number
+     height?: number
+     enableMirroring?: boolean
+     document?: Document
+  }
+
+   const ctx: {new (options?: SVGRenderingOptions): SVGRenderingContext2D}
 }

@@ -10,10 +10,10 @@ import * as igv from 'igv';
 import * as igvutils from 'igv-utils';
 import { Locus, Chromosome, Interaction, getChromosomeFromMap } from "./chromosome";
 import { Rectangle } from "./axis";
+import { SVGContext } from "./canvas2svg"
 
 
 import * as d3 from 'd3';
-import { start } from "node:repl";
 
 //import igv = require('igv');
 //import { browser } from "igv_wrapper";
@@ -23,7 +23,6 @@ import { start } from "node:repl";
 //import Delaunator from 'delaunator';
 
 //import * as points from './data/output.json';
-
 
 
 var numBins = 500;
@@ -48,10 +47,10 @@ var intrachromosomeView: boolean = false
 let viewChangeButton = <HTMLInputElement>document.getElementById('viewChangeButton');
 
 const triangleViewParam = urlParams.get('triangleView')
-if(triangleViewParam) {
+if (triangleViewParam) {
     intrachromosomeView = triangleViewParam.localeCompare("true") == 0
 
-    if(intrachromosomeView) {
+    if (intrachromosomeView) {
         viewChangeButton.value = "Full view"
     }
 }
@@ -120,49 +119,145 @@ saveButton.addEventListener('click', (event) => {
     downloadCanvas.width = voronoiMap.canvas.width + trackSizesRight;
     downloadCanvas.height = voronoiMap.canvas.height + trackSizesBelow;
 
-    let downloadCanvasCTX = <CanvasRenderingContext2D>downloadCanvas.getContext("2d");
-    downloadCanvasCTX.drawImage(voronoiMap.canvas, 0, 0);
+    let drawSVG = true
+    if (!drawSVG) {
+        let downloadCanvasCTX = <CanvasRenderingContext2D>downloadCanvas.getContext("2d");
 
-    let lastY = voronoiMap.canvas.height;
-    bottomBrowser.trackViews.forEach((trackView: igv.TrackView) => {
-        let trackCanvas = trackView.viewports[0].canvas
+        downloadCanvasCTX.drawImage(voronoiMap.canvas, 0, 0);
 
-        if (trackCanvas && trackCanvas.width > 0) {
-            let canvasXOffset = 0;
+        let lastY = voronoiMap.canvas.height;
+        bottomBrowser.trackViews.forEach((trackView: igv.TrackView) => {
+            let trackCanvas = trackView.viewports[0].canvas
 
-            if (trackCanvas.style.left != "") {
-                canvasXOffset = -parseInt(trackCanvas.style.left.replace("px", ""))
+            if (trackCanvas && trackCanvas.width > 0) {
+                let canvasXOffset = 0;
+
+                if (trackCanvas.style.left != "") {
+                    canvasXOffset = -parseInt(trackCanvas.style.left.replace("px", ""))
+                }
+
+                downloadCanvasCTX.drawImage(trackCanvas, canvasXOffset, 0, voronoiMap.axisWidth, trackCanvas.height, voronoiMap.axisOffsetX, lastY, voronoiMap.axisWidth, trackCanvas.height);
+                lastY += trackView.viewports[0].canvas.height;
             }
+        })
 
-            downloadCanvasCTX.drawImage(trackCanvas, canvasXOffset, 0, voronoiMap.axisWidth, trackCanvas.height, voronoiMap.axisOffsetX, lastY, voronoiMap.axisWidth, trackCanvas.height);
-            lastY += trackView.viewports[0].canvas.height;
-        }
-    })
+        let lastX = voronoiMap.canvas.width;
+        rightBrowser.trackViews.forEach((trackView: igv.TrackView) => {
+            let trackCanvas = trackView.viewports[0].canvas
 
-    let lastX = voronoiMap.canvas.width;
-    rightBrowser.trackViews.forEach((trackView: igv.TrackView) => {
-        let trackCanvas = trackView.viewports[0].canvas
+            if (trackCanvas && trackCanvas.width > 0) {
+                let canvasXOffset = 0;
 
-        if (trackCanvas && trackCanvas.width > 0) {
-            let canvasXOffset = 0;
-
-            if (trackCanvas.style.left != "") {
-                canvasXOffset = -parseInt(trackCanvas.style.left.replace("px", ""))
+                if (trackCanvas.style.left != "") {
+                    canvasXOffset = -parseInt(trackCanvas.style.left.replace("px", ""))
+                }
+                downloadCanvasCTX.save();
+                downloadCanvasCTX.translate(lastX, voronoiMap.canvas.height - voronoiMap.axisOffsetY);
+                downloadCanvasCTX.rotate(270 * Math.PI / 180);
+                downloadCanvasCTX.drawImage(trackCanvas, canvasXOffset, 0, voronoiMap.axisWidth, trackCanvas.height, 0, 0, voronoiMap.axisWidth, trackCanvas.height);
+                downloadCanvasCTX.restore();
+                lastX += trackView.viewports[0].canvas.height;
             }
-            downloadCanvasCTX.save();
-            downloadCanvasCTX.translate(lastX, voronoiMap.canvas.height - voronoiMap.axisOffsetY);
-            downloadCanvasCTX.rotate(270 * Math.PI / 180);
-            downloadCanvasCTX.drawImage(trackCanvas, canvasXOffset, 0, voronoiMap.axisWidth, trackCanvas.height, 0, 0, voronoiMap.axisWidth, trackCanvas.height);
-            downloadCanvasCTX.restore();
-            lastX += trackView.viewports[0].canvas.height;
-        }
-    })
+        })
 
-    var link = <HTMLAnchorElement>document.getElementById('link');
-    link.setAttribute('download', 'voronoiImage.png');
-    link.setAttribute('href', downloadCanvas.toDataURL("image/png").replace("image/png", "image/octet-stream"));
-    link.click();
+        var link = <HTMLAnchorElement>document.getElementById('link');
+        link.setAttribute('download', 'voronoiImage.png');
+        link.setAttribute('href', downloadCanvas.toDataURL("image/png").replace("image/png", "image/octet-stream"));
+        link.click();
+    } else {
+        const multiLocusGapDivWidth = 1
+        const multiLocusGapMarginWidth = 2
+
+        const multiLocusGapWidth = (2 * multiLocusGapMarginWidth) + multiLocusGapDivWidth
+        var downloadCanvasCTX = new SVGContext({
+            width: downloadCanvas.width, height: downloadCanvas.height,
+            backdropColor: 'white',
+
+            multiLocusGap: multiLocusGapWidth,
+
+            viewbox:
+            {
+                x: 0,
+                y: 0,
+                width: downloadCanvas.width,
+                height: downloadCanvas.height
+            }
+        });
+
+        
+        //link.setAttribute('download', 'voronoiImage.png');
+        //link.setAttribute('href', downloadCanvas.toDataURL("image/png").replace("image/png", "image/octet-stream"));
+        downloadCanvasCTX.save()
+        if (intrachromosomeView) {
+            downloadCanvasCTX.translate(voronoiMap.axisWidth/2 + voronoiMap.axisOffsetX, -voronoiMap.axisOffsetY)
+            downloadCanvasCTX.rotate(45 * Math.PI / 180)
+            downloadCanvasCTX.scale(1 / Math.sqrt(2), 1 / Math.sqrt(2))
+            downloadCanvasCTX.imageSmoothingEnabled = true;
+            voronoiMap.drawVoronoi(downloadCanvasCTX, voronoiMap.axisOffsetX, voronoiMap.axisOffsetY, voronoiMap.axisWidth, voronoiMap.axisWidth, true, true)
+        } else {
+            downloadCanvasCTX.imageSmoothingEnabled = false;
+            voronoiMap.drawVoronoi(downloadCanvasCTX, voronoiMap.axisOffsetX, voronoiMap.axisOffsetY, voronoiMap.axisWidth, voronoiMap.axisHeight, true, false)
+        }
+        downloadCanvasCTX.restore()
+        voronoiMap.drawTicks(downloadCanvasCTX)
+        // const multiLocusGapDivWidth = 1
+        // const multiLocusGapMarginWidth = 2
+
+        // const multiLocusGapWidth = (2 * multiLocusGapMarginWidth) + multiLocusGapDivWidth
+
+        // let { x, y, width, height } = bottomBrowser.trackContainer.getBoundingClientRect();
+        // const {x: vpx} = bottomBrowser.trackViews[0].$viewportContainer.get(0).getBoundingClientRect();
+
+        // width += (bottomBrowser.referenceFrameList.length - 1) * multiLocusGapWidth
+
+        // const h_render = 8000;
+
+        // const dx = vpx - x;
+
+        // tracks -> SVG
+        
+        for (let trackView of bottomBrowser.trackViews) {
+            let trackCanvas = trackView.viewports[0].canvas
+
+            if (trackCanvas && trackCanvas.width > 0) {
+                trackView.renderSVGContext(downloadCanvasCTX, { deltaX: voronoiMap.axisOffsetX, deltaY: -40 })
+                //lastY += trackView.viewports[0].canvas.height /2;
+            }
+            //renderSVGAxis(downloadCanvasCTX, trackView.track, trackView.axisCanvas, 0, 0)
+            //for (let viewport of trackView.viewports) {
+            //    viewport.renderSVGContext(downloadCanvasCTX, {deltaX: 0, deltaY: lastY})
+            //    const { width } = viewport.$viewport.get(0).getBoundingClientRect()
+            //delta.deltaX += width
+            //}
+        }
+
+        var mySerializedSVG = downloadCanvasCTX.getSerializedSvg(true);
+
+        var link = <HTMLAnchorElement>document.getElementById('link');
+        link.setAttribute('download', 'voronoiImage.svg');
+        link.setAttribute('href', "data:image/svg+xml;charset=utf-8," + encodeURIComponent(mySerializedSVG));
+        link.click();
+        console.log(mySerializedSVG)
+    }
 })
+
+function renderSVGAxis(context: SVGContext, track: igv.ITrack, axisCanvas: HTMLCanvasElement, deltaX: number, deltaY: number) {
+    console.log(track)
+    if (typeof track.paintAxis === 'function') {
+
+        const { y, width, height } = axisCanvas.getBoundingClientRect()
+
+        const str = track.name || track.id
+        if (str) {
+            context.addTrackGroupWithTranslationAndClipRect((`${str.replace(/\\W/g, '')}_axis`), deltaX, y + deltaY, width, height, 0)
+
+            context.save()
+            track.paintAxis(context, width, height)
+            context.restore()
+        }
+    }
+
+}
 
 function reposition() {
     // TODO: Only reposition maximum once every 50 ms as this requires loading data (voronoi)
@@ -282,7 +377,7 @@ interface ViewRequest {
 
 var xRequest: ViewRequest | null
 var yRequest: ViewRequest | null
-var lastLocus: Locus = {chr: "", start:0, end:0}
+var lastLocus: Locus = { chr: "", start: 0, end: 0 }
 var timeoutFunction: any;
 
 interface MinMax {
