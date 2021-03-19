@@ -43,7 +43,7 @@ var rightBrowser: igv.IGVBrowser;
 var intrachromosomeView = false
 
 var displayImageMap = true;
-var igvHeight = 230;
+var igvHeight = 280;
 var viewWidth = 400;
 var viewHeight = 400;
 
@@ -74,6 +74,11 @@ viewChangeButton.addEventListener('click', (event) => {
 
     voronoiMap.setIntrachromosomeView(intrachromosomeView);
     imageMap.setIntrachromosomeView(intrachromosomeView);
+
+
+    // Perform search again to ensure the IGV browsers are updated to the correct size
+    bottomBrowser.search(lastLocus.chr + ":" + lastLocus.start + "-" + lastLocus.end);
+    rightBrowser.search(lastLocus.chr + ":" + lastLocus.start + "-" + lastLocus.end);
 })
 
 let saveButton = <HTMLInputElement>document.getElementById('saveButton');
@@ -264,6 +269,7 @@ interface ViewRequest {
 
 var xRequest: ViewRequest | null
 var yRequest: ViewRequest | null
+var lastLocus: Locus = {chr: "", start:0, end:0}
 var timeoutFunction: any;
 
 interface MinMax {
@@ -411,6 +417,10 @@ function requestViewUpdate(request: ViewRequest) {
                 endY = newTargetChrom.length
                 targetChrom = newTargetChrom
             }
+
+            lastLocus.chr = xRequest.locus.chr;
+            lastLocus.start = startX;
+            lastLocus.end = endX;
 
             // Update the URL to reflect the current view
             let nextURL = window.location.href.split('?')[0] + "?srcChrom=" + sourceChrom.name + "&srcStart=" + startX + "&srcEnd=" + endX + "&tarChrom=" + targetChrom.name + "&tarStart=" + startY + "&tarEnd=" + endY
@@ -726,19 +736,12 @@ fetch('./genomes.json').then((response) => {
                             locus: locusBottom,
 
                             reference: genomeDetails,
-                            //tracks: genomeDetails.tracks
-                            //{
-                            //    id: details['Genome'],
-                            //    fastaURL: urls.fastaURL,
-                            //    indexURL: urls.indexURL,
-                            //},
                         }
                         const optionsRight: igv.IIGVBrowserOptions = {
                             palette: ['#00A0B0', '#6A4A3C', '#CC333F', '#EB6841'],
                             locus: locusRight,
 
                             reference: genomeDetails,
-                            //tracks: genomeDetails.tracks
                         }
 
 
