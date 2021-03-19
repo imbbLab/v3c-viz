@@ -158,7 +158,7 @@ export abstract class Axis {
                     ctx.fillStyle = "black";
                     ctx.textBaseline = "middle";
                     ctx.textAlign = "left";
-                    ctx.fillText("" + xPosition.toFixed(0) + ", " + yPosition.toFixed(0), mousePos.x + margin * 2, mousePos.y - margin*2);
+                    ctx.fillText("" + xPosition.toFixed(0) + ", " + yPosition.toFixed(0), mousePos.x + margin * 2, mousePos.y - margin*2.4);
 
                     if (!self.mouseDown) {
 
