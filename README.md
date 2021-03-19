@@ -4,8 +4,9 @@
 
 ## Features
 * Visualisation interactively customisable using GUI
+* Full matrix view and triangle view 
 * Optionally load interact file for visualising contacts
-* Index generated automatically at start of run to enable random access of data
+* pairix format used (and accompanying index). See: https://github.com/4dn-dcic/pairix
 * User can select which chromosomes to view
 
 ## Current limitations
