@@ -64,7 +64,7 @@ let viewChangeButton = <HTMLInputElement>document.getElementById('viewChangeButt
 viewChangeButton.addEventListener('click', (event) => {
     intrachromosomeView = !intrachromosomeView
 
-    if(intrachromosomeView) {
+    if (intrachromosomeView) {
         viewChangeButton.value = "Full view"
     } else {
         viewChangeButton.value = "Triangle view"
@@ -87,14 +87,14 @@ saveButton.addEventListener('click', (event) => {
     console.log(bottomBrowser)
     bottomBrowser.trackViews.forEach((trackView: igv.TrackView) => {
         console.log(trackView.viewports[0])
-        if(trackView.viewports[0].canvas) {
+        if (trackView.viewports[0].canvas) {
             trackSizesBelow += trackView.viewports[0].canvas.height;
         }
     })
 
     rightBrowser.trackViews.forEach((trackView: igv.TrackView) => {
         console.log(trackView.viewports[0])
-        if(trackView.viewports[0].canvas) {
+        if (trackView.viewports[0].canvas) {
             trackSizesRight += trackView.viewports[0].canvas.height;
         }
     })
@@ -109,10 +109,10 @@ saveButton.addEventListener('click', (event) => {
     bottomBrowser.trackViews.forEach((trackView: igv.TrackView) => {
         let trackCanvas = trackView.viewports[0].canvas
 
-        if(trackCanvas && trackCanvas.width > 0) {
+        if (trackCanvas && trackCanvas.width > 0) {
             let canvasXOffset = 0;
-            
-            if(trackCanvas.style.left != "") {
+
+            if (trackCanvas.style.left != "") {
                 canvasXOffset = -parseInt(trackCanvas.style.left.replace("px", ""))
             }
 
@@ -125,15 +125,15 @@ saveButton.addEventListener('click', (event) => {
     rightBrowser.trackViews.forEach((trackView: igv.TrackView) => {
         let trackCanvas = trackView.viewports[0].canvas
 
-        if(trackCanvas && trackCanvas.width > 0) {
+        if (trackCanvas && trackCanvas.width > 0) {
             let canvasXOffset = 0;
-            
-            if(trackCanvas.style.left != "") {
+
+            if (trackCanvas.style.left != "") {
                 canvasXOffset = -parseInt(trackCanvas.style.left.replace("px", ""))
             }
             downloadCanvasCTX.save();
             downloadCanvasCTX.translate(lastX, voronoiMap.canvas.height - voronoiMap.axisOffsetY);
-            downloadCanvasCTX.rotate(270*Math.PI/180);
+            downloadCanvasCTX.rotate(270 * Math.PI / 180);
             downloadCanvasCTX.drawImage(trackCanvas, canvasXOffset, 0, voronoiMap.axisWidth, trackCanvas.height, 0, 0, voronoiMap.axisWidth, trackCanvas.height);
             downloadCanvasCTX.restore();
             lastX += trackView.viewports[0].canvas.height;
@@ -165,16 +165,16 @@ function reposition() {
     let maxWidth = window.innerWidth;
     let maxHeight = window.innerHeight;
 
-    if(!intrachromosomeView) {
+    if (!intrachromosomeView) {
         maxWidth -= igvHeight;
     } else {
         maxWidth -= 20
     }
     maxHeight -= igvHeight;
 
-    if(intrachromosomeView) {
+    if (intrachromosomeView) {
         viewWidth = maxWidth / 2;
-        viewHeight = viewWidth/2;
+        viewHeight = viewWidth / 2;
     } else {
         viewWidth = Math.min(maxHeight, maxWidth);
         viewHeight = viewWidth
@@ -187,7 +187,7 @@ function reposition() {
     geneBrowserBelow.style.left = (imageMap.axisOffsetX - 10) + (viewWidth * (numDisplayedViews - 1)) + "px";
     geneBrowserBelow.style.width = imageMap.axisWidth + "px"
 
-    if(intrachromosomeView) {
+    if (intrachromosomeView) {
         geneBrowserRight.style.display = "none";
     } else {
         geneBrowserRight.style.display = "block";
@@ -226,7 +226,6 @@ function reposition() {
     for (let viewport of viewports) {
         viewport.style.width = (imageMap.axisWidth) + "px";
     }
-
     resizeTracks();
 
     let navBars = <HTMLCollectionOf<HTMLDivElement>>document.getElementsByClassName('igv-navbar');
@@ -239,6 +238,8 @@ function reposition() {
         zoomWidget.style.marginRight = 5 + "px";
     }
 
+    //bottomBrowser.updateViews()
+
 }
 
 function resizeTracks() {
@@ -246,6 +247,11 @@ function resizeTracks() {
     for (let track of tracks) {
         track.style.width = (imageMap.axisWidth) + "px";
     }
+
+    //let canvases = <HTMLCollectionOf<HTMLCanvasElement>>document.getElementsByClassName('igv-canvas');
+    //for (let canvas of canvases) {
+    //    canvas.style.width = (imageMap.axisWidth) + "px";
+    //}
 }
 
 
@@ -333,15 +339,15 @@ function binAreas(voronoi: Voronoi, binWidth: number, numBins: number, minMaxAre
 
 function getLocusFromBrowser(browser: igv.IGVBrowser): Locus {
     let value = browser.$searchInput.val();
-    if(value) {
+    if (value) {
         let searchValue = <string>value.toString();
         let parts = searchValue.split(':');
         let chrParts = parts[1].split('-');
-        
-        return {chr: parts[0], start: parseInt(chrParts[0].replaceAll(',', '')), end:parseInt(chrParts[1].replaceAll(',', ''))};
-    } 
 
-    return {chr: "", start: 0, end: 0}
+        return { chr: parts[0], start: parseInt(chrParts[0].replaceAll(',', '')), end: parseInt(chrParts[1].replaceAll(',', '')) };
+    }
+
+    return { chr: "", start: 0, end: 0 }
 }
 
 function requestViewUpdate(request: ViewRequest) {
@@ -374,7 +380,7 @@ function requestViewUpdate(request: ViewRequest) {
             var startY: number
             var endY: number
 
-            if(intrachromosomeView) {
+            if (intrachromosomeView) {
                 newTargetChrom = newSourceChrom
                 startY = startX
                 endY = endX
@@ -391,7 +397,7 @@ function requestViewUpdate(request: ViewRequest) {
                 startY = 0;
             }
 
-            if(isNaN(startY) || isNaN(endY)) {
+            if (isNaN(startY) || isNaN(endY)) {
                 startY = startX
                 endY = endX
             }
@@ -588,479 +594,539 @@ window.addEventListener('resize', (event) => {
     reposition();
 })
 
-interface GenomeURL {
+interface TrackDetails {
+    format: string
+    name: string
+    url: string
+    indexURL: string
+    order: number
+    removable: boolean
+    visibilityWindow: number
+}
+
+interface GenomeDetails {
+    id: string
+    name: string
     fastaURL: string
     indexURL: string
+    cytobandURL: string
+
+    tracks: TrackDetails[]
 }
 
-function getGenomeURLs(genome: string) : GenomeURL {
-    switch(genome) {
-        case "dm6":
-            return {fastaURL: "https://s3.amazonaws.com/igv.broadinstitute.org/genomes/seq/dm6/dm6.fa", indexURL: "https://s3.amazonaws.com/igv.broadinstitute.org/genomes/seq/dm6/dm6.fa.fai"}
-        case "hg19":
-            return {fastaURL: "https://s3.amazonaws.com/igv.broadinstitute.org/genomes/seq/hg19/hg19.fasta", indexURL: "https://s3.amazonaws.com/igv.broadinstitute.org/genomes/seq/hg19/hg19.fasta.fai"}
-        case "hg38":
-            return {fastaURL: "https://s3.amazonaws.com/igv.broadinstitute.org/genomes/seq/hg38/hg38.fa", indexURL: "https://s3.amazonaws.com/igv.broadinstitute.org/genomes/seq/hg38/hg38.fa.fai"}
+function getGenomeDetails(genome: string): GenomeDetails | undefined {
+    return genomes.get(genome)
+    // switch(genome) {
+    //     case "dm6":
+    //         return {fastaURL: "https://s3.amazonaws.com/igv.broadinstitute.org/genomes/seq/dm6/dm6.fa", indexURL: "https://s3.amazonaws.com/igv.broadinstitute.org/genomes/seq/dm6/dm6.fa.fai"}
+    //     case "hg19":
+    //         return {fastaURL: "https://s3.amazonaws.com/igv.broadinstitute.org/genomes/seq/hg19/hg19.fasta", indexURL: "https://s3.amazonaws.com/igv.broadinstitute.org/genomes/seq/hg19/hg19.fasta.fai"}
+    //     case "hg38":
+    //         return {fastaURL: "https://s3.amazonaws.com/igv.broadinstitute.org/genomes/seq/hg38/hg38.fa", indexURL: "https://s3.amazonaws.com/igv.broadinstitute.org/genomes/seq/hg38/hg38.fa.fai"}
+    // }
+    // // TODO: Unknown genome - should ask the user for the fasta files?
+
+    // // Try a default
+    // return {fastaURL: "https://s3.amazonaws.com/igv.broadinstitute.org/genomes/seq/" + genome + "/" + genome + ".fa", indexURL: "https://s3.amazonaws.com/igv.broadinstitute.org/genomes/seq/" + genome + "/" + genome + ".fa.fai"}
+}
+
+
+var genomes: Map<string, GenomeDetails> = new Map();
+
+// Get genome information from server
+fetch('./genomes.json').then((response) => {
+    if (response.status !== 200) {
+        console.log('Looks like there was a problem. Status Code: ' +
+            response.status);
+        return;
     }
-    // TODO: Unknown genome - should ask the user for the fasta files?
 
-    // Try a default
-    return {fastaURL: "https://s3.amazonaws.com/igv.broadinstitute.org/genomes/seq/" + genome + "/" + genome + ".fa", indexURL: "https://s3.amazonaws.com/igv.broadinstitute.org/genomes/seq/" + genome + "/" + genome + ".fa.fai"}
-}
+    response.json().then(genomeDetails => {
+        for (let i = 0; i < genomeDetails.length; i++) {
+            var genome: GenomeDetails = {
+                id: genomeDetails[i]['id'],
+                name: genomeDetails[i]['name'],
+                fastaURL: genomeDetails[i]['fastaURL'],
+                indexURL: genomeDetails[i]['indexURL'],
+                cytobandURL: genomeDetails[i]['cytobandURL'],
 
-// First get the details of the chromosome from the server
-fetch('./details')
-    .then(
-        (response) => {
-            if (response.status !== 200) {
-                console.log('Looks like there was a problem. Status Code: ' +
-                    response.status);
-                return;
+                tracks: [],
             }
 
-            response.json().then(details => {
-                var chromosomeDetails = details['Chromosomes'];
-                chromosomeDetails.forEach((chromosome: any) => {
-                    chromosomes.set(chromosome['Name'], Chromosome.fromJSON(chromosome))
-                });
-
-                var locusBottom: string
-                var locusRight: string
-
-                // If parameters set as part of URL, then load that region of the chromosome, otherwise just load the whole of the first chromosome
-                const queryString = window.location.search;
-                const urlParams = new URLSearchParams(queryString);
-                
-                const srcChrom = urlParams.get('srcChrom');
-                const tarChrom = urlParams.get('tarChrom');
-                const srcStart = urlParams.get('srcStart');
-                const srcEnd = urlParams.get('srcEnd');
-                const tarStart = urlParams.get('tarStart');
-                const tarEnd = urlParams.get('tarEnd');
-
-                if(srcChrom && srcStart && srcEnd && tarChrom && tarStart && tarEnd) {
-                    sourceChrom = getChromosomeFromMap(chromosomes, srcChrom)
-                    targetChrom = getChromosomeFromMap(chromosomes, tarChrom)
-
-                    locusBottom = sourceChrom.name + ":" + srcStart + "-" + srcEnd;
-                    locusRight = targetChrom.name + ":" + tarStart + "-" + tarEnd;
-                } else {
-                    sourceChrom = getChromosomeFromMap(chromosomes, details['Chromosomes'][0]['Name'])
-                    targetChrom = sourceChrom
-
-                    locusBottom = sourceChrom.name + ":0-" + sourceChrom.length; //'chr4:0-1348131'
-                    locusRight = locusBottom
-                }
-                console.log(locusBottom)
-
-                let urls = getGenomeURLs(details['Genome']);
-
-                // Set up the options
-                const optionsBottom: igv.IIGVBrowserOptions = {
-                    palette: ['#00A0B0', '#6A4A3C', '#CC333F', '#EB6841'],
-                    locus: locusBottom,
-
-                    reference: {
-                        id: details['Genome'],
-                        fastaURL: urls.fastaURL,
-                        indexURL: urls.indexURL,
-                    },
-                }
-                const optionsRight: igv.IIGVBrowserOptions = {
-                    palette: ['#00A0B0', '#6A4A3C', '#CC333F', '#EB6841'],
-                    locus: locusRight,
-
-                    reference: {
-                        id: details['Genome'],
-                        fastaURL: urls.fastaURL,
-                        indexURL: urls.indexURL,
-                    },
+            for (let j = 0; j < genomeDetails[i]['tracks'].length; j++) {
+                var track: TrackDetails = {
+                    format: genomeDetails[i]['tracks'][j]['format'],
+                    name: genomeDetails[i]['tracks'][j]['name'],
+                    url: genomeDetails[i]['tracks'][j]['url'],
+                    indexURL: genomeDetails[i]['tracks'][j]['indexURL'],
+                    order: genomeDetails[i]['tracks'][j]['order'],
+                    removable: genomeDetails[i]['tracks'][j]['removable'],
+                    visibilityWindow: genomeDetails[i]['tracks'][j]['visibilityWindow'],
                 }
 
+                genome.tracks.push(track)
+            }
 
-                function overrideMouse() {
-                    //let trackContainer = $(rightBrowser.trackContainer);
-                    //console.log(trackContainer)
-                    //console.log(rightBrowser.$root)
-                    //$(document).off('mousedown')
-                    //$(document).off('mouseup')
-                    rightBrowser.$root.off();
-                    $(rightBrowser.trackContainer).off('mousemove').on('mousemove', (event) => {
-                        console.log(event)
-                        event.stopPropagation();
-                    });
-                    $(rightBrowser.trackContainer).off('mouseup').on('mouseup', (event) => {
-                        console.log(event)
-                        event.stopPropagation();
-                    });
-                    //trackContainer.off('mouseup');
-
-                    rightBrowser.trackViews.forEach((track) => {
-                        track.viewports.forEach((viewport) => {
-                            //console.log(viewport)
-
-                            viewport.trackView.$viewportContainer.off().on('mousemove', (event) => {
-                                event.stopPropagation();
-
-                                let self = rightBrowser;
-                                var coords, viewport, viewportWidth, referenceFrame;
-
-                                event.preventDefault();
-
-                                if (self.loadInProgress()) {
-                                    return;
-                                }
-
-                                coords = igvutils.DOMUtils.pageCoordinates(event);
-
-                                if (self.vpMouseDown) {
-
-                                    // Determine direction,  true == horizontal
-                                    const horizontal = Math.abs((coords.x - self.vpMouseDown.mouseDownX)) > Math.abs((coords.y - self.vpMouseDown.mouseDownY));
-                                    const vertical = !horizontal;
-
-                                    viewport = self.vpMouseDown.viewport;
-                                    viewportWidth = <number>viewport.$viewport.width();
-                                    referenceFrame = viewport.referenceFrame;
-
-                                    if (!self.dragObject && !self.isScrolling) {
-                                        self.dragObject = {
-                                            viewport: viewport,
-                                            start: referenceFrame.start
-                                        };
-                                    }
-
-                                    if (self.dragObject) {
-                                        const viewChanged = referenceFrame.shiftPixels(coords.y - self.vpMouseDown.lastMouseY, viewportWidth);
-                                        if (viewChanged) {
-
-                                            if (self.referenceFrameList.length > 1) {
-                                                self.updateLocusSearchWidget(self.referenceFrameList);
-                                            } else {
-                                                self.updateLocusSearchWidget([self.vpMouseDown.referenceFrame]);
-                                            }
-
-                                            self.updateViews();
-                                        }
-                                        self.fireEvent('trackdrag');
-
-                                        if (self.isScrolling) {
-                                            const delta = self.vpMouseDown.r * (self.vpMouseDown.lastMouseY - coords.y);
-                                            self.vpMouseDown.viewport.trackView.scrollBy(delta);
-                                        }
-                                    }
-
-                                    //console.log(self.dragObject)
-
-                                    self.vpMouseDown.lastMouseX = coords.x;
-                                    self.vpMouseDown.lastMouseY = coords.y;
-                                }
-                            });
-
-                            viewport.trackView.$viewportContainer.on('mouseup', (event) => {
-                                console.log(event);
-                                event.stopPropagation();
-                            })
-
-                            //console.log("HERE")
-                            //console.log(viewport.$viewport)
-                            viewport.$viewport.off().on('mouseup', (event) => {
-                                //console.log("MOUSE UP" + event);
-                                event.stopPropagation();
-                            })
-
-                            /*console.log("Turning off $viewport")
-                            viewport.$viewport.off().on('mousedown', (event) => {
-                                console.log(event);
-                                event.stopImmediatePropagation();
-                                viewport.enableClick = true;
-
-                                let coords = igvutils.DOMUtils.pageCoordinates(event);
-                                rightBrowser.vpMouseDown = {
-                                    viewport: viewport,
-                                    lastMouseX: coords.x,
-                                    mouseDownX: coords.x,
-                                    lastMouseY: coords.y,
-                                    mouseDownY: coords.y,
-                                    referenceFrame: viewport.referenceFrame,
-                                    r: 1
-                                };
-
-                                //rightBrowser.mouseDownOnViewport(event, viewport);
-                                //mouseDownCoords = igvutils.DOMUtils.pageCoordinates(event);
-                            })*/
-                            //viewport.$viewport.off('mouseup');
-                        })
-
-                        /*console.log(track);
-                        console.log(track.$trackDragScrim)
-
-                        if (track.$trackDragScrim) {
-                            console.log("Turning off trackDragScrim")
-                            track.$trackDragScrim.off(); //('mousedown');
-                            //track.$trackDragScrim.off('mouseup');
-                        }
-                        if (track.$trackManipulationHandle) {
-                            console.log("Turning off trackManipulationHandle")
-                            track.$trackManipulationHandle.off(); //('mousedown');
-                            //track.$trackManipulationHandle.off('mouseup');
-                        }
-
-                        //
-                        $(document).off() //('mousedown' + track.namespace);
-                        //$(document).off('mouseup' + track.namespace);
-                        */
-                    })
-                }
+            genomes.set(genome.id, genome)
+        }
 
 
 
-                var promise: Promise<igv.IGVBrowser> = igv.createBrowser(<HTMLDivElement>document.getElementById('gene-browser-below'), optionsBottom);
-                promise.then(belowBrowser => {
-                    bottomBrowser = belowBrowser;
-                    // Override the method for updating search widget when resizing
-                    bottomBrowser._updateLocusSearchWidget = bottomBrowser.updateLocusSearchWidget;
-                    bottomBrowser.updateLocusSearchWidget = function (referenceFrameList: igv.ReferenceFrame[]): void {
-                        bottomBrowser._updateLocusSearchWidget(referenceFrameList);
-
-                        requestViewUpdate({ dimension: "x", locus: getLocusFromBrowser(bottomBrowser) }) 
-
+        // First get the details of the chromosome from the server
+        fetch('./details')
+            .then(
+                (response) => {
+                    if (response.status !== 200) {
+                        console.log('Looks like there was a problem. Status Code: ' +
+                            response.status);
+                        return;
                     }
 
-                    var promise: Promise<igv.IGVBrowser> = igv.createBrowser(<HTMLDivElement>document.getElementById('gene-browser-right'), optionsRight);
-                    promise.then(browser => {
-                        rightBrowser = browser;
-                        rightBrowser._updateLocusSearchWidget = rightBrowser.updateLocusSearchWidget;
-                        rightBrowser.updateLocusSearchWidget = function (referenceFrameList: igv.ReferenceFrame[]): void {
-                            rightBrowser._updateLocusSearchWidget(referenceFrameList)
+                    response.json().then(details => {
+                        var chromosomeDetails = details['Chromosomes'];
+                        chromosomeDetails.forEach((chromosome: any) => {
+                            chromosomes.set(chromosome['Name'], Chromosome.fromJSON(chromosome))
+                        });
 
-                            requestViewUpdate({ dimension: "y", locus: getLocusFromBrowser(rightBrowser) })
+                        var locusBottom: string
+                        var locusRight: string
+
+                        // If parameters set as part of URL, then load that region of the chromosome, otherwise just load the whole of the first chromosome
+                        const queryString = window.location.search;
+                        const urlParams = new URLSearchParams(queryString);
+
+                        const srcChrom = urlParams.get('srcChrom');
+                        const tarChrom = urlParams.get('tarChrom');
+                        const srcStart = urlParams.get('srcStart');
+                        const srcEnd = urlParams.get('srcEnd');
+                        const tarStart = urlParams.get('tarStart');
+                        const tarEnd = urlParams.get('tarEnd');
+
+                        if (srcChrom && srcStart && srcEnd && tarChrom && tarStart && tarEnd) {
+                            sourceChrom = getChromosomeFromMap(chromosomes, srcChrom)
+                            targetChrom = getChromosomeFromMap(chromosomes, tarChrom)
+
+                            locusBottom = sourceChrom.name + ":" + srcStart + "-" + srcEnd;
+                            locusRight = targetChrom.name + ":" + tarStart + "-" + tarEnd;
+                        } else {
+                            sourceChrom = getChromosomeFromMap(chromosomes, details['Chromosomes'][0]['Name'])
+                            targetChrom = sourceChrom
+
+                            locusBottom = sourceChrom.name + ":0-" + sourceChrom.length; //'chr4:0-1348131'
+                            locusRight = locusBottom
+                        }
+                        console.log(locusBottom)
+
+                        let genomeDetails = <GenomeDetails>getGenomeDetails(details['Genome']);
+                        console.log(genomeDetails)
+
+                        // Set up the options
+                        const optionsBottom: igv.IIGVBrowserOptions = {
+                            palette: ['#00A0B0', '#6A4A3C', '#CC333F', '#EB6841'],
+                            locus: locusBottom,
+
+                            reference: genomeDetails,
+                            //tracks: genomeDetails.tracks
+                            //{
+                            //    id: details['Genome'],
+                            //    fastaURL: urls.fastaURL,
+                            //    indexURL: urls.indexURL,
+                            //},
+                        }
+                        const optionsRight: igv.IIGVBrowserOptions = {
+                            palette: ['#00A0B0', '#6A4A3C', '#CC333F', '#EB6841'],
+                            locus: locusRight,
+
+                            reference: genomeDetails,
+                            //tracks: genomeDetails.tracks
                         }
 
 
-                        belowBrowser.search(locusBottom);
-                        rightBrowser.search(locusRight);
+                        function overrideMouse() {
+                            //let trackContainer = $(rightBrowser.trackContainer);
+                            //console.log(trackContainer)
+                            //console.log(rightBrowser.$root)
+                            //$(document).off('mousedown')
+                            //$(document).off('mouseup')
+                            rightBrowser.$root.off();
+                            $(rightBrowser.trackContainer).off('mousemove').on('mousemove', (event) => {
+                                console.log(event)
+                                event.stopPropagation();
+                            });
+                            $(rightBrowser.trackContainer).off('mouseup').on('mouseup', (event) => {
+                                console.log(event)
+                                event.stopPropagation();
+                            });
+                            //trackContainer.off('mouseup');
 
-                        let fileSelector = <HTMLInputElement>document.getElementById('file-selector')
-                        fileSelector.addEventListener('change', (event) => {
+                            rightBrowser.trackViews.forEach((track) => {
+                                track.viewports.forEach((viewport) => {
+                                    //console.log(viewport)
 
+                                    viewport.trackView.$viewportContainer.off().on('mousemove', (event) => {
+                                        event.stopPropagation();
 
-                            console.log(event)
-                            console.log(fileSelector.files)
-                            if (fileSelector.files) {
-                                let data = new FormData();
-                                data.append('myFile', fileSelector.files[0]);
+                                        let self = rightBrowser;
+                                        var coords, viewport, viewportWidth, referenceFrame;
 
-                                let filename = fileSelector.files[0].name;
+                                        event.preventDefault();
 
-                                // send fetch along with cookies
-                                fetch('/upload', {
-                                    method: 'POST',
-                                    credentials: 'same-origin',
-                                    body: data
-                                }).then((response) => {
-                                    if (response.status !== 200) {
-                                        console.log('Looks like there was a problem. Status Code: ' +
-                                            response.status);
-                                        return;
-                                    }
-
-                                    response.text().then((location: string) => {
-                                        const extension = filename.split('.').pop();
-                                        console.log(extension);
-                                        var format: string = 'unknown'
-                                        var type: 'annotation' | 'wig' | 'alignment' | 'variant' | 'seg' = 'annotation'
-                                        if (extension?.localeCompare("bed") == 0) {
-                                            type = 'annotation';
-                                            format = 'bed';
-                                        } else if (extension?.localeCompare("bw") == 0) {
-                                            type = 'wig';
-                                            format = 'bigwig';
+                                        if (self.loadInProgress()) {
+                                            return;
                                         }
 
+                                        coords = igvutils.DOMUtils.pageCoordinates(event);
 
-                                        bottomBrowser.loadTrack({
-                                            type: type,
-                                            format: format,
-                                            url: location,
-                                            name: filename
-                                        }).then(track => {
-                                            resizeTracks()
-                                        })
-                                        rightBrowser.loadTrack({
-                                            type: type,
-                                            format: format,
-                                            //sourceType: "file",
-                                            url: location,
-                                            name: filename
-                                        }).then(track => {
-                                            resizeTracks()
-                                        })
+                                        if (self.vpMouseDown) {
+
+                                            // Determine direction,  true == horizontal
+                                            const horizontal = Math.abs((coords.x - self.vpMouseDown.mouseDownX)) > Math.abs((coords.y - self.vpMouseDown.mouseDownY));
+                                            const vertical = !horizontal;
+
+                                            viewport = self.vpMouseDown.viewport;
+                                            viewportWidth = <number>viewport.$viewport.width();
+                                            referenceFrame = viewport.referenceFrame;
+
+                                            if (!self.dragObject && !self.isScrolling) {
+                                                self.dragObject = {
+                                                    viewport: viewport,
+                                                    start: referenceFrame.start
+                                                };
+                                            }
+
+                                            if (self.dragObject) {
+                                                const viewChanged = referenceFrame.shiftPixels(coords.y - self.vpMouseDown.lastMouseY, viewportWidth);
+                                                if (viewChanged) {
+
+                                                    if (self.referenceFrameList.length > 1) {
+                                                        self.updateLocusSearchWidget(self.referenceFrameList);
+                                                    } else {
+                                                        self.updateLocusSearchWidget([self.vpMouseDown.referenceFrame]);
+                                                    }
+
+                                                    self.updateViews();
+                                                }
+                                                self.fireEvent('trackdrag');
+
+                                                if (self.isScrolling) {
+                                                    const delta = self.vpMouseDown.r * (self.vpMouseDown.lastMouseY - coords.y);
+                                                    self.vpMouseDown.viewport.trackView.scrollBy(delta);
+                                                }
+                                            }
+
+                                            //console.log(self.dragObject)
+
+                                            self.vpMouseDown.lastMouseX = coords.x;
+                                            self.vpMouseDown.lastMouseY = coords.y;
+                                        }
                                     });
-                                });
 
+                                    viewport.trackView.$viewportContainer.on('mouseup', (event) => {
+                                        console.log(event);
+                                        event.stopPropagation();
+                                    })
 
-                                /*const reader = new FileReader();
-                                
-                                } else if (extension?.localeCompare("bw") == 0) {
-                                    type = 'wig'
-                                    format = 'bigwig';
+                                    //console.log("HERE")
+                                    //console.log(viewport.$viewport)
+                                    viewport.$viewport.off().on('mouseup', (event) => {
+                                        //console.log("MOUSE UP" + event);
+                                        event.stopPropagation();
+                                    })
 
-                                    // Need to copy the file to the server and then load a link
+                                    /*console.log("Turning off $viewport")
+                                    viewport.$viewport.off().on('mousedown', (event) => {
+                                        console.log(event);
+                                        event.stopImmediatePropagation();
+                                        viewport.enableClick = true;
+        
+                                        let coords = igvutils.DOMUtils.pageCoordinates(event);
+                                        rightBrowser.vpMouseDown = {
+                                            viewport: viewport,
+                                            lastMouseX: coords.x,
+                                            mouseDownX: coords.x,
+                                            lastMouseY: coords.y,
+                                            mouseDownY: coords.y,
+                                            referenceFrame: viewport.referenceFrame,
+                                            r: 1
+                                        };
+        
+                                        //rightBrowser.mouseDownOnViewport(event, viewport);
+                                        //mouseDownCoords = igvutils.DOMUtils.pageCoordinates(event);
+                                    })*/
+                                    //viewport.$viewport.off('mouseup');
+                                })
+
+                                /*console.log(track);
+                                console.log(track.$trackDragScrim)
+        
+                                if (track.$trackDragScrim) {
+                                    console.log("Turning off trackDragScrim")
+                                    track.$trackDragScrim.off(); //('mousedown');
+                                    //track.$trackDragScrim.off('mouseup');
                                 }
+                                if (track.$trackManipulationHandle) {
+                                    console.log("Turning off trackManipulationHandle")
+                                    track.$trackManipulationHandle.off(); //('mousedown');
+                                    //track.$trackManipulationHandle.off('mouseup');
+                                }
+        
+                                //
+                                $(document).off() //('mousedown' + track.namespace);
+                                //$(document).off('mouseup' + track.namespace);
+                                */
+                            })
+                        }
 
 
-                                reader.readAsDataURL(fileSelector.files[0])*/
+
+                        var promise: Promise<igv.IGVBrowser> = igv.createBrowser(<HTMLDivElement>document.getElementById('gene-browser-below'), optionsBottom);
+                        promise.then(belowBrowser => {
+                            bottomBrowser = belowBrowser;
+                            // Override the method for updating search widget when resizing
+                            bottomBrowser._updateLocusSearchWidget = bottomBrowser.updateLocusSearchWidget;
+                            bottomBrowser.updateLocusSearchWidget = function (referenceFrameList: igv.ReferenceFrame[]): void {
+                                bottomBrowser._updateLocusSearchWidget(referenceFrameList);
+
+                                requestViewUpdate({ dimension: "x", locus: getLocusFromBrowser(bottomBrowser) })
+
                             }
-                        });
 
-                        // Override the events for controlling scrolling
-                        overrideMouse();
+                            var promise: Promise<igv.IGVBrowser> = igv.createBrowser(<HTMLDivElement>document.getElementById('gene-browser-right'), optionsRight);
+                            promise.then(browser => {
+                                rightBrowser = browser;
+                                rightBrowser._updateLocusSearchWidget = rightBrowser.updateLocusSearchWidget;
+                                rightBrowser.updateLocusSearchWidget = function (referenceFrameList: igv.ReferenceFrame[]): void {
+                                    rightBrowser._updateLocusSearchWidget(referenceFrameList)
 
-                        //var HASH_PREFIX = "#/locus/";
-                        //console.log(belowBrowser);
-                        //belowBrowser.on('locuschange', function (referenceFrame: igv.ReferenceFrame) {
-                        //console.log(referenceFrame)
-                        //window.location.replace(HASH_PREFIX + referenceFrame.label);
-
-                        //console.log(parseInt(referenceFrame.start.replace(',', '')))
-                        //    voronoiMap.requestView(sourceChrom, targetChrom, parseInt(referenceFrame.start.replace(/,/g, '')), parseInt(referenceFrame.end.replace(/,/g, '')), voronoiMap.minViewY, voronoiMap.maxViewY)
-                        //});
-                        //rightBrowser.on('locuschange', (referenceFrame: igv.ReferenceFrame) => {
-                        //    voronoiMap.requestView(sourceChrom, targetChrom, voronoiMap.minViewX, voronoiMap.maxViewX, parseInt(referenceFrame.start.replace(/,/g, '')), parseInt(referenceFrame.end.replace(/,/g, '')))
-                        //});
-
-
-                        /**/
-
-                        let jQueryKeyName = Object.keys(belowBrowser.trackContainer)[0];
-                        //let obj = belowBrowser.trackContainer.
-                        //console.log(jQueryKeyName)
-                        //console.log(Object.keys(belowBrowser.trackContainer));
-                        //console.log(belowBrowser.trackContainer);
-                        //console.log(belowBrowser.trackViews);
-
-                        voronoiMap = new VoronoiPlot(belowBrowser, rightBrowser);
-                        imageMap = new ImageMap(numBins, voronoiMap);
-
-                        voronoiMap.addRegionSelectEventListener((region: Rectangle) => {
-                            belowBrowser.search(voronoiMap.sourceChrom.name + ":" + region.min.x + "-" + region.max.x);
-                            rightBrowser.search(voronoiMap.targetChrom.name + ":" + region.min.y + "-" + region.max.y);
-                        })
-                        voronoiMap.addDoubleClickEventListener(() => {
-                            belowBrowser.search(voronoiMap.sourceChrom.name + ":0-" + voronoiMap.sourceChrom.length);
-                            rightBrowser.search(voronoiMap.targetChrom.name + ":0-" + voronoiMap.targetChrom.length);
-                        })
-                        imageMap.addRegionSelectEventListener((region: Rectangle) => {
-                            belowBrowser.search(imageMap.sourceChrom.name + ":" + region.min.x + "-" + region.max.x);
-                            rightBrowser.search(imageMap.targetChrom.name + ":" + region.min.y + "-" + region.max.y);
-                        })
-                        imageMap.addDoubleClickEventListener(() => {
-                            belowBrowser.search(voronoiMap.sourceChrom.name + ":0-" + voronoiMap.sourceChrom.length);
-                            rightBrowser.search(voronoiMap.targetChrom.name + ":0-" + voronoiMap.targetChrom.length);
-                        })
-
-                        /*imageMap.setOnImageLoad((minX, maxX, minY, maxY) => {
-                            belowBrowser.search(sourceChrom.name + ":" + minX + "-" + maxX);
-                            rightBrowser.search(targetChrom.name + ":" + minY + "-" + maxY);
-                            //requestViewUpdate({dimension: "x", locus: {chr: sourceChrom.name, start: ""+minX, end: ""+maxX}})
-                            //requestViewUpdate({dimension: "y", locus: {chr: targetChrom.name, start: ""+minY, end: ""+maxY}})
-                            //belowBrowser.search(sourceChrom.name + ":" + minX + "-" + maxX).then(() => {
-                            //    rightBrowser.search(targetChrom.name + ":" + minY + "-" + maxY).then(() => {
-                            //        voronoiMap.requestView(sourceChrom, targetChrom, minX, maxX, minY, maxY);
-                            //    })
-                            //})
-                        })*/
-                        //imageMap.loadDensityImage(200, xStart, xEnd, yStart, yEnd, voronoiMap.loadDataForVoronoi);
-
-                        imageMap.setChromPair(sourceChrom, targetChrom);
-
-                        (<HTMLDivElement>document.getElementById('gene-browser-right')).classList.add("rotated");//.setAttribute("class", "rotated")
-
-                        // Set up the options boxes
-                        const imageGUI = new dat.GUI({ name: "Image Options", autoPlace: false });
-                        //imageGUI.domElement.className = 'dgui main';
-                        document.getElementById('image-controls')?.appendChild(imageGUI.domElement);
-                        //document.getElementById('image-canvas-div')?.insertBefore(imageGUI.domElement, document.getElementById('image-canvas'));
-                        imageGUI.add(imageMap, 'numBins').name('Number of bins').onChange((value) => {
-                            imageMap.setNumberBins(parseInt(value));
-                        });
-                        imageGUI.add(imageMap, 'percentile', 0, 1, 0.001).name('Percentile (threshold) ').onChange((value) => {
-                            imageMap.setPercentile(parseFloat(value));
-                        });
-
-                        imageMap.addContactMenu(imageGUI);
-
-
-                        // Set up the options for voronoi
-                        const voronoiGUI = new dat.GUI({ name: "Voronoi Options", autoPlace: false });
-                        console.log(document.getElementById('voronoi-canvas-div'))
-                        document.getElementById('voronoi-controls')?.appendChild(voronoiGUI.domElement);
-
-                        //voronoiGUI.add(voronoiMap, 'generateVoronoiOnServer').name("Server Voronoi")
-
-                        voronoiGUI.add(voronoiMap, 'displayVoronoiEdges').name('Display edges').onChange((value) => {
-                            //voronoiMap.drawVoronoi();
-                            //voronoiMap.redraw();
-                            voronoiMap.redrawVoronoi();
-                        })
-                        voronoiGUI.add(voronoiMap, 'displayCentroid').name('Display centroid').onChange((value) => {
-                            voronoiMap.redrawVoronoi();
-                        })
-
-                        const smoothingMenu = voronoiGUI.addFolder('Smoothing');
-                        smoothingMenu.add(voronoiMap, 'smoothingRepetitions', 0, 10, 1).name('Repetitions').onChange((value) => {
-                            requestViewUpdate({ dimension: "x", locus: getLocusFromBrowser(bottomBrowser)  })
-                            requestViewUpdate({ dimension: "y", locus: getLocusFromBrowser(rightBrowser) })
-                            /*voronoiMap.calculateVoronoi();
-                            voronoiMap.drawVoronoi();
-                            voronoiMap.redraw();*/
-                        })
-
-                        /*smoothingMenu.add(voronoiMap, 'omega', 0, 2).name('Omega').onChange((value) => {
-                            voronoiMap.calculateVoronoi();
-                            voronoiMap.drawVoronoi();
-                            voronoiMap.redraw();
-                        })*/
-
-                        voronoiMap.addContactMenu(voronoiGUI);
-
-                        // Reposition the interface
-                        reposition();
-
-                        if (details['hasInteract']) {
-                            fetch('./interact').then((response) => {
-                                if (response.status !== 200) {
-                                    console.log('Looks like there was a problem. Status Code: ' +
-                                        response.status);
-                                    return;
+                                    requestViewUpdate({ dimension: "y", locus: getLocusFromBrowser(rightBrowser) })
                                 }
 
-                                response.json().then(interact => {
-                                    for (var chromPair in interact['Interactions']) {
-                                        var interactionArray: Interaction[] = [];
-                                        interact['Interactions'][chromPair].forEach((interaction: any) => {
-                                            interactionArray.push(Interaction.fromJSON(interaction, chromosomes));
+
+                                belowBrowser.search(locusBottom);
+                                rightBrowser.search(locusRight);
+
+                                let fileSelector = <HTMLInputElement>document.getElementById('file-selector')
+                                fileSelector.addEventListener('change', (event) => {
+
+
+                                    console.log(event)
+                                    console.log(fileSelector.files)
+                                    if (fileSelector.files) {
+                                        let data = new FormData();
+                                        data.append('myFile', fileSelector.files[0]);
+
+                                        let filename = fileSelector.files[0].name;
+
+                                        // send fetch along with cookies
+                                        fetch('/upload', {
+                                            method: 'POST',
+                                            credentials: 'same-origin',
+                                            body: data
+                                        }).then((response) => {
+                                            if (response.status !== 200) {
+                                                console.log('Looks like there was a problem. Status Code: ' +
+                                                    response.status);
+                                                return;
+                                            }
+
+                                            response.text().then((location: string) => {
+                                                const extension = filename.split('.').pop();
+                                                console.log(extension);
+                                                var format: string = 'unknown'
+                                                var type: 'annotation' | 'wig' | 'alignment' | 'variant' | 'seg' = 'annotation'
+                                                if (extension?.localeCompare("bed") == 0) {
+                                                    type = 'annotation';
+                                                    format = 'bed';
+                                                } else if (extension?.localeCompare("bw") == 0) {
+                                                    type = 'wig';
+                                                    format = 'bigwig';
+                                                }
+
+
+                                                bottomBrowser.loadTrack({
+                                                    type: type,
+                                                    format: format,
+                                                    url: location,
+                                                    name: filename
+                                                }).then(track => {
+                                                    resizeTracks()
+                                                })
+                                                rightBrowser.loadTrack({
+                                                    type: type,
+                                                    format: format,
+                                                    //sourceType: "file",
+                                                    url: location,
+                                                    name: filename
+                                                }).then(track => {
+                                                    resizeTracks()
+                                                })
+                                            });
                                         });
 
-                                        interactions.set(chromPair, interactionArray)
+
+                                        /*const reader = new FileReader();
+                                        
+                                        } else if (extension?.localeCompare("bw") == 0) {
+                                            type = 'wig'
+                                            format = 'bigwig';
+        
+                                            // Need to copy the file to the server and then load a link
+                                        }
+        
+        
+                                        reader.readAsDataURL(fileSelector.files[0])*/
                                     }
+                                });
 
-                                    /*interact['Interactions'].forEach((interaction: any) => {
-                                        imageMap.addContact(interaction['SourceStart'], interaction['TargetStart']);
-                                        voronoiMap.addContact(interaction['SourceStart'], interaction['TargetStart']);
-                                    });
+                                // Override the events for controlling scrolling
+                                overrideMouse();
 
-                                    imageMap.redraw();
+                                //var HASH_PREFIX = "#/locus/";
+                                //console.log(belowBrowser);
+                                //belowBrowser.on('locuschange', function (referenceFrame: igv.ReferenceFrame) {
+                                //console.log(referenceFrame)
+                                //window.location.replace(HASH_PREFIX + referenceFrame.label);
+
+                                //console.log(parseInt(referenceFrame.start.replace(',', '')))
+                                //    voronoiMap.requestView(sourceChrom, targetChrom, parseInt(referenceFrame.start.replace(/,/g, '')), parseInt(referenceFrame.end.replace(/,/g, '')), voronoiMap.minViewY, voronoiMap.maxViewY)
+                                //});
+                                //rightBrowser.on('locuschange', (referenceFrame: igv.ReferenceFrame) => {
+                                //    voronoiMap.requestView(sourceChrom, targetChrom, voronoiMap.minViewX, voronoiMap.maxViewX, parseInt(referenceFrame.start.replace(/,/g, '')), parseInt(referenceFrame.end.replace(/,/g, '')))
+                                //});
+
+
+                                /**/
+
+                                let jQueryKeyName = Object.keys(belowBrowser.trackContainer)[0];
+                                //let obj = belowBrowser.trackContainer.
+                                //console.log(jQueryKeyName)
+                                //console.log(Object.keys(belowBrowser.trackContainer));
+                                //console.log(belowBrowser.trackContainer);
+                                //console.log(belowBrowser.trackViews);
+
+                                voronoiMap = new VoronoiPlot(belowBrowser, rightBrowser);
+                                imageMap = new ImageMap(numBins, voronoiMap);
+
+                                voronoiMap.addRegionSelectEventListener((region: Rectangle) => {
+                                    belowBrowser.search(voronoiMap.sourceChrom.name + ":" + region.min.x + "-" + region.max.x);
+                                    rightBrowser.search(voronoiMap.targetChrom.name + ":" + region.min.y + "-" + region.max.y);
+                                })
+                                voronoiMap.addDoubleClickEventListener(() => {
+                                    belowBrowser.search(voronoiMap.sourceChrom.name + ":0-" + voronoiMap.sourceChrom.length);
+                                    rightBrowser.search(voronoiMap.targetChrom.name + ":0-" + voronoiMap.targetChrom.length);
+                                })
+                                imageMap.addRegionSelectEventListener((region: Rectangle) => {
+                                    belowBrowser.search(imageMap.sourceChrom.name + ":" + region.min.x + "-" + region.max.x);
+                                    rightBrowser.search(imageMap.targetChrom.name + ":" + region.min.y + "-" + region.max.y);
+                                })
+                                imageMap.addDoubleClickEventListener(() => {
+                                    belowBrowser.search(voronoiMap.sourceChrom.name + ":0-" + voronoiMap.sourceChrom.length);
+                                    rightBrowser.search(voronoiMap.targetChrom.name + ":0-" + voronoiMap.targetChrom.length);
+                                })
+
+                                /*imageMap.setOnImageLoad((minX, maxX, minY, maxY) => {
+                                    belowBrowser.search(sourceChrom.name + ":" + minX + "-" + maxX);
+                                    rightBrowser.search(targetChrom.name + ":" + minY + "-" + maxY);
+                                    //requestViewUpdate({dimension: "x", locus: {chr: sourceChrom.name, start: ""+minX, end: ""+maxX}})
+                                    //requestViewUpdate({dimension: "y", locus: {chr: targetChrom.name, start: ""+minY, end: ""+maxY}})
+                                    //belowBrowser.search(sourceChrom.name + ":" + minX + "-" + maxX).then(() => {
+                                    //    rightBrowser.search(targetChrom.name + ":" + minY + "-" + maxY).then(() => {
+                                    //        voronoiMap.requestView(sourceChrom, targetChrom, minX, maxX, minY, maxY);
+                                    //    })
+                                    //})
+                                })*/
+                                //imageMap.loadDensityImage(200, xStart, xEnd, yStart, yEnd, voronoiMap.loadDataForVoronoi);
+
+                                imageMap.setChromPair(sourceChrom, targetChrom);
+
+                                (<HTMLDivElement>document.getElementById('gene-browser-right')).classList.add("rotated");//.setAttribute("class", "rotated")
+
+                                // Set up the options boxes
+                                const imageGUI = new dat.GUI({ name: "Image Options", autoPlace: false });
+                                //imageGUI.domElement.className = 'dgui main';
+                                document.getElementById('image-controls')?.appendChild(imageGUI.domElement);
+                                //document.getElementById('image-canvas-div')?.insertBefore(imageGUI.domElement, document.getElementById('image-canvas'));
+                                imageGUI.add(imageMap, 'numBins').name('Number of bins').onChange((value) => {
+                                    imageMap.setNumberBins(parseInt(value));
+                                });
+                                imageGUI.add(imageMap, 'percentile', 0, 1, 0.001).name('Percentile (threshold) ').onChange((value) => {
+                                    imageMap.setPercentile(parseFloat(value));
+                                });
+
+                                imageMap.addContactMenu(imageGUI);
+
+
+                                // Set up the options for voronoi
+                                const voronoiGUI = new dat.GUI({ name: "Voronoi Options", autoPlace: false });
+                                console.log(document.getElementById('voronoi-canvas-div'))
+                                document.getElementById('voronoi-controls')?.appendChild(voronoiGUI.domElement);
+
+                                //voronoiGUI.add(voronoiMap, 'generateVoronoiOnServer').name("Server Voronoi")
+
+                                voronoiGUI.add(voronoiMap, 'displayVoronoiEdges').name('Display edges').onChange((value) => {
+                                    //voronoiMap.drawVoronoi();
+                                    //voronoiMap.redraw();
+                                    voronoiMap.redrawVoronoi();
+                                })
+                                voronoiGUI.add(voronoiMap, 'displayCentroid').name('Display centroid').onChange((value) => {
+                                    voronoiMap.redrawVoronoi();
+                                })
+
+                                const smoothingMenu = voronoiGUI.addFolder('Smoothing');
+                                smoothingMenu.add(voronoiMap, 'smoothingRepetitions', 0, 10, 1).name('Repetitions').onChange((value) => {
+                                    requestViewUpdate({ dimension: "x", locus: getLocusFromBrowser(bottomBrowser) })
+                                    requestViewUpdate({ dimension: "y", locus: getLocusFromBrowser(rightBrowser) })
+                                    /*voronoiMap.calculateVoronoi();
+                                    voronoiMap.drawVoronoi();
                                     voronoiMap.redraw();*/
                                 })
+
+                                /*smoothingMenu.add(voronoiMap, 'omega', 0, 2).name('Omega').onChange((value) => {
+                                    voronoiMap.calculateVoronoi();
+                                    voronoiMap.drawVoronoi();
+                                    voronoiMap.redraw();
+                                })*/
+
+                                voronoiMap.addContactMenu(voronoiGUI);
+
+                                // Reposition the interface
+                                reposition();
+
+                                if (details['hasInteract']) {
+                                    fetch('./interact').then((response) => {
+                                        if (response.status !== 200) {
+                                            console.log('Looks like there was a problem. Status Code: ' +
+                                                response.status);
+                                            return;
+                                        }
+
+                                        response.json().then(interact => {
+                                            for (var chromPair in interact['Interactions']) {
+                                                var interactionArray: Interaction[] = [];
+                                                interact['Interactions'][chromPair].forEach((interaction: any) => {
+                                                    interactionArray.push(Interaction.fromJSON(interaction, chromosomes));
+                                                });
+
+                                                interactions.set(chromPair, interactionArray)
+                                            }
+
+                                            /*interact['Interactions'].forEach((interaction: any) => {
+                                                imageMap.addContact(interaction['SourceStart'], interaction['TargetStart']);
+                                                voronoiMap.addContact(interaction['SourceStart'], interaction['TargetStart']);
+                                            });
+        
+                                            imageMap.redraw();
+                                            voronoiMap.redraw();*/
+                                        })
+                                    });
+                                }
                             });
-                        }
+                        });
                     });
                 });
-            });
-        });
 
+    })
+});
 //https://s3.amazonaws.com/igv.org.genomes/genomes.json
 
 

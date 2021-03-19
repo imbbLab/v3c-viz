@@ -181,6 +181,8 @@ declare module 'igv' {
     scrollbar: TrackScrollbar
 
     scrollBy(amount: number): void
+    resize(size: number): void
+    updateViews(force: boolean): Promise<null>
   }
 
   export interface Viewport {
@@ -232,6 +234,7 @@ declare module 'igv' {
     updateLocusSearchWidget(referenceFrameList: ReferenceFrame[]): void
     _updateLocusSearchWidget(referenceFrameList: ReferenceFrame[]): void
     updateViews(): void
+    resize(): Promise<null>
 
     mouseDownOnViewport(event: JQuery.MouseDownEvent, viewport: Viewport): void
   
