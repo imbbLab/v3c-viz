@@ -180,7 +180,7 @@ saveButton.addEventListener('click', (event) => {
                 backdropColor: 'white',
 
                 multiLocusGap: multiLocusGapWidth,
-
+                pixelWidth: 2,
                 viewbox:
                 {
                     x: 0,
@@ -206,18 +206,22 @@ saveButton.addEventListener('click', (event) => {
         downloadCanvasCTX.restore()
         voronoiMap.drawTicks(downloadCanvasCTX)
 
-        var mySerializedSVG = downloadCanvasCTX.getSerializedSvg(true);
-        let bottomBrowserSVG = bottomBrowser.toSVG()
+        // Resize the browser so that the ticks display nicely
+        //let tempWidth = voronoiMap.axisWidth * 1.25
+        //resizeIGVElements(tempWidth);
 
+        var mySerializedSVG = downloadCanvasCTX.getSerializedSvg(true);
         var parser = new DOMParser();
         var voronoiElement = parser.parseFromString(mySerializedSVG, "image/svg+xml");
+
+        let bottomBrowserSVG = bottomBrowser.toSVG()
         var bottomBrowserElement = parser.parseFromString(bottomBrowserSVG, "image/svg+xml");
 
         // Specify the transformation first so that the definitions are created
         bottomBrowserElement.documentElement.setAttribute('transform', "translate(" + voronoiMap.axisOffsetX + " " + voronoiMap.canvas.height + ")")
         mergeSVG(voronoiElement, bottomBrowserElement, "translate(" + voronoiMap.axisOffsetX + " " + voronoiMap.canvas.height + ")")
 
-        if(!intrachromosomeView) {
+        if (!intrachromosomeView) {
             // Have to remove the CSS rotation, otherwise SVG export produces odd results
             (<HTMLDivElement>document.getElementById('gene-browser-right')).classList.remove("rotated");
             let rightBrowserSVG = rightBrowser.toSVG();
@@ -225,9 +229,12 @@ saveButton.addEventListener('click', (event) => {
             var rightBrowserDocument = parser.parseFromString(rightBrowserSVG, "image/svg+xml");
 
             // Specify the transformation first so that the definitions are created
+            //rightBrowserDocument.documentElement.setAttribute('viewport', '')
             rightBrowserDocument.documentElement.setAttribute('transform', "translate(" + voronoiMap.canvas.width + " " + (voronoiMap.canvas.height - voronoiMap.axisOffsetY) + ") rotate(-90)")
             mergeSVG(voronoiElement, rightBrowserDocument, "translate(" + voronoiMap.canvas.width + " " + (voronoiMap.canvas.height - voronoiMap.axisOffsetY) + ") rotate(-90)")
         }
+
+        resizeIGVElements(voronoiMap.axisWidth);
 
         var s = new XMLSerializer();
         mySerializedSVG = s.serializeToString(voronoiElement.documentElement)
@@ -241,24 +248,24 @@ saveButton.addEventListener('click', (event) => {
 
 let numProcessedSVGs = 1;
 
-function mergeSVG(mainDocument: Document, browserDocument: Document, transform: string) {
+function mergeSVG(mainDocument: Document, browserDocument: Document, transform: string) { //clipWidth: number, 
     let mainDefs = mainDocument.getElementsByTagName('defs')[0];
     let browserDefs = browserDocument.getElementsByTagName('defs')[0];
-    
+
     // Copy over all new definitions to the main document
-    for(let defIndex = 0; defIndex < browserDefs.children.length; defIndex++) {
+    for (let defIndex = 0; defIndex < browserDefs.children.length; defIndex++) {
         let curDef = browserDefs.children[defIndex];
-        
-        if(curDef && !mainDocument.getElementById(curDef.id)) {
+
+        if (curDef && !mainDocument.getElementById(curDef.id)) {
             mainDefs.appendChild(curDef)
         }
     }
 
     // Copy over the root group to the main document
     let groupElement = <HTMLElement>browserDocument.getElementById('root-group');
-    
+
     // Update the name of the element so that it remains unique in new document
-    groupElement.id = groupElement + "-" +numProcessedSVGs
+    groupElement.id = groupElement + "-" + numProcessedSVGs
     numProcessedSVGs += 1
 
     // Set the specified transformation for the group being added
@@ -352,25 +359,43 @@ function reposition() {
     imageControls.style.left = Math.max(imageMap.axisOffsetX, viewWidth - 250) + "px";
 
 
-    let geneBrowsers = <HTMLCollectionOf<HTMLDivElement>>document.getElementsByClassName('gene-browser');
-    for (let geneBrowser of geneBrowsers) {
-        //geneBrowser.style.width = (imageMap.axisWidth) + "px";
-    }
+    // let geneBrowsers = <HTMLCollectionOf<HTMLDivElement>>document.getElementsByClassName('gene-browser');
+    // for (let geneBrowser of geneBrowsers) {
+    //     //geneBrowser.style.width = (imageMap.axisWidth) + "px";
+    // }
 
+
+    resizeIGVElements(voronoiMap.axisWidth);
+
+
+    //bottomBrowser.updateViews()
+
+}
+
+function resizeIGVElements(size: number) {
     let igvRootDivs = <HTMLCollectionOf<HTMLDivElement>>document.getElementsByClassName('igv-root-div');
     for (let rootDiv of igvRootDivs) {
-        rootDiv.style.width = (imageMap.axisWidth) + "px";
+        rootDiv.style.width = (size) + "px";
     }
 
     let viewports = <HTMLCollectionOf<HTMLDivElement>>document.getElementsByClassName('igv-viewport');
     for (let viewport of viewports) {
-        viewport.style.width = (imageMap.axisWidth) + "px";
+        viewport.style.width = (size) + "px";
     }
-    resizeTracks();
+
+    let tracks = <HTMLCollectionOf<HTMLDivElement>>document.getElementsByClassName('igv-track');
+    for (let track of tracks) {
+        track.style.width = (size) + "px";
+    }
+
+    //let canvases = <HTMLCollectionOf<HTMLCanvasElement>>document.getElementsByClassName('igv-canvas');
+    //for (let canvas of canvases) {
+    //    canvas.style.width = (imageMap.axisWidth) + "px";
+    //}
 
     let navBars = <HTMLCollectionOf<HTMLDivElement>>document.getElementsByClassName('igv-navbar');
     for (let navBar of navBars) {
-        navBar.style.width = (viewWidth - 25) + "px";
+        navBar.style.width = (size + 40) + "px";
     }
 
     let zoomWidgets = <HTMLCollectionOf<HTMLDivElement>>document.getElementsByClassName('igv-zoom-widget-900')
@@ -378,20 +403,12 @@ function reposition() {
         zoomWidget.style.marginRight = 5 + "px";
     }
 
-    //bottomBrowser.updateViews()
-
-}
-
-function resizeTracks() {
-    let tracks = <HTMLCollectionOf<HTMLDivElement>>document.getElementsByClassName('igv-track');
-    for (let track of tracks) {
-        track.style.width = (imageMap.axisWidth) + "px";
+    for (let trackView of bottomBrowser.trackViews) {
+        trackView.updateViews(true);
     }
-
-    //let canvases = <HTMLCollectionOf<HTMLCanvasElement>>document.getElementsByClassName('igv-canvas');
-    //for (let canvas of canvases) {
-    //    canvas.style.width = (imageMap.axisWidth) + "px";
-    //}
+    for (let trackView of rightBrowser.trackViews) {
+        trackView.updateViews(true);
+    }
 }
 
 
@@ -626,7 +643,7 @@ function requestViewUpdate(request: ViewRequest) {
                                 vor.polygons.push(polygon)
                             }
 
-                            
+
 
                             let minMaxArea = getMinMaxArea(vor);
 
@@ -673,7 +690,9 @@ function requestViewUpdate(request: ViewRequest) {
                             colourCanvas.addEventListener('mousedown', function (event: MouseEvent) {
                                 let colourCanvas = <HTMLCanvasElement>document.getElementById('voronoi-colour');
                                 let colourCanvasCTX = <CanvasRenderingContext2D>colourCanvas.getContext("2d");
-                                colourCanvasCTX.clearRect(0, 0, colourCanvas.width, colourCanvas.height)
+
+                                // Clear the colour bar region
+                                colourCanvasCTX.clearRect(0, histogramY, colourCanvas.width, colourCanvas.height)
 
                                 var rect = colourCanvas.getBoundingClientRect();
                                 let x = event.clientX - rect.left
@@ -690,13 +709,6 @@ function requestViewUpdate(request: ViewRequest) {
                                 [minScale, maxScale] = voronoiMap.scale.domain();
 
                                 for (let i = 0; i < numBins; i++) {
-                                    colourCanvasCTX.strokeStyle = 'rgb(0, 0, 0)'
-                                    colourCanvasCTX.beginPath();
-                                    colourCanvasCTX.moveTo(i, histogramY);
-                                    colourCanvasCTX.lineTo(i, histogramY - (Math.log(areaBins[i]) / Math.log(maxBin) * histogramY))
-                                    //colourCanvasCTX.lineTo(i, histogramY - (areaBins[i] / maxBin * colourCanvas.height))
-                                    colourCanvasCTX.stroke();
-
                                     colourCanvasCTX.strokeStyle = voronoiMap.colourScale(voronoiMap.scale(binWidth * i + minMaxArea.Min))
                                     colourCanvasCTX.beginPath();
                                     colourCanvasCTX.moveTo(i, colourCanvas.height);
@@ -1086,7 +1098,7 @@ fetch('./genomes.json').then((response) => {
                                                     url: location,
                                                     name: filename
                                                 }).then(track => {
-                                                    resizeTracks()
+                                                    resizeIGVElements(voronoiMap.axisWidth)
                                                 })
                                                 rightBrowser.loadTrack({
                                                     type: type,
@@ -1095,7 +1107,7 @@ fetch('./genomes.json').then((response) => {
                                                     url: location,
                                                     name: filename
                                                 }).then(track => {
-                                                    resizeTracks()
+                                                    resizeIGVElements(voronoiMap.axisWidth)
                                                 })
                                             });
                                         });
