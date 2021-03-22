@@ -43,7 +43,7 @@ declare module 'igv' {
     addTrackToFactory(name: string, track: Track): void
     isMultiLocusWholeGenomeView(): boolean
 
-    toSVG(): Promise<string>
+    toSVG(): string // Promise<string>
     saveSVGtoFile(): Promise<null>
 
     loadSession(options: any): Promise<any>

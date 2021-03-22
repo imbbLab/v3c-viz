@@ -59,6 +59,7 @@ var displayImageMap = true;
 var igvHeight = 280;
 var viewWidth = 400;
 var viewHeight = 400;
+var lastLocus: Locus = { chr: "", start: 0, end: 0 }
 
 let hideButton = <HTMLInputElement>document.getElementById('hideButton');
 hideButton.addEventListener('click', (event) => {
@@ -169,27 +170,31 @@ saveButton.addEventListener('click', (event) => {
         const multiLocusGapMarginWidth = 2
 
         const multiLocusGapWidth = (2 * multiLocusGapMarginWidth) + multiLocusGapDivWidth
-        var downloadCanvasCTX = new SVGContext({
-            width: downloadCanvas.width, height: downloadCanvas.height,
-            backdropColor: 'white',
 
-            multiLocusGap: multiLocusGapWidth,
-
-            viewbox:
+        let downloadCanvasCTX = new SVGContext(
             {
-                x: 0,
-                y: 0,
-                width: downloadCanvas.width,
-                height: downloadCanvas.height
-            }
-        });
 
-        
-        //link.setAttribute('download', 'voronoiImage.png');
-        //link.setAttribute('href', downloadCanvas.toDataURL("image/png").replace("image/png", "image/octet-stream"));
+                width: downloadCanvas.width,
+                height: downloadCanvas.height,
+
+                backdropColor: 'white',
+
+                multiLocusGap: multiLocusGapWidth,
+
+                viewbox:
+                {
+                    x: 0,
+                    y: 0,
+                    width: downloadCanvas.width,
+                    height: downloadCanvas.height
+                }
+
+            });
+
         downloadCanvasCTX.save()
+        downloadCanvasCTX.lineWidth = 0.25
         if (intrachromosomeView) {
-            downloadCanvasCTX.translate(voronoiMap.axisWidth/2 + voronoiMap.axisOffsetX, -voronoiMap.axisOffsetY)
+            downloadCanvasCTX.translate(voronoiMap.axisWidth / 2 + voronoiMap.axisOffsetX, -voronoiMap.axisOffsetY)
             downloadCanvasCTX.rotate(45 * Math.PI / 180)
             downloadCanvasCTX.scale(1 / Math.sqrt(2), 1 / Math.sqrt(2))
             downloadCanvasCTX.imageSmoothingEnabled = true;
@@ -200,64 +205,32 @@ saveButton.addEventListener('click', (event) => {
         }
         downloadCanvasCTX.restore()
         voronoiMap.drawTicks(downloadCanvasCTX)
-        // const multiLocusGapDivWidth = 1
-        // const multiLocusGapMarginWidth = 2
-
-        // const multiLocusGapWidth = (2 * multiLocusGapMarginWidth) + multiLocusGapDivWidth
-
-        // let { x, y, width, height } = bottomBrowser.trackContainer.getBoundingClientRect();
-        // const {x: vpx} = bottomBrowser.trackViews[0].$viewportContainer.get(0).getBoundingClientRect();
-
-        // width += (bottomBrowser.referenceFrameList.length - 1) * multiLocusGapWidth
-
-        // const h_render = 8000;
-
-        // const dx = vpx - x;
-
-        // tracks -> SVG
-        
-        downloadCanvasCTX.rotate(-10 * Math.PI / 180)
-        
-        for (let trackView of bottomBrowser.trackViews) {
-            let trackCanvas = trackView.viewports[0].canvas
-
-            //if (trackCanvas && trackCanvas.width > 0) {
-            //    trackView.renderSVGContext(downloadCanvasCTX, { deltaX: voronoiMap.axisOffsetX, deltaY: -40 })
-                //lastY += trackView.viewports[0].canvas.height /2;
-            //}
-            //renderSVGAxis(downloadCanvasCTX, trackView.track, trackView.axisCanvas, 0, 0)
-
-            //downloadCanvasCTX.translate(voronoiMap.axisWidth/2 + voronoiMap.axisOffsetX, -voronoiMap.axisOffsetY)
-            for (let viewport of trackView.viewports) {
-                const config =
-            {
-                downloadCanvasCTX,
-                viewport: this,
-                referenceFrame: viewport.referenceFrame,
-                top,
-                pixelTop: top,
-                pixelWidth: voronoiMap.axisWidth,
-                pixelHeight: voronoiMap.axisHeight,
-               // bpStart: start,
-               // bpEnd: start + (width * bpPerPixel),
-                //bpPerPixel,
-                viewportWidth: voronoiMap.axisWidth,
-                viewportContainerX: 0,
-                //viewportContainerWidth: bottomBrowser.getViewportContainerWidth(),
-                //selection: viewport.selection
-            };
-            downloadCanvasCTX.translate(0, 10)
-        console.log(viewport)
-        console.log(trackView.viewports[0])
-        viewport.renderTrackLabelSVG(downloadCanvasCTX);
-        //viewport.drawSVGWithContect(downloadCanvasCTX);
-        //        viewport.renderSVGContext(downloadCanvasCTX, {deltaX: 0, deltaY: 0})
-            //    const { width } = viewport.$viewport.get(0).getBoundingClientRect()
-            //delta.deltaX += width
-            }
-        }
 
         var mySerializedSVG = downloadCanvasCTX.getSerializedSvg(true);
+        let bottomBrowserSVG = bottomBrowser.toSVG()
+
+        var parser = new DOMParser();
+        var voronoiElement = parser.parseFromString(mySerializedSVG, "image/svg+xml");
+        var bottomBrowserElement = parser.parseFromString(bottomBrowserSVG, "image/svg+xml");
+
+        // Specify the transformation first so that the definitions are created
+        bottomBrowserElement.documentElement.setAttribute('transform', "translate(" + voronoiMap.axisOffsetX + " " + voronoiMap.canvas.height + ")")
+        mergeSVG(voronoiElement, bottomBrowserElement, "translate(" + voronoiMap.axisOffsetX + " " + voronoiMap.canvas.height + ")")
+
+        if(!intrachromosomeView) {
+            // Have to remove the CSS rotation, otherwise SVG export produces odd results
+            (<HTMLDivElement>document.getElementById('gene-browser-right')).classList.remove("rotated");
+            let rightBrowserSVG = rightBrowser.toSVG();
+            (<HTMLDivElement>document.getElementById('gene-browser-right')).classList.add("rotated");
+            var rightBrowserDocument = parser.parseFromString(rightBrowserSVG, "image/svg+xml");
+
+            // Specify the transformation first so that the definitions are created
+            rightBrowserDocument.documentElement.setAttribute('transform', "translate(" + voronoiMap.canvas.width + " " + (voronoiMap.canvas.height - voronoiMap.axisOffsetY) + ") rotate(-90)")
+            mergeSVG(voronoiElement, rightBrowserDocument, "translate(" + voronoiMap.canvas.width + " " + (voronoiMap.canvas.height - voronoiMap.axisOffsetY) + ") rotate(-90)")
+        }
+
+        var s = new XMLSerializer();
+        mySerializedSVG = s.serializeToString(voronoiElement.documentElement)
 
         var link = <HTMLAnchorElement>document.getElementById('link');
         link.setAttribute('download', 'voronoiImage.svg');
@@ -265,6 +238,35 @@ saveButton.addEventListener('click', (event) => {
         link.click();
     }
 })
+
+let numProcessedSVGs = 1;
+
+function mergeSVG(mainDocument: Document, browserDocument: Document, transform: string) {
+    let mainDefs = mainDocument.getElementsByTagName('defs')[0];
+    let browserDefs = browserDocument.getElementsByTagName('defs')[0];
+    
+    // Copy over all new definitions to the main document
+    for(let defIndex = 0; defIndex < browserDefs.children.length; defIndex++) {
+        let curDef = browserDefs.children[defIndex];
+        
+        if(curDef && !mainDocument.getElementById(curDef.id)) {
+            mainDefs.appendChild(curDef)
+        }
+    }
+
+    // Copy over the root group to the main document
+    let groupElement = <HTMLElement>browserDocument.getElementById('root-group');
+    
+    // Update the name of the element so that it remains unique in new document
+    groupElement.id = groupElement + "-" +numProcessedSVGs
+    numProcessedSVGs += 1
+
+    // Set the specified transformation for the group being added
+    groupElement.setAttribute('transform', transform)
+
+    mainDocument.documentElement.appendChild(groupElement)
+}
+
 
 function renderSVGAxis(context: SVGContext, track: igv.ITrack, axisCanvas: HTMLCanvasElement, deltaX: number, deltaY: number) {
     console.log(track)
@@ -402,7 +404,6 @@ interface ViewRequest {
 
 var xRequest: ViewRequest | null
 var yRequest: ViewRequest | null
-var lastLocus: Locus = { chr: "", start: 0, end: 0 }
 var timeoutFunction: any;
 
 interface MinMax {
@@ -624,6 +625,8 @@ function requestViewUpdate(request: ViewRequest) {
 
                                 vor.polygons.push(polygon)
                             }
+
+                            
 
                             let minMaxArea = getMinMaxArea(vor);
 

@@ -689,8 +689,7 @@ export class SVGContext implements CanvasRenderingContext2D {
 
         let group = this.__createElement('g');
         this.__rootGroup.appendChild(group);
-        console.log(tx)
-console.log(format('translate({x},{y})', { x: tx, y: ty }))
+        
         group.setAttribute('transform', format('translate({x},{y})', { x: tx, y: ty }));
         group.setAttribute('id', (id + '_group'));
 

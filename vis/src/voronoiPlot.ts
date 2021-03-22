@@ -240,8 +240,6 @@ export class VoronoiPlot extends Axis {
             voronoiCanvasCTX.fillStyle = this.colourScale(0);
         }
 
-        console.log(xOffset)
-
         // if (this.singlePoints) {
         //     for (let i = 0; i < this.singlePoints.length; i++) {
         //         voronoiCanvasCTX.fillRect(this.singlePoints[i]['X'], this.singlePoints[i]['Y'], 1, 1);
@@ -270,7 +268,7 @@ export class VoronoiPlot extends Axis {
         if (this.colourScale && this.scale) {
             let binSizeX = (this.maxViewX - this.minViewX) / width
             let binSizeY = (this.maxViewY - this.minViewY) / height
-
+            
             for (let i = 0; i < this.voronoi.polygons.length; i++) {
                 voronoiCanvasCTX.fillStyle = this.colourScale(this.scale(Math.log(this.voronoi.polygons[i].area)));
 
@@ -305,8 +303,8 @@ export class VoronoiPlot extends Axis {
                 if (this.sourceChrom == this.targetChrom) {
                     // Recreate opposite polygon
                     let oppPolygon = new Polygon()
-                    for (let j = 0; j < points.length; j++) {
-                        oppPolygon.points.push({ x: points[j].y, y: points[j].x })
+                    for (let j = 0; j < this.voronoi.polygons[i].points.length; j++) {
+                        oppPolygon.points.push({ x: this.voronoi.polygons[i].points[j].y, y: this.voronoi.polygons[i].points[j].x })
                     }
                     points = oppPolygon.clip(clipPolygon).points
                     if(points.length >= 3) {
