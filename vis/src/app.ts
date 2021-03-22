@@ -56,7 +56,7 @@ if (triangleViewParam) {
 }
 
 var displayImageMap = true;
-var igvHeight = 280;
+var igvHeight = 300;
 var viewWidth = 400;
 var viewHeight = 400;
 var lastLocus: Locus = { chr: "", start: 0, end: 0 }
@@ -296,6 +296,8 @@ function renderSVGAxis(context: SVGContext, track: igv.ITrack, axisCanvas: HTMLC
 function reposition() {
     // TODO: Only reposition maximum once every 50 ms as this requires loading data (voronoi)
 
+    let navBarDiv = <HTMLDivElement>document.getElementById('menubar-div');
+
     let imageCanvasDiv = <HTMLDivElement>document.getElementById('image-canvas-div');
     let voronoiCanvasDiv = <HTMLDivElement>document.getElementById('voronoi-canvas-div');
     let geneBrowserBelow = <HTMLDivElement>document.getElementById('gene-browser-below');
@@ -309,7 +311,7 @@ function reposition() {
         imageCanvasDiv.style.display = 'none'
     }
 
-    let maxWidth = window.innerWidth;
+    let maxWidth = window.innerWidth - navBarDiv.clientWidth;
     let maxHeight = window.innerHeight;
 
     if (!intrachromosomeView) {
@@ -327,11 +329,12 @@ function reposition() {
         viewHeight = viewWidth
     }
 
+    imageCanvasDiv.style.left = (navBarDiv.clientWidth) + "px";
     imageMap.setDimensions(viewWidth, viewHeight)
     imageMap.redraw();
 
     geneBrowserBelow.style.top = viewHeight + "px";
-    geneBrowserBelow.style.left = (imageMap.axisOffsetX - 10) + (viewWidth * (numDisplayedViews - 1)) + "px";
+    geneBrowserBelow.style.left = navBarDiv.clientWidth + (imageMap.axisOffsetX - 10) + (viewWidth * (numDisplayedViews - 1)) + "px";
     geneBrowserBelow.style.width = imageMap.axisWidth + "px"
 
     if (intrachromosomeView) {
@@ -339,19 +342,21 @@ function reposition() {
     } else {
         geneBrowserRight.style.display = "block";
         geneBrowserRight.style.top = (viewHeight - (imageMap.axisOffsetX - 10)) + "px";
-        geneBrowserRight.style.left = (viewWidth * numDisplayedViews) + "px";
+        geneBrowserRight.style.left = navBarDiv.clientWidth + (viewWidth * numDisplayedViews) + "px";
     }
 
-    voronoiCanvasDiv.style.left = (viewWidth * (numDisplayedViews - 1)) + "px";
+    voronoiCanvasDiv.style.left = navBarDiv.clientWidth + (viewWidth * (numDisplayedViews - 1)) + "px";
     voronoiMap.setDimensions(viewWidth, viewHeight)
     voronoiMap.redraw();
 
 
     let hideButton = <HTMLInputElement>document.getElementById('hideButton');
     hideButton.style.top = viewHeight + "px";
+    hideButton.style.left = navBarDiv.clientWidth + "px";
 
     let controls = <HTMLDivElement>document.getElementById('controls');
     controls.style.top = (viewHeight + 50) + "px";
+    controls.style.left = navBarDiv.clientWidth + "px";
 
     let voronoiControls = <HTMLDivElement>document.getElementById('voronoi-controls');
     voronoiControls.style.left = Math.max(voronoiMap.axisOffsetX, viewWidth - 250) + "px";
@@ -1240,6 +1245,10 @@ fetch('./genomes.json').then((response) => {
                                 })*/
 
                                 voronoiMap.addContactMenu(voronoiGUI);
+
+                                // Hide the menus
+                                imageGUI.close();
+                                voronoiGUI.close();
 
                                 // Reposition the interface
                                 reposition();
