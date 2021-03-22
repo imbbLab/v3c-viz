@@ -316,7 +316,7 @@ func performVoronoi(points []*pairs.Entry, query pairs.Query, smoothingIteration
 	vor, err := voronoi.FromPoints(dPoints, boundingPolygon, normalisation, smoothingIterations)
 	elapsed := time.Since(start)
 	//fmt.Println(triangulation)
-	fmt.Printf("Finishing voronoi calculation: %s\n", elapsed)
+	fmt.Printf("Finishing voronoi calculation: %s [%d polygons]\n", elapsed, len(vor.Polygons))
 
 	//elapsed = time.Since(start)
 	//fmt.Printf("[%s] Originally had %d polygons, but now have %d\n", elapsed, len(vor.Polygons), len(result.Polygons))
@@ -506,7 +506,7 @@ func GetVoronoiAndImage(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	//fmt.Println(pairsQuery)
+	fmt.Println(pairsQuery)
 
 	//var result *voronoi.Int16VoronoiResult
 	var result *voronoi.Voronoi
@@ -633,6 +633,22 @@ func GetVoronoiAndImage(w http.ResponseWriter, r *http.Request) {
 
 	// w.Write(bytes)
 
+}
+
+func min(a, b uint64) uint64 {
+	if a < b {
+		return a
+	}
+
+	return b
+}
+
+func max(a, b uint64) uint64 {
+	if a > b {
+		return a
+	}
+
+	return b
 }
 
 func GetDensityImage(w http.ResponseWriter, r *http.Request) {

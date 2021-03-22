@@ -43,6 +43,14 @@ func FromPoints(data []delaunay.Point, boundingPolygon Polygon, normalisation Re
 		return &Voronoi{}, nil
 	}
 
+	// Scale everything by a factor to avoid points having the same coordinates
+	scaleFactor := 100000.0
+
+	for index := range boundingPolygon.Points {
+		boundingPolygon.Points[index].X *= scaleFactor
+		boundingPolygon.Points[index].Y *= scaleFactor
+	}
+
 	var totalPoints []delaunay.Point
 	var triangulation *delaunay.Triangulation
 
@@ -66,6 +74,11 @@ func FromPoints(data []delaunay.Point, boundingPolygon Polygon, normalisation Re
 		totalPoints = append(totalPoints, pointNormalisation(data[index], normalisation))
 		//totalPoints = append(totalPoints, data[index])
 		//dPoints[index] = chromNormalisation(dPoints[index], pairsFile.Chromsizes()[sourceChrom], pairsFile.Chromsizes()[targetChrom])
+	}
+
+	for index := range totalPoints {
+		totalPoints[index].X *= scaleFactor
+		totalPoints[index].Y *= scaleFactor
 	}
 
 	//start := time.Now()
@@ -127,8 +140,8 @@ func FromPoints(data []delaunay.Point, boundingPolygon Polygon, normalisation Re
 	}
 
 	// Scale the points back to original space
-	xDim := normalisation.Width()
-	yDim := normalisation.Height()
+	xDim := normalisation.Width() / scaleFactor
+	yDim := normalisation.Height() / scaleFactor
 
 	for polyIndex := range vor.Polygons {
 		for index := range vor.Polygons[polyIndex].Points {
@@ -211,6 +224,7 @@ func calculateVoronoi(triangulation *delaunay.Triangulation, boundingPolygon Pol
 		}
 
 		centroid := polygon.Centroid()
+
 		if !math.IsNaN(centroid.X) && !math.IsNaN(centroid.Y) { // && centroid.X >= bounds.Min.X && centroid.X <= bounds.Max.X &&
 			//centroid.Y >= bounds.Min.Y && centroid.Y <= bounds.Max.Y {
 			voronoi.Polygons = append(voronoi.Polygons, polygon)
