@@ -326,7 +326,7 @@ export class VoronoiPlot extends Axis {
                             // Remove odd edge that occurs when saving to SVG
                             // TODO: Investigate cause? Why do we need this?
                             if(y > height + yOffset) {
-                                continue;
+                                y = height + yOffset
                             }
 
                             voronoiCanvasCTX.lineTo(xOffset + x, y)

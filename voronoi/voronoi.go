@@ -44,7 +44,7 @@ func FromPoints(data []delaunay.Point, boundingPolygon Polygon, normalisation Re
 	}
 
 	// Scale everything by a factor to avoid points having the same coordinates
-	scaleFactor := 1000.0
+	scaleFactor := 100.0
 
 	var totalPoints []delaunay.Point
 	var triangulation *delaunay.Triangulation
@@ -125,6 +125,7 @@ func FromPoints(data []delaunay.Point, boundingPolygon Polygon, normalisation Re
 			totalPoints = append(totalPoints, fixedPoint2)
 			totalPoints = append(totalPoints, fixedPoint3)
 			totalPoints = append(totalPoints, fixedPoint4)
+
 			for index := range totalPoints {
 				totalPoints[index].X *= scaleFactor
 				totalPoints[index].Y *= scaleFactor
