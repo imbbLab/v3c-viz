@@ -57,7 +57,7 @@ if (triangleViewParam) {
 }
 
 var displayImageMap = true;
-var displayColourControls = true;
+var displayColourControls = false;
 var igvHeight = 300;
 var viewWidth = 400;
 var viewHeight = 400;
@@ -120,9 +120,9 @@ editColourmapButton.addEventListener('click', (event) => {
     displayColourControls = !displayColourControls;
 
     if (!displayColourControls) {
-        editColourmapButton.style.color = 'red'
+        editColourmapButton.style.filter = ''
     } else {
-        editColourmapButton.style.color = 'white'
+        editColourmapButton.style.filter = 'sepia(51%)'
     }
 
     reposition();
@@ -133,9 +133,9 @@ hideButton.addEventListener('click', (event) => {
     displayImageMap = !displayImageMap;
 
     if (!displayImageMap) {
-        hideButton.value = 'Show'
+        hideButton.style.filter = 'sepia(51%)'
     } else {
-        hideButton.value = 'Hide'
+        hideButton.style.filter = ''
     }
 
     reposition();
@@ -144,10 +144,10 @@ hideButton.addEventListener('click', (event) => {
 viewChangeButton.addEventListener('click', (event) => {
     intrachromosomeView = !intrachromosomeView
 
-    if (intrachromosomeView) {
-        viewChangeButton.value = "Full view"
+    if (!intrachromosomeView) {
+        viewChangeButton.style.filter = ''
     } else {
-        viewChangeButton.value = "Triangle view"
+        viewChangeButton.style.filter = 'sepia(51%)'
     }
 
     reposition();
