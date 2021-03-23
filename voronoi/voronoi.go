@@ -44,12 +44,7 @@ func FromPoints(data []delaunay.Point, boundingPolygon Polygon, normalisation Re
 	}
 
 	// Scale everything by a factor to avoid points having the same coordinates
-	scaleFactor := 100000.0
-
-	for index := range boundingPolygon.Points {
-		boundingPolygon.Points[index].X *= scaleFactor
-		boundingPolygon.Points[index].Y *= scaleFactor
-	}
+	scaleFactor := 1000.0
 
 	var totalPoints []delaunay.Point
 	var triangulation *delaunay.Triangulation
@@ -67,18 +62,23 @@ func FromPoints(data []delaunay.Point, boundingPolygon Polygon, normalisation Re
 	totalPoints = append(totalPoints, fixedPoint3)
 	totalPoints = append(totalPoints, fixedPoint4)
 
+	for index := range totalPoints {
+		totalPoints[index].X *= scaleFactor
+		totalPoints[index].Y *= scaleFactor
+	}
+
 	//totalPoints = append(totalPoints, data...)
 
 	for index := range data {
 		//totalPoints[index] = pointNormalisation(totalPoints[index], normalisation)
-		totalPoints = append(totalPoints, pointNormalisation(data[index], normalisation))
+		totalPoints = append(totalPoints, pointNormalisation(data[index], normalisation, scaleFactor))
 		//totalPoints = append(totalPoints, data[index])
 		//dPoints[index] = chromNormalisation(dPoints[index], pairsFile.Chromsizes()[sourceChrom], pairsFile.Chromsizes()[targetChrom])
 	}
 
-	for index := range totalPoints {
-		totalPoints[index].X *= scaleFactor
-		totalPoints[index].Y *= scaleFactor
+	for index := range boundingPolygon.Points {
+		boundingPolygon.Points[index].X *= scaleFactor
+		boundingPolygon.Points[index].Y *= scaleFactor
 	}
 
 	//start := time.Now()
@@ -125,6 +125,10 @@ func FromPoints(data []delaunay.Point, boundingPolygon Polygon, normalisation Re
 			totalPoints = append(totalPoints, fixedPoint2)
 			totalPoints = append(totalPoints, fixedPoint3)
 			totalPoints = append(totalPoints, fixedPoint4)
+			for index := range totalPoints {
+				totalPoints[index].X *= scaleFactor
+				totalPoints[index].Y *= scaleFactor
+			}
 
 			for _, polygon := range vor.Polygons {
 				if polygon != nil && len(polygon.Points) > 0 {
@@ -160,8 +164,8 @@ func FromPoints(data []delaunay.Point, boundingPolygon Polygon, normalisation Re
 	return calculateVoronoi(triangulation)
 }*/
 
-func pointNormalisation(point delaunay.Point, bounds Rectangle) delaunay.Point {
-	return delaunay.Point{X: (point.X - bounds.Min.X) / bounds.Width(), Y: (point.Y - bounds.Min.Y) / bounds.Height()}
+func pointNormalisation(point delaunay.Point, bounds Rectangle, scaleFactor float64) delaunay.Point {
+	return delaunay.Point{X: (scaleFactor * (point.X - bounds.Min.X)) / bounds.Width(), Y: (scaleFactor * (point.Y - bounds.Min.Y)) / bounds.Height()}
 }
 
 func calculateVoronoi(triangulation *delaunay.Triangulation, boundingPolygon Polygon) *Voronoi {
