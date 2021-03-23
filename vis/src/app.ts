@@ -14,6 +14,7 @@ import { SVGContext } from "./canvas2svg"
 
 
 import * as d3 from 'd3';
+import { start } from "node:repl";
 
 //import igv = require('igv');
 //import { browser } from "igv_wrapper";
@@ -56,10 +57,37 @@ if (triangleViewParam) {
 }
 
 var displayImageMap = true;
+var displayColourControls = true;
 var igvHeight = 300;
 var viewWidth = 400;
 var viewHeight = 400;
 var lastLocus: Locus = { chr: "", start: 0, end: 0 }
+
+// Add hover events for load track menu
+let loadTrackButton = <HTMLSpanElement>document.getElementById('loadTrack')
+let loadTrackMenu = <HTMLSpanElement>document.getElementById('loadTrackMenu')
+loadTrackButton.addEventListener('mouseenter', (event) => {
+    let dropdown = <HTMLDivElement>document.getElementById('loadTrackMenu');
+    let buttonPosition = loadTrackButton.getBoundingClientRect()
+    dropdown.style.display = 'block';
+    dropdown.style.top = buttonPosition.top + "px"
+})
+loadTrackButton.addEventListener('mouseleave', (event) => {
+    let dropdown = <HTMLDivElement>document.getElementById('loadTrackMenu');
+
+    dropdown.style.display = 'none';
+})
+loadTrackMenu.addEventListener('mouseenter', (event) => {
+    let dropdown = <HTMLDivElement>document.getElementById('loadTrackMenu');
+    let buttonPosition = loadTrackButton.getBoundingClientRect()
+    dropdown.style.display = 'block';
+    dropdown.style.top = buttonPosition.top + "px"
+})
+loadTrackMenu.addEventListener('mouseleave', (event) => {
+    let dropdown = <HTMLDivElement>document.getElementById('saveImageMenu');
+
+    dropdown.style.display = 'none';
+})
 
 // Add hover events for save image menu
 let saveImageButton = <HTMLSpanElement>document.getElementById('saveButton')
@@ -86,6 +114,19 @@ saveImageMenu.addEventListener('mouseleave', (event) => {
 
     dropdown.style.display = 'none';
 })
+
+let editColourmapButton = <HTMLInputElement>document.getElementById('editColourmapButton');
+editColourmapButton.addEventListener('click', (event) => {
+    displayColourControls = !displayColourControls;
+
+    if (!displayColourControls) {
+        editColourmapButton.style.color = 'red'
+    } else {
+        editColourmapButton.style.color = 'white'
+    }
+
+    reposition();
+});
 
 let hideButton = <HTMLInputElement>document.getElementById('hideButton');
 hideButton.addEventListener('click', (event) => {
@@ -334,6 +375,7 @@ function reposition() {
 
     let imageCanvasDiv = <HTMLDivElement>document.getElementById('image-canvas-div');
     let voronoiCanvasDiv = <HTMLDivElement>document.getElementById('voronoi-canvas-div');
+    let voronoiColourControls = <HTMLDivElement> document.getElementById('voronoi-colour-controls')
     let geneBrowserBelow = <HTMLDivElement>document.getElementById('gene-browser-below');
     let geneBrowserRight = <HTMLDivElement>document.getElementById('gene-browser-right');
     let numDisplayedViews = 1
@@ -345,8 +387,14 @@ function reposition() {
         imageCanvasDiv.style.display = 'none'
     }
 
+    let startTop = 0;
+
+    if(displayColourControls) {
+        startTop += 100
+    }
+
     let maxWidth = window.innerWidth - navBarDiv.clientWidth;
-    let maxHeight = window.innerHeight;
+    let maxHeight = window.innerHeight - startTop;
 
     if (!intrachromosomeView) {
         maxWidth -= igvHeight;
@@ -363,11 +411,12 @@ function reposition() {
         viewHeight = viewWidth
     }
 
+    imageCanvasDiv.style.top = startTop + "px"
     imageCanvasDiv.style.left = (navBarDiv.clientWidth) + "px";
     imageMap.setDimensions(viewWidth, viewHeight)
     imageMap.redraw();
 
-    geneBrowserBelow.style.top = viewHeight + "px";
+    geneBrowserBelow.style.top = startTop + viewHeight + "px";
     geneBrowserBelow.style.left = navBarDiv.clientWidth + (imageMap.axisOffsetX - 10) + (viewWidth * (numDisplayedViews - 1)) + "px";
     geneBrowserBelow.style.width = imageMap.axisWidth + "px"
 
@@ -375,11 +424,13 @@ function reposition() {
         geneBrowserRight.style.display = "none";
     } else {
         geneBrowserRight.style.display = "block";
-        geneBrowserRight.style.top = (viewHeight - (imageMap.axisOffsetX - 10)) + "px";
+        geneBrowserRight.style.top = (startTop + viewHeight - (imageMap.axisOffsetX - 10)) + "px";
         geneBrowserRight.style.left = navBarDiv.clientWidth + (viewWidth * numDisplayedViews) + "px";
     }
 
+    voronoiCanvasDiv.style.top = startTop + "px"
     voronoiCanvasDiv.style.left = navBarDiv.clientWidth + (viewWidth * (numDisplayedViews - 1)) + "px";
+    voronoiColourControls.style.left = voronoiCanvasDiv.style.left
     voronoiMap.setDimensions(viewWidth, viewHeight)
     voronoiMap.redraw();
 
@@ -388,9 +439,9 @@ function reposition() {
     hideButton.style.top = viewHeight + "px";
     hideButton.style.left = navBarDiv.clientWidth + "px";
 
-    let controls = <HTMLDivElement>document.getElementById('controls');
-    controls.style.top = (viewHeight + 50) + "px";
-    controls.style.left = navBarDiv.clientWidth + "px";
+    //let controls = <HTMLDivElement>document.getElementById('controls');
+    //controls.style.top = (viewHeight + 50) + "px";
+    //controls.style.left = navBarDiv.clientWidth + "px";
 
     let voronoiControls = <HTMLDivElement>document.getElementById('voronoi-controls');
     voronoiControls.style.left = Math.max(voronoiMap.axisOffsetX, viewWidth - 250) + "px";

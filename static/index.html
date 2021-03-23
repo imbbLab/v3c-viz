@@ -106,23 +106,21 @@
       margin: 5px 5px;
     }
 
-    .save-image-dropdown {
+    .menu-dropdown input  {
+      color: white;
+      height: 30px;
+      margin: 5px 5px;
+    }
+
+    .menu-dropdown {
       display: none;
       left: 40px;
       height: 40px;
       position: absolute;
       background-color: rgb(99, 184, 214);
-      /*box-shadow: 0px 8px 16px 0px rgba(0, 0, 0, 0.2);*/
       z-index: 1;
     }
 
-    /* Links inside the dropdown */
-    .save-image-dropdown a {
-      color: black;
-      padding: 12px 16px;
-      text-decoration: none;
-      display: block;
-    }
 
 
     /*.btn:hover {
@@ -217,17 +215,23 @@
 
   <div id="menubar-div" class="sidenav">
     <!--<a href="javascript:void(0)" class="closebtn" onclick="closeNav()">&times;</a>-->
-    <span class="menubtn icon-load-track" title="Load a track"></span>
+    <span class="menubtn icon-load-track" title="Load a track" id="loadTrack"></span>
     <span class="menubtn icon-save-image" title="Save view to image" id="saveButton"></span>
     <span class="menubtn icon-triangle-view" title="Swap to triangle view" id="viewChangeButton"></span>
     <span class="menubtn icon-hide-image" title="Hide image view" id="hideButton"></span>
-    <span class="menubtn icon-show-colourmap" title="Edit colourmaps for data views"></span>
+    <span class="menubtn icon-show-colourmap" title="Edit colourmaps for data views" id="editColourmapButton"></span>
   </div>
-  <div id="saveImageMenu" class="save-image-dropdown">
+  <div id="loadTrackMenu" class="menu-dropdown">
+    <input type="file" id="file-selector" accept=".bed, .bw">
+  </div>
+  <div id="saveImageMenu" class="menu-dropdown">
     <button class="dropbtn " id="saveSVGButton">SVG</button>
     <button class="dropbtn " id="savePNGButton">PNG</button>
   </div>
 
+  <div id="voronoi-colour-controls" style="position:absolute; left:0px; top:0px">
+    <canvas id="voronoi-colour" width="700" height="100"></canvas>
+  </div>
   <div>
     <div>
       <!--<input type="button" value="Triangle View" id="viewChangeButton"  style="position:absolute; left:0px; top:0px; z-index: 2;" />
@@ -241,18 +245,7 @@
         <div id="voronoi-controls" style="position:absolute; left:450px; top:0px"></div>
         <canvas id="voronoi-canvas" width="700" height="700"></canvas>
       </div>
-      <div id="controls" style="position:absolute; left:0px; top:700px">
-        <!--<div>
-          <label>Source Chromosome: </label><select id="sourceChromSelect"></select>
-        </div>
-        <div>
-          <label>Target Chromosome: </label><select id="targetChromSelect"></select>
-        </div>-->
-        <input type="file" id="file-selector" accept=".bed, .bw">
-        <!--<input type="button" value="Save" id="saveButton" />-->
-        <br />
-        <canvas id="voronoi-colour" width="700" height="100"></canvas>
-      </div>
+      
       <div id="gene-browser-below" class="gene-browser"></div>
       <div id="gene-browser-right" class="gene-browser"></div>
 
