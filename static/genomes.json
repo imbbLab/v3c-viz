@@ -245,12 +245,12 @@
     "name": "D. melanogaster (dm6)",
     "fastaURL": "https://s3.amazonaws.com/igv.broadinstitute.org/genomes/seq/dm6/dm6.fa",
     "indexURL": "https://s3.amazonaws.com/igv.broadinstitute.org/genomes/seq/dm6/dm6.fa.fai",
-    "cytobandURL": "https://s3.amazonaws.com/igv.org.genomes/dm6/cytoBandIdeo.txt.gz",
+    "cytobandURL": "https://s3.amazonaws.com/igv.org.genomes/dm6/cytoBand.txt",
     "tracks": [
       {
         "name": "Refseq Genes",
-        "url": "https://s3.amazonaws.com/igv.org.genomes/dm6/refGene.txt.gz",
-        "indexURL": "https://s3.amazonaws.com/igv.org.genomes/dm6/refGene.txt.gz.tbi",
+        "url": "https://s3.amazonaws.com/igv.org.genomes/dm6/refGene.sorted.txt.gz",
+        "indexURL": "https://s3.amazonaws.com/igv.org.genomes/dm6/refGene.sorted.txt.gz.tbi",
         "order": 1000000,
         "removable": false,
         "supportsWholeGenome": false,
