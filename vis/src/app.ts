@@ -61,6 +61,32 @@ var viewWidth = 400;
 var viewHeight = 400;
 var lastLocus: Locus = { chr: "", start: 0, end: 0 }
 
+// Add hover events for save image menu
+let saveImageButton = <HTMLSpanElement>document.getElementById('saveButton')
+let saveImageMenu = <HTMLSpanElement>document.getElementById('saveImageMenu')
+saveImageButton.addEventListener('mouseenter', (event) => {
+    let dropdown = <HTMLDivElement>document.getElementById('saveImageMenu');
+    let buttonPosition = saveImageButton.getBoundingClientRect()
+    dropdown.style.display = 'block';
+    dropdown.style.top = buttonPosition.top + "px"
+})
+saveImageButton.addEventListener('mouseleave', (event) => {
+    let dropdown = <HTMLDivElement>document.getElementById('saveImageMenu');
+
+    dropdown.style.display = 'none';
+})
+saveImageMenu.addEventListener('mouseenter', (event) => {
+    let dropdown = <HTMLDivElement>document.getElementById('saveImageMenu');
+    let buttonPosition = saveImageButton.getBoundingClientRect()
+    dropdown.style.display = 'block';
+    dropdown.style.top = buttonPosition.top + "px"
+})
+saveImageMenu.addEventListener('mouseleave', (event) => {
+    let dropdown = <HTMLDivElement>document.getElementById('saveImageMenu');
+
+    dropdown.style.display = 'none';
+})
+
 let hideButton = <HTMLInputElement>document.getElementById('hideButton');
 hideButton.addEventListener('click', (event) => {
     displayImageMap = !displayImageMap;
@@ -94,8 +120,17 @@ viewChangeButton.addEventListener('click', (event) => {
     rightBrowser.search(lastLocus.chr + ":" + lastLocus.start + "-" + lastLocus.end);
 })
 
-let saveButton = <HTMLInputElement>document.getElementById('saveButton');
-saveButton.addEventListener('click', (event) => {
+let saveSVGButton = <HTMLInputElement>document.getElementById('saveSVGButton');
+saveSVGButton.addEventListener('click', (event) => {
+    exportToImage(true);
+})
+
+let savePNGButton = <HTMLInputElement>document.getElementById('savePNGButton');
+savePNGButton.addEventListener('click', (event) => {
+    exportToImage(false);
+})
+
+function exportToImage(drawSVG: boolean): void {
     let downloadCanvas = <HTMLCanvasElement>document.getElementById('downloadCanvas');
     voronoiMap.redraw();
 
@@ -120,7 +155,6 @@ saveButton.addEventListener('click', (event) => {
     downloadCanvas.width = voronoiMap.canvas.width + trackSizesRight;
     downloadCanvas.height = voronoiMap.canvas.height + trackSizesBelow;
 
-    let drawSVG = true
     if (!drawSVG) {
         let downloadCanvasCTX = <CanvasRenderingContext2D>downloadCanvas.getContext("2d");
 
@@ -244,7 +278,7 @@ saveButton.addEventListener('click', (event) => {
         link.setAttribute('href', "data:image/svg+xml;charset=utf-8," + encodeURIComponent(mySerializedSVG));
         link.click();
     }
-})
+}
 
 let numProcessedSVGs = 1;
 
