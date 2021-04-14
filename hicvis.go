@@ -367,6 +367,8 @@ func GetInteract(w http.ResponseWriter, r *http.Request) {
 }
 
 func SetInteract(w http.ResponseWriter, r *http.Request) {
+	log.Println("Request received to set interactions.")
+
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -374,7 +376,6 @@ func SetInteract(w http.ResponseWriter, r *http.Request) {
 	}
 
 	bodyData := string(body)
-	fmt.Println(bodyData)
 
 	type interactData struct {
 		Interactions []interact.Interaction
@@ -390,7 +391,8 @@ func SetInteract(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fmt.Println(interactions)
+	log.Printf("Processing %d interactions.\n", len(interactions.Interactions))
+
 	interactFile = new(interact.InteractFile)
 	interactFile.Interactions = make(map[string][]interact.Interaction)
 
@@ -409,7 +411,8 @@ func SetInteract(w http.ResponseWriter, r *http.Request) {
 		interactFile.Interactions[chromPairName] = append(interactFile.Interactions[chromPairName], interactions.Interactions[index])
 	}
 
-	fmt.Println(interactFile.Interactions)
+	//fmt.Println(interactFile.Interactions)
+	log.Println("Finished loading interactions, can now refresh the interface.")
 }
 
 func GetVoronoiAndImage(w http.ResponseWriter, r *http.Request) {
