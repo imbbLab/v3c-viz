@@ -114,7 +114,7 @@ func FromPoints(data []delaunay.Point, boundingPolygon Polygon, normalisation Re
 		//midPoint = time.Now()
 		//fmt.Printf("Triangulation: %s\n", elapsed)
 
-		vor = calculateVoronoi(triangulation, boundingPolygon)
+		vor = calculateVoronoi(triangulation, boundingPolygon, data, 4)
 		//elapsed = time.Since(midPoint)
 		//midPoint = time.Now()
 		//fmt.Printf("Voronoi: %s\n", elapsed)
@@ -133,7 +133,8 @@ func FromPoints(data []delaunay.Point, boundingPolygon Polygon, normalisation Re
 
 			for _, polygon := range vor.Polygons {
 				if polygon != nil && len(polygon.Points) > 0 {
-					centroid := polygon.Centroid()
+					centroid := polygon.Centroid
+
 					if math.IsNaN(centroid.X) || math.IsNaN(centroid.Y) || math.IsInf(centroid.X, 0) || math.IsInf(centroid.Y, 0) {
 						log.Printf("We have calculated bad centroid for polygon: %v\n", polygon)
 					} else {
@@ -153,6 +154,8 @@ func FromPoints(data []delaunay.Point, boundingPolygon Polygon, normalisation Re
 			vor.Polygons[polyIndex].Points[index].X = vor.Polygons[polyIndex].Points[index].X * xDim
 			vor.Polygons[polyIndex].Points[index].Y = vor.Polygons[polyIndex].Points[index].Y * yDim
 		}
+
+		vor.Polygons[polyIndex].calculateCentroid()
 	}
 
 	//elapsed = time.Since(start)
@@ -169,7 +172,7 @@ func pointNormalisation(point delaunay.Point, bounds Rectangle, scaleFactor floa
 	return delaunay.Point{X: (scaleFactor * (point.X - bounds.Min.X)) / bounds.Width(), Y: (scaleFactor * (point.Y - bounds.Min.Y)) / bounds.Height()}
 }
 
-func calculateVoronoi(triangulation *delaunay.Triangulation, boundingPolygon Polygon) *Voronoi {
+func calculateVoronoi(triangulation *delaunay.Triangulation, boundingPolygon Polygon, data []delaunay.Point, toSkip int) *Voronoi {
 	// See https://mapbox.github.io/delaunator/ for information
 
 	indexMap := make(map[int]int)
@@ -197,7 +200,9 @@ func calculateVoronoi(triangulation *delaunay.Triangulation, boundingPolygon Pol
 			defer wg.Done()
 
 			var polygon Polygon
-			polygon.DataPoint = triangulation.Points[p]
+			if p >= toSkip {
+				polygon.DataPoint = data[p-toSkip] //triangulation.Points[p]
+			}
 			polygon.Points = make([]delaunay.Point, 0, len(edges))
 
 			// TODO: Can test for out of bounds points and then only clip polygons which need it
@@ -214,7 +219,7 @@ func calculateVoronoi(triangulation *delaunay.Triangulation, boundingPolygon Pol
 			polygon = SutherlandHodgman(polygon, boundingPolygon)
 
 			//polygon.calculateArea()
-			polygon.DataPoint = polygon.Centroid()
+			//polygon.DataPoint = polygon.Centroid()
 			polygons[p] = &polygon
 		}(p, edges)
 	}
@@ -228,7 +233,7 @@ func calculateVoronoi(triangulation *delaunay.Triangulation, boundingPolygon Pol
 			continue
 		}
 
-		centroid := polygon.Centroid()
+		centroid := polygon.Centroid
 
 		if !math.IsNaN(centroid.X) && !math.IsNaN(centroid.Y) { // && centroid.X >= bounds.Min.X && centroid.X <= bounds.Max.X &&
 			//centroid.Y >= bounds.Min.Y && centroid.Y <= bounds.Max.Y {

@@ -722,6 +722,9 @@ function requestViewUpdate(request: ViewRequest) {
                                 polygon.clipped = dataView.getUint8(offset) == 1;
                                 offset += 1
 
+                                polygon.dataPoint = new Point(dataView.getFloat64(offset), dataView.getFloat64(offset + 8))
+                                offset += 16;
+
                                 polygon.centroid = new Point(dataView.getFloat64(offset), dataView.getFloat64(offset + 8))
                                 offset += 16;
 
@@ -1308,6 +1311,9 @@ fetch('./genomes.json').then((response) => {
                                 voronoiGUI.add(voronoiMap, 'displayVoronoiEdges').name('Display edges').onChange((value) => {
                                     //voronoiMap.drawVoronoi();
                                     //voronoiMap.redraw();
+                                    voronoiMap.redrawVoronoi();
+                                })
+                                voronoiGUI.add(voronoiMap, 'displayVoronoiPoints').name('Display data').onChange((value) => {
                                     voronoiMap.redrawVoronoi();
                                 })
                                 voronoiGUI.add(voronoiMap, 'displayCentroid').name('Display centroid').onChange((value) => {

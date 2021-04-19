@@ -20,6 +20,7 @@ export class Polygon {
     area: number = 0
     clipped: boolean = false;
     centroid: Point = new Point(0, 0)
+    dataPoint: Point = new Point(0, 0)
 
     clip(clipPolygon: Polygon): Polygon {
         var cp1: Point, cp2: Point, s: Point, e: Point
@@ -127,7 +128,7 @@ export class VoronoiPlot extends Axis {
 
     displayVoronoiEdges: boolean;
     displayCentroid: boolean = false;
-    displayVoronoiPoints: boolean;
+    displayVoronoiPoints: boolean = false;
 
     generateVoronoiOnServer: boolean = true
 
@@ -161,7 +162,7 @@ export class VoronoiPlot extends Axis {
         this.rightBrowser = rightBrowser;
 
         this.displayVoronoiEdges = true;
-        this.displayVoronoiPoints = true;
+        this.displayVoronoiPoints;
 
         // Buffer canvas for voronoi to improve interactivity 
         this.voronoiCanvas = document.createElement("canvas");
@@ -344,7 +345,6 @@ export class VoronoiPlot extends Axis {
             voronoiCanvasCTX.fillStyle = 'rgb(0, 0, 0)'
 
             if (this.displayCentroid) {
-                if (this.displayVoronoiPoints) {
                     for (let i = 0; i < this.voronoi.polygons.length; i++) {
                         //voronoiCanvasCTX.fillRect(this.voronoi.polygons[i].centroid.x-1, this.voronoi.polygons[i].centroid.y-1, 2, 2);
                         voronoiCanvasCTX.fillRect(xOffset + ((this.voronoi.polygons[i].centroid.x - this.minViewX) / binSizeX), yOffset + ((this.voronoi.polygons[i].centroid.y - this.minViewY) / binSizeY), 2, 2);
@@ -353,6 +353,14 @@ export class VoronoiPlot extends Axis {
                         if (this.sourceChrom == this.targetChrom) {
                             voronoiCanvasCTX.fillRect(xOffset + ((this.voronoi.polygons[i].centroid.y - this.minViewX) / binSizeX), yOffset + ((this.voronoi.polygons[i].centroid.x - this.minViewY) / binSizeY), 2, 2);
                         }
+                    }
+            }
+            if(this.displayVoronoiPoints) {
+                for (let i = 0; i < this.voronoi.polygons.length; i++) {
+                    voronoiCanvasCTX.fillRect(xOffset + ((this.voronoi.polygons[i].dataPoint.x - this.minViewX) / binSizeX), yOffset + ((this.voronoi.polygons[i].dataPoint.y - this.minViewY) / binSizeY), 2, 2);
+
+                    if (this.sourceChrom == this.targetChrom) {
+                        voronoiCanvasCTX.fillRect(xOffset + ((this.voronoi.polygons[i].dataPoint.y - this.minViewX) / binSizeX), yOffset + ((this.voronoi.polygons[i].dataPoint.x - this.minViewY) / binSizeY), 2, 2);
                     }
                 }
             }

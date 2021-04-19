@@ -8,6 +8,7 @@ type Polygon struct {
 	DataPoint delaunay.Point
 	Points    []delaunay.Point
 	Area      float64
+	Centroid  delaunay.Point
 	Clipped   bool
 }
 
@@ -62,31 +63,31 @@ func triangleArea2(p1, p2, p3 delaunay.Point) float64 {
 		(p3.X-p1.X)*(p2.Y-p1.Y)
 }
 
-func (polygon *Polygon) Centroid() delaunay.Point {
+func (polygon *Polygon) calculateCentroid() {
 	var centroid delaunay.Point
 	var areasum2 float64
 
-	if len(polygon.Points) < 1 {
-		return centroid
+	if len(polygon.Points) >= 1 {
+		polygon.Centroid = centroid
+
+		areaBasePoint := polygon.Points[0]
+		for i := 0; i < len(polygon.Points)-1; i++ {
+			triangleCent3 := triangleCentroid3(areaBasePoint, polygon.Points[i], polygon.Points[i+1])
+			area2 := triangleArea2(areaBasePoint, polygon.Points[i], polygon.Points[i+1])
+
+			centroid.X += area2 * triangleCent3.X
+			centroid.Y += area2 * triangleCent3.Y
+
+			areasum2 += area2
+		}
+
+		centroid.X = centroid.X / 3 / areasum2
+		centroid.Y = centroid.Y / 3 / areasum2
+
+		polygon.Area = areasum2 / 2
 	}
 
-	areaBasePoint := polygon.Points[0]
-	for i := 0; i < len(polygon.Points)-1; i++ {
-		triangleCent3 := triangleCentroid3(areaBasePoint, polygon.Points[i], polygon.Points[i+1])
-		area2 := triangleArea2(areaBasePoint, polygon.Points[i], polygon.Points[i+1])
-
-		centroid.X += area2 * triangleCent3.X
-		centroid.Y += area2 * triangleCent3.Y
-
-		areasum2 += area2
-	}
-
-	centroid.X = centroid.X / 3 / areasum2
-	centroid.Y = centroid.Y / 3 / areasum2
-
-	polygon.Area = areasum2 / 2
-
-	return centroid
+	polygon.Centroid = centroid
 
 	// i := 0
 	// n := len(polygon.Points)
@@ -196,5 +197,7 @@ func SutherlandHodgman(subjectPolygon Polygon, clipPolygon Polygon) Polygon {
 	}
 
 	outputPolygon.Clipped = clipped
+	outputPolygon.calculateCentroid()
+
 	return outputPolygon
 }
