@@ -322,16 +322,16 @@ export abstract class Axis {
                 x = this.interactions[i].sourceStart;
                 y = this.interactions[i].targetStart;
 
-                if (x >= this.minViewX && x <= this.maxDataX && y >= this.minViewY && y <= this.maxViewY) {
-                    x = (x - startX) * xScaleFactor;
-                    y = (y - startY) * yScaleFactor;
+                let halfWidth = (this.interactions[i].sourceEnd - this.interactions[i].sourceStart)/2;
+                let halfHeight = (this.interactions[i].targetEnd - this.interactions[i].targetStart)/2;
 
-                    let halfWidth = 250 * xScaleFactor;
-                    let halfHeight = 250 * yScaleFactor;
+                if (x >= this.minViewX && x <= this.maxDataX && y >= this.minViewY && y <= this.maxViewY) {
+                    x = (x - startX + halfWidth) * xScaleFactor;
+                    y = (y - startY + halfHeight) * yScaleFactor;                    
 
                     // Make sure it is visible
-                    halfWidth = Math.max(halfWidth, this.contactSize);
-                    halfHeight = Math.max(halfHeight, this.contactSize);
+                    halfWidth = Math.max(halfWidth * xScaleFactor, this.contactSize);
+                    halfHeight = Math.max(halfHeight * yScaleFactor, this.contactSize);
 
                     axisCanvasCTX.beginPath();
                     axisCanvasCTX.rect(x - halfWidth, y - halfHeight, halfWidth * 2, halfHeight * 2);
@@ -346,16 +346,16 @@ export abstract class Axis {
                 y = this.interactions[i].sourceStart;
                 x = this.interactions[i].targetStart;
 
-                if (x >= this.minViewX && x <= this.maxDataX && y >= this.minViewY && y <= this.maxViewY) {
-                    x = (x - startX) * xScaleFactor;
-                    y = (y - startY) * yScaleFactor;
+                let halfHeight = (this.interactions[i].sourceEnd - this.interactions[i].sourceStart)/2;
+                let halfWidth = (this.interactions[i].targetEnd - this.interactions[i].targetStart)/2;
 
-                    let halfWidth = 250 * xScaleFactor;
-                    let halfHeight = 250 * yScaleFactor;
+                if (x >= this.minViewX && x <= this.maxDataX && y >= this.minViewY && y <= this.maxViewY) {
+                    x = (x - startX + halfWidth) * xScaleFactor;
+                    y = (y - startY + halfHeight) * yScaleFactor;
 
                     // Make sure it is visible
-                    halfWidth = Math.max(halfWidth, this.contactSize);
-                    halfHeight = Math.max(halfHeight, this.contactSize);
+                    halfWidth = Math.max(halfWidth * xScaleFactor, this.contactSize);
+                    halfHeight = Math.max(halfHeight * yScaleFactor, this.contactSize);
 
                     axisCanvasCTX.beginPath();
                     axisCanvasCTX.rect(x - halfWidth, y - halfHeight, halfWidth * 2, halfHeight * 2);
