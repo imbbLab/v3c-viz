@@ -325,7 +325,10 @@ export abstract class Axis {
                 let halfWidth = (this.interactions[i].sourceEnd - this.interactions[i].sourceStart)/2;
                 let halfHeight = (this.interactions[i].targetEnd - this.interactions[i].targetStart)/2;
 
-                if (x >= this.minViewX && x <= this.maxDataX && y >= this.minViewY && y <= this.maxViewY) {
+                x += halfWidth;
+                y += halfHeight;
+
+                //if (x >= this.minViewX && x <= this.maxDataX && y >= this.minViewY && y <= this.maxViewY) {
                     x = (x - startX + halfWidth) * xScaleFactor;
                     y = (y - startY + halfHeight) * yScaleFactor;                    
 
@@ -339,7 +342,7 @@ export abstract class Axis {
                         axisCanvasCTX.fill();
                     }
                     axisCanvasCTX.stroke();
-                }
+               // }
             }
 
             if (this.interactions[i].sourceChrom == this.targetChrom && this.interactions[i].targetChrom == this.sourceChrom) {
@@ -349,9 +352,12 @@ export abstract class Axis {
                 let halfHeight = (this.interactions[i].sourceEnd - this.interactions[i].sourceStart)/2;
                 let halfWidth = (this.interactions[i].targetEnd - this.interactions[i].targetStart)/2;
 
-                if (x >= this.minViewX && x <= this.maxDataX && y >= this.minViewY && y <= this.maxViewY) {
-                    x = (x - startX + halfWidth) * xScaleFactor;
-                    y = (y - startY + halfHeight) * yScaleFactor;
+                x += halfWidth;
+                y += halfHeight;
+
+               // if (x >= this.minViewX && x <= this.maxDataX && y >= this.minViewY && y <= this.maxViewY) {
+                    x = (x - startX) * xScaleFactor;
+                    y = (y - startY) * yScaleFactor;
 
                     // Make sure it is visible
                     halfWidth = Math.max(halfWidth * xScaleFactor, this.contactSize);
@@ -363,7 +369,7 @@ export abstract class Axis {
                         axisCanvasCTX.fill();
                     }
                     axisCanvasCTX.stroke();
-                }
+                //}
             }
         }
         axisCanvasCTX.restore();
