@@ -328,9 +328,12 @@ export abstract class Axis {
                 x += halfWidth;
                 y += halfHeight;
 
+                // TODO: Possible performance improvement here - check whether any part of the contact box is visible
+                // and only draw if it is.
+
                 //if (x >= this.minViewX && x <= this.maxDataX && y >= this.minViewY && y <= this.maxViewY) {
-                    x = (x - startX + halfWidth) * xScaleFactor;
-                    y = (y - startY + halfHeight) * yScaleFactor;                    
+                    x = (x - startX) * xScaleFactor;
+                    y = (y - startY) * yScaleFactor;                    
 
                     // Make sure it is visible
                     halfWidth = Math.max(halfWidth * xScaleFactor, this.contactSize);
