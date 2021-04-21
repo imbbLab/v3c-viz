@@ -490,6 +490,10 @@ func (index indexHeader) getChunksFromQuery(query Query) []fileChunk {
 		chunkstoLoad = append(chunkstoLoad, fileChunk{Start: startBlock, End: endBlock})
 	}
 
+	if query.TargetChrom == query.SourceChrom {
+		return chunkstoLoad
+	}
+
 	// Process the inverse chrom pair
 	chromPairName = query.TargetChrom + string(index.Conf.RegionSplitCharacter) + query.SourceChrom
 
