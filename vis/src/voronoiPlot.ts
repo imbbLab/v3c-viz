@@ -166,8 +166,8 @@ export class VoronoiPlot extends Axis {
 
         // Buffer canvas for voronoi to improve interactivity 
         this.voronoiCanvas = document.createElement("canvas");
-        this.voronoiCanvas.width = 1024; //this.axisWidth;
-        this.voronoiCanvas.height = 1024; //this.axisHeight;
+        this.voronoiCanvas.width = 1600; //this.axisWidth;
+        this.voronoiCanvas.height = 1600; //this.axisHeight;
 
         this.voronoi = new Voronoi(); //Delaunay.from([]).voronoi();
         this.voronoiCanvas.style.position = 'absolute';

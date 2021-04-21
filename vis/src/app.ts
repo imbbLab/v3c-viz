@@ -399,12 +399,12 @@ function reposition() {
     if (!intrachromosomeView) {
         maxWidth -= igvHeight;
     } else {
-        maxWidth -= 20
+        maxWidth -= 20 * (3-numDisplayedViews);
     }
     maxHeight -= igvHeight;
 
     if (intrachromosomeView) {
-        viewWidth = maxWidth / 2;
+        viewWidth = maxWidth / numDisplayedViews;
         viewHeight = viewWidth / 2;
     } else {
         viewWidth = Math.min(maxHeight, maxWidth);
