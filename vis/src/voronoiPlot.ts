@@ -344,23 +344,25 @@ export class VoronoiPlot extends Axis {
 
             voronoiCanvasCTX.fillStyle = 'rgb(0, 0, 0)'
 
+            let pointSize = 7
+
             if (this.displayCentroid) {
                     for (let i = 0; i < this.voronoi.polygons.length; i++) {
                         //voronoiCanvasCTX.fillRect(this.voronoi.polygons[i].centroid.x-1, this.voronoi.polygons[i].centroid.y-1, 2, 2);
-                        voronoiCanvasCTX.fillRect(xOffset + ((this.voronoi.polygons[i].centroid.x - this.minViewX) / binSizeX), yOffset + ((this.voronoi.polygons[i].centroid.y - this.minViewY) / binSizeY), 2, 2);
+                        voronoiCanvasCTX.fillRect(xOffset + ((this.voronoi.polygons[i].centroid.x - this.minViewX) / binSizeX), yOffset + ((this.voronoi.polygons[i].centroid.y - this.minViewY) / binSizeY), pointSize, pointSize);
                         //     voronoiCanvasCTX.fillRect(this.polygons[i]['DataPoint'][0], this.polygons[i]['DataPoint'][1], 2, 2);
 
                         if (this.sourceChrom == this.targetChrom) {
-                            voronoiCanvasCTX.fillRect(xOffset + ((this.voronoi.polygons[i].centroid.y - this.minViewX) / binSizeX), yOffset + ((this.voronoi.polygons[i].centroid.x - this.minViewY) / binSizeY), 2, 2);
+                            voronoiCanvasCTX.fillRect(xOffset + ((this.voronoi.polygons[i].centroid.y - this.minViewX) / binSizeX), yOffset + ((this.voronoi.polygons[i].centroid.x - this.minViewY) / binSizeY), pointSize, pointSize);
                         }
                     }
             }
             if(this.displayVoronoiPoints) {
                 for (let i = 0; i < this.voronoi.polygons.length; i++) {
-                    voronoiCanvasCTX.fillRect(xOffset + ((this.voronoi.polygons[i].dataPoint.x - this.minViewX) / binSizeX), yOffset + ((this.voronoi.polygons[i].dataPoint.y - this.minViewY) / binSizeY), 2, 2);
+                    voronoiCanvasCTX.fillRect(xOffset + ((this.voronoi.polygons[i].dataPoint.x - this.minViewX) / binSizeX), yOffset + ((this.voronoi.polygons[i].dataPoint.y - this.minViewY) / binSizeY), pointSize, pointSize);
 
                     if (this.sourceChrom == this.targetChrom) {
-                        voronoiCanvasCTX.fillRect(xOffset + ((this.voronoi.polygons[i].dataPoint.y - this.minViewX) / binSizeX), yOffset + ((this.voronoi.polygons[i].dataPoint.x - this.minViewY) / binSizeY), 2, 2);
+                        voronoiCanvasCTX.fillRect(xOffset + ((this.voronoi.polygons[i].dataPoint.y - this.minViewX) / binSizeX), yOffset + ((this.voronoi.polygons[i].dataPoint.x - this.minViewY) / binSizeY), pointSize, pointSize);
                     }
                 }
             }
