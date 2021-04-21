@@ -65,10 +65,10 @@ export abstract class Axis {
 
     // Editable contact options
     contactOpacity = 0.7;
-    contactEdgeColour = 2649545;
+    contactEdgeColour = 0xc92730;
     edgeWidth = 2;
-    contactFill = true;
-    contactFillColour = 2649545;
+    contactFill = false;
+    contactFillColour = 0xc92730;
     contactSize = 10;
 
     // Contacts
@@ -162,6 +162,9 @@ export abstract class Axis {
 
                     if (!self.mouseDown) {
 
+
+                        let canvasLocation = self.canvas.getBoundingClientRect();
+
                         if(self.intrachromosomeView) {
                             let minCanvasX = self.axisOffsetX + (axisPos.x - axisPos.y)*self.axisWidth;
                             let maxCanvasX = self.axisOffsetX + (axisPos.x + axisPos.y)*self.axisWidth;
@@ -174,18 +177,16 @@ export abstract class Axis {
                             ctx.lineWidth = 2;
                             ctx.stroke();
 
-                            let canvasLocation = self.canvas.getBoundingClientRect();
-
                             let vertline = (<HTMLDivElement>document.getElementById('vertline'))
                             vertline.style.width = "1px"
                             vertline.style.height = (window.innerHeight - canvasLocation.bottom) + "px";
-                            vertline.style.top = (canvasLocation.bottom - self.axisOffsetY) + "px";
+                            vertline.style.top = (window.pageYOffset + canvasLocation.bottom - self.axisOffsetY) + "px";
                             vertline.style.left = (canvasLocation.left + minCanvasX) + "px";
-
+                            
                             let horline = (<HTMLDivElement>document.getElementById('horline'))
                             horline.style.width = "1px"
                             horline.style.height = (window.innerHeight - canvasLocation.bottom) + "px";
-                            horline.style.top = (canvasLocation.bottom - self.axisOffsetY) + "px";
+                            horline.style.top = (window.pageYOffset + canvasLocation.bottom - self.axisOffsetY) + "px";
                             horline.style.left = (canvasLocation.left + maxCanvasX) + "px";
                         } else {
                             ctx.beginPath();
