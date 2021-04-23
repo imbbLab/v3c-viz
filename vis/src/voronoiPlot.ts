@@ -142,6 +142,8 @@ export class VoronoiPlot extends Axis {
     //voronoi: Voronoi<Delaunay.Point>;
     voronoi: Voronoi;
     voronoiCanvas: HTMLCanvasElement;
+    polygons: Polygon[] = []
+
 
     constructor(belowBrowser: igv.Browser, rightBrowser: igv.Browser) {
         super(<HTMLCanvasElement>document.getElementById("voronoi-canvas"));
@@ -199,6 +201,16 @@ export class VoronoiPlot extends Axis {
         .range(["saddlebrown", "lightgreen", "steelblue"])
         .domain([0, this.colours / 2, this.colours]);
 
+    // TODO: Put colour bar in its own class..
+    colourMinArea: number = -1
+    colourMaxArea: number = -1
+
+    setColourRange(min: number, max: number) {
+        this.scale.domain([min, max]);
+        this.colourMinArea = min;
+        this.colourMaxArea = max;
+    }
+
     // singlePoints: any
     // twoPoints: any
     // polygons: any
@@ -234,7 +246,6 @@ export class VoronoiPlot extends Axis {
         this.redraw()
     }
 
-    polygons: Polygon[] = []
 
     convertVoronoiToPolygons(xOffset: number, yOffset: number, width: number, height: number, invertY: boolean, clipDiagonal: boolean): Polygon[] {
         let polygons: Polygon[] = [];

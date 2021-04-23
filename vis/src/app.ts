@@ -762,10 +762,17 @@ function requestViewUpdate(request: ViewRequest) {
                                 }
                             }
 
+                            let lastMin = voronoiMap.colourMinArea;
+                            let lastMax = voronoiMap.colourMaxArea; 
+
                             voronoiMap.scale = d3.scaleQuantize()
                                 .range(d3.range(voronoiMap.colours))
                                 .domain([minMaxArea.Min, minMaxArea.Max]);
 
+                            if(lastMin != -1 && lastMax != -1) {
+                                voronoiMap.setColourRange(lastMin, lastMax);
+                            }
+    
                             for (let i = 0; i < numBins; i++) {
                                 colourCanvasCTX.strokeStyle = 'rgb(0, 0, 0)'
                                 colourCanvasCTX.beginPath();
@@ -781,8 +788,21 @@ function requestViewUpdate(request: ViewRequest) {
                                 colourCanvasCTX.stroke();
                             }
 
-                            
+                            let [minScale, maxScale] = voronoiMap.scale.domain();
 
+                            colourCanvasCTX.strokeStyle = 'rgb(0, 0, 0)'
+                            let minScaleX = (minScale - minMaxArea.Min) / binWidth
+                            colourCanvasCTX.beginPath();
+                            colourCanvasCTX.moveTo(minScaleX, histogramY);
+                            colourCanvasCTX.lineTo(minScaleX - 5, colourCanvas.height);
+                            colourCanvasCTX.lineTo(minScaleX + 5, colourCanvas.height);
+                            colourCanvasCTX.fill();
+                            let maxScaleX = (maxScale - minMaxArea.Min) / binWidth
+                            colourCanvasCTX.beginPath();
+                            colourCanvasCTX.moveTo(maxScaleX, histogramY);
+                            colourCanvasCTX.lineTo(maxScaleX - 5, colourCanvas.height);
+                            colourCanvasCTX.lineTo(maxScaleX + 5, colourCanvas.height);
+                            colourCanvasCTX.fill();
 
                             voronoiMap.setVoronoi(vor);
                         })
@@ -819,9 +839,11 @@ colourCanvas.addEventListener('mousedown', function (event: MouseEvent) {
     let [minScale, maxScale] = voronoiMap.scale.domain();
 
     if (event.button == 0) {
-        voronoiMap.scale.domain([binWidth * x + minMaxArea.Min, maxScale]);
+        //voronoiMap.scale.domain([binWidth * x + minMaxArea.Min, maxScale]);
+        voronoiMap.setColourRange(binWidth * x + minMaxArea.Min, maxScale);
     } else {
-        voronoiMap.scale.domain([minScale, binWidth * x + minMaxArea.Min]);
+        //voronoiMap.scale.domain([minScale, binWidth * x + minMaxArea.Min]);
+        voronoiMap.setColourRange(minScale, binWidth * x + minMaxArea.Min);
     }
 
     [minScale, maxScale] = voronoiMap.scale.domain();
