@@ -258,7 +258,7 @@ declare module 'igv' {
 
     loadFeatures(): Promise<any>
     repaint(): Promise<any>
-    draw(drawConfiguration: any, features: any, roiFeatures: any): void
+    draw(drawConfiguration: any, features?: any, roiFeatures?: any): void
     checkContentHeight(): void
     getContentHeight(): number
     setContentHeight(contentHeight: number): void

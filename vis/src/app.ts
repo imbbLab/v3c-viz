@@ -202,8 +202,36 @@ function exportToImage(drawSVG: boolean): void {
         downloadCanvasCTX.drawImage(voronoiMap.canvas, 0, 0);
 
         let lastY = voronoiMap.canvas.height;
+
+        console.log("DRAWING!!")
+        
         bottomBrowser.trackViews.forEach((trackView: igv.TrackView) => {
-            let trackCanvas = trackView.viewports[0].canvas
+            const visibleViewports = trackView.viewports.filter(vp => vp.isVisible())
+
+
+            visibleViewports.forEach((viewport) => {
+                const viewportHeight = <number>viewport.$viewport.height()
+                console.log(viewport.referenceFrame)
+
+                lastY += 50
+                
+                downloadCanvasCTX.save();
+                downloadCanvasCTX.translate(0, lastY);
+                viewport.trackView.track.draw({ 
+                    context: downloadCanvasCTX, 
+                    referenceFrame: viewport.referenceFrame, 
+                    pixelTop: Math.max(0, -(viewport.$content.position().top) - viewportHeight),
+                    bpStart: 0,
+                    bpEnd: 10000,
+                    bpPerPixel: 100,
+                    pixelWidth: viewport.$viewport.width(),
+                    pixelHeight: viewport.$viewport.height(),
+                    viewport: viewport,
+                    viewportWidth: viewport.$viewport.width()})
+                downloadCanvasCTX.restore();
+            })
+            //trackView.track.draw()
+           /* let trackCanvas = trackView.viewports[0].canvas
 
             if (trackCanvas && trackCanvas.width > 0) {
                 let canvasXOffset = 0;
@@ -214,7 +242,7 @@ function exportToImage(drawSVG: boolean): void {
 
                 downloadCanvasCTX.drawImage(trackCanvas, canvasXOffset, 0, voronoiMap.axisWidth, trackCanvas.height, voronoiMap.axisOffsetX, lastY, voronoiMap.axisWidth, trackCanvas.height);
                 lastY += trackView.viewports[0].canvas.height;
-            }
+            }*/
         })
 
         let lastX = voronoiMap.canvas.width;

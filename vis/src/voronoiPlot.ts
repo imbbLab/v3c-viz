@@ -384,7 +384,7 @@ export class VoronoiPlot extends Axis {
 
         if (this.colourScale && this.scale) {
             for (let i = 0; i < polygons.length; i++) {
-                voronoiCanvasCTX.fillStyle = this.colourScale(this.scale(Math.log(this.polygons[i].area)));
+                voronoiCanvasCTX.fillStyle = this.colourScale(this.scale(Math.log(polygons[i].area)));
 
                 voronoiCanvasCTX.beginPath();
                 voronoiCanvasCTX.moveTo(polygons[i].points[0].x, polygons[i].points[0].y)
