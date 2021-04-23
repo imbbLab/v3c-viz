@@ -29,7 +29,7 @@ import (
 	"github.com/fogleman/delaunay"
 )
 
-var interactFile *interact.InteractFile
+var interactFiles map[string]*interact.InteractFile = make(map[string]*interact.InteractFile)
 var pairsFile pairs.File
 
 var opts struct {
@@ -82,10 +82,12 @@ func main() {
 	}
 
 	// Process interact file
-	interactFile, err = interact.Parse(opts.InteractFile)
+	interactFile, err := interact.Parse(opts.InteractFile)
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	interactFiles["default"] = interactFile
 
 	location := ":" + opts.Port
 
@@ -115,7 +117,7 @@ func GetDetails(w http.ResponseWriter, r *http.Request) {
 	type details struct {
 		Genome      string
 		Chromosomes []pairs.Chromsize
-		HasInteract bool `json:"hasInteract"`
+		HasInteract int `json:"hasInteract"`
 	}
 
 	genome := pairsFile.Genome()
@@ -123,7 +125,7 @@ func GetDetails(w http.ResponseWriter, r *http.Request) {
 		genome = opts.Genome
 	}
 
-	dets, _ := json.Marshal(&details{Genome: genome, Chromosomes: orderedChromosomes, HasInteract: interactFile != nil})
+	dets, _ := json.Marshal(&details{Genome: genome, Chromosomes: orderedChromosomes, HasInteract: len(interactFiles)})
 	w.Write(dets)
 }
 
@@ -357,7 +359,7 @@ func float64ToByte(floats []float64) []byte {
 }
 
 func GetInteract(w http.ResponseWriter, r *http.Request) {
-	bytes, err := json.Marshal(interactFile)
+	bytes, err := json.Marshal(interactFiles)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -378,6 +380,7 @@ func SetInteract(w http.ResponseWriter, r *http.Request) {
 	bodyData := string(body)
 
 	type interactData struct {
+		Name         string `json:"Name,omitempty"`
 		Interactions []interact.Interaction
 	}
 	var interactions interactData
@@ -393,7 +396,7 @@ func SetInteract(w http.ResponseWriter, r *http.Request) {
 
 	log.Printf("Processing %d interactions.\n", len(interactions.Interactions))
 
-	interactFile = new(interact.InteractFile)
+	interactFile := new(interact.InteractFile)
 	interactFile.Interactions = make(map[string][]interact.Interaction)
 
 	// Make sure that interactions include 'chr'
@@ -409,6 +412,12 @@ func SetInteract(w http.ResponseWriter, r *http.Request) {
 		chromPairName := interactions.Interactions[index].ChromPairName()
 
 		interactFile.Interactions[chromPairName] = append(interactFile.Interactions[chromPairName], interactions.Interactions[index])
+	}
+
+	if interactions.Name == "" {
+		interactFiles["default"] = interactFile
+	} else {
+		interactFiles[interactions.Name] = interactFile
 	}
 
 	//fmt.Println(interactFile.Interactions)
