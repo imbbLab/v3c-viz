@@ -262,7 +262,7 @@ export class VoronoiPlot extends Axis {
             if (points.length >= 3) {
                 for (let j = 0; j < points.length; j++) {
                     points[j].y = ((points[j].y - this.minViewY) / binSizeY)
-                    points[j].x = ((points[j].x - this.minViewX) / binSizeX)
+                    points[j].x = xOffset + ((points[j].x - this.minViewX) / binSizeX)
                     if (invertY) {
                         points[j].y = height - points[j].y + yOffset
                     }
@@ -291,7 +291,7 @@ export class VoronoiPlot extends Axis {
                 if (points.length >= 3) {
                     for (let j = 0; j < points.length; j++) {
                         points[j].y = ((points[j].y - this.minViewY) / binSizeY)
-                        points[j].x = ((points[j].x - this.minViewX) / binSizeX)
+                        points[j].x = xOffset + ((points[j].x - this.minViewX) / binSizeX)
                         if (invertY) {
                             points[j].y = height - points[j].y + yOffset
                         }
@@ -324,7 +324,7 @@ export class VoronoiPlot extends Axis {
         if(voronoiCanvasCTX instanceof CanvasRenderingContext2D) {
             this.polygons = polygons;
         }
-        
+
         this.drawPolygons(voronoiCanvasCTX, polygons);
     }
 

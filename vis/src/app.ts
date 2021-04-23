@@ -850,10 +850,7 @@ colourCanvas.addEventListener('mousedown', function (event: MouseEvent) {
     colourCanvasCTX.fill();
 
 
-    console.log("about to redraw")
     voronoiMap.drawPolygonsCanvas();
-    //voronoiMap.redrawVoronoi();
-    console.log("redrawn")
 });
 
 
