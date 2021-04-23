@@ -267,6 +267,14 @@ export class VoronoiPlot extends Axis {
                         points[j].y = height - points[j].y + yOffset
                     }
 
+                    // Remove odd edge that occurs when saving to SVG
+                    // TODO: Investigate cause? Why do we need this?
+                    if (points[j].y > height + yOffset) {
+                        points[j].y = height + yOffset
+                    }
+                    if (points[j].x > width + xOffset) {
+                        points[j].x = width + xOffset
+                    }
                 }
 
                 let polygon = new Polygon();
@@ -301,6 +309,9 @@ export class VoronoiPlot extends Axis {
                         if (points[j].y > height + yOffset) {
                             points[j].y = height + yOffset
                         }
+                        if (points[j].x > width + xOffset) {
+                            points[j].x = width + xOffset
+                        }
                     }
 
                     let polygon = new Polygon();
@@ -321,7 +332,7 @@ export class VoronoiPlot extends Axis {
     drawVoronoi(voronoiCanvasCTX: CanvasRenderingContext2D | SVGContext, xOffset: number, yOffset: number, width: number, height: number, invertY: boolean, clipDiagonal: boolean) {
         let polygons = this.convertVoronoiToPolygons(xOffset, yOffset, width, height, invertY, clipDiagonal);
 
-        if(voronoiCanvasCTX instanceof CanvasRenderingContext2D) {
+        if (voronoiCanvasCTX instanceof CanvasRenderingContext2D) {
             this.polygons = polygons;
         }
 
@@ -371,6 +382,7 @@ export class VoronoiPlot extends Axis {
                     voronoiCanvasCTX.lineTo(polygons[i].points[j].x, polygons[i].points[j].y)
                 }
 
+                voronoiCanvasCTX.closePath();
                 voronoiCanvasCTX.fill();
 
                 if (this.displayVoronoiEdges) {
