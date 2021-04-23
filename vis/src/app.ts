@@ -763,16 +763,16 @@ function requestViewUpdate(request: ViewRequest) {
                             }
 
                             let lastMin = voronoiMap.colourMinArea;
-                            let lastMax = voronoiMap.colourMaxArea; 
+                            let lastMax = voronoiMap.colourMaxArea;
 
                             voronoiMap.scale = d3.scaleQuantize()
                                 .range(d3.range(voronoiMap.colours))
                                 .domain([minMaxArea.Min, minMaxArea.Max]);
 
-                            if(lastMin != -1 && lastMax != -1) {
+                            if (lastMin != -1 && lastMax != -1) {
                                 voronoiMap.setColourRange(lastMin, lastMax);
                             }
-    
+
                             for (let i = 0; i < numBins; i++) {
                                 colourCanvasCTX.strokeStyle = 'rgb(0, 0, 0)'
                                 colourCanvasCTX.beginPath();
@@ -819,7 +819,7 @@ function requestViewUpdate(request: ViewRequest) {
 
 //Mousedown
 var minMaxArea: MinMax
-let colourCanvas = <HTMLCanvasElement>document.getElementById('voronoi-colour');               
+let colourCanvas = <HTMLCanvasElement>document.getElementById('voronoi-colour');
 colourCanvas.oncontextmenu = function (e) { e.preventDefault(); e.stopPropagation(); }
 colourCanvas.addEventListener('mousedown', function (event: MouseEvent) {
     let colourCanvas = <HTMLCanvasElement>document.getElementById('voronoi-colour');
@@ -880,6 +880,60 @@ window.addEventListener('resize', (event) => {
     reposition();
 })
 
+
+let fileSelector = <HTMLInputElement>document.getElementById('file-selector')
+fileSelector.addEventListener('change', (event) => {
+    if (fileSelector.files) {
+        let data = new FormData();
+        data.append('myFile', fileSelector.files[0]);
+
+        let filename = fileSelector.files[0].name;
+
+        // send fetch along with cookies
+        fetch('/upload', {
+            method: 'POST',
+            credentials: 'same-origin',
+            body: data
+        }).then((response) => {
+            if (response.status !== 200) {
+                console.log('Looks like there was a problem. Status Code: ' +
+                    response.status);
+                return;
+            }
+
+            response.text().then((location: string) => {
+                var tracksString = window.sessionStorage.getItem("loadedTracks");
+                var tracks: UploadedTrack[]
+
+                if (!tracksString) {
+                    tracks = []
+                } else {
+                    tracks = JSON.parse(tracksString);
+                }
+
+                let newTrack: UploadedTrack = { filename: filename, location: location };
+                tracks.push(newTrack);
+                window.sessionStorage.setItem("loadedTracks", JSON.stringify(tracks));
+
+                loadUploadedTrack(newTrack);
+            });
+        });
+
+
+        /*const reader = new FileReader();
+        
+        } else if (extension?.localeCompare("bw") == 0) {
+            type = 'wig'
+            format = 'bigwig';
+ 
+            // Need to copy the file to the server and then load a link
+        }
+ 
+ 
+        reader.readAsDataURL(fileSelector.files[0])*/
+    }
+});
+
 interface TrackDetails {
     format: string
     name: string
@@ -898,6 +952,47 @@ interface GenomeDetails {
     cytobandURL: string
 
     tracks: TrackDetails[]
+}
+
+interface UploadedTrack {
+    filename: string
+    location: string
+}
+
+
+
+
+function loadUploadedTrack(uploadedTrack: UploadedTrack) {
+
+    const extension = uploadedTrack.filename.split('.').pop();
+    console.log(extension);
+    var format: string = 'unknown'
+    var type: 'annotation' | 'wig' | 'alignment' | 'variant' | 'seg' = 'annotation'
+    if (extension?.localeCompare("bed") == 0) {
+        type = 'annotation';
+        format = 'bed';
+    } else if (extension?.localeCompare("bw") == 0) {
+        type = 'wig';
+        format = 'bigwig';
+    }
+
+    bottomBrowser.loadTrack({
+        type: type,
+        format: format,
+        url: uploadedTrack.location,
+        name: uploadedTrack.filename
+    }).then(track => {
+        resizeIGVElements(voronoiMap.axisWidth)
+    })
+    rightBrowser.loadTrack({
+        type: type,
+        format: format,
+        //sourceType: "file",
+        url: uploadedTrack.location,
+        name: uploadedTrack.filename
+    }).then(track => {
+        resizeIGVElements(voronoiMap.axisWidth)
+    })
 }
 
 function getGenomeDetails(genome: string): GenomeDetails | undefined {
@@ -1182,78 +1277,21 @@ fetch('./genomes.json').then((response) => {
                                 belowBrowser.search(locusBottom);
                                 rightBrowser.search(locusRight);
 
-                                let fileSelector = <HTMLInputElement>document.getElementById('file-selector')
-                                fileSelector.addEventListener('change', (event) => {
+                                // Load existing tracks
+                                var tracksString = window.sessionStorage.getItem("loadedTracks");
+                                var tracks: UploadedTrack[]
+
+                                if (!tracksString) {
+                                    tracks = []
+                                } else {
+                                    tracks = JSON.parse(tracksString);
+                                }
+
+                                for (let i = 0; i < tracks.length; i++) {
+                                    loadUploadedTrack(tracks[i])
+                                }
 
 
-                                    console.log(event)
-                                    console.log(fileSelector.files)
-                                    if (fileSelector.files) {
-                                        let data = new FormData();
-                                        data.append('myFile', fileSelector.files[0]);
-
-                                        let filename = fileSelector.files[0].name;
-
-                                        // send fetch along with cookies
-                                        fetch('/upload', {
-                                            method: 'POST',
-                                            credentials: 'same-origin',
-                                            body: data
-                                        }).then((response) => {
-                                            if (response.status !== 200) {
-                                                console.log('Looks like there was a problem. Status Code: ' +
-                                                    response.status);
-                                                return;
-                                            }
-
-                                            response.text().then((location: string) => {
-                                                const extension = filename.split('.').pop();
-                                                console.log(extension);
-                                                var format: string = 'unknown'
-                                                var type: 'annotation' | 'wig' | 'alignment' | 'variant' | 'seg' = 'annotation'
-                                                if (extension?.localeCompare("bed") == 0) {
-                                                    type = 'annotation';
-                                                    format = 'bed';
-                                                } else if (extension?.localeCompare("bw") == 0) {
-                                                    type = 'wig';
-                                                    format = 'bigwig';
-                                                }
-
-
-                                                bottomBrowser.loadTrack({
-                                                    type: type,
-                                                    format: format,
-                                                    url: location,
-                                                    name: filename
-                                                }).then(track => {
-                                                    resizeIGVElements(voronoiMap.axisWidth)
-                                                })
-                                                rightBrowser.loadTrack({
-                                                    type: type,
-                                                    format: format,
-                                                    //sourceType: "file",
-                                                    url: location,
-                                                    name: filename
-                                                }).then(track => {
-                                                    resizeIGVElements(voronoiMap.axisWidth)
-                                                })
-                                            });
-                                        });
-
-
-                                        /*const reader = new FileReader();
-                                        
-                                        } else if (extension?.localeCompare("bw") == 0) {
-                                            type = 'wig'
-                                            format = 'bigwig';
-        
-                                            // Need to copy the file to the server and then load a link
-                                        }
-        
-        
-                                        reader.readAsDataURL(fileSelector.files[0])*/
-                                    }
-                                });
 
                                 // Override the events for controlling scrolling
                                 overrideMouse();
