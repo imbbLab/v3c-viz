@@ -18,6 +18,7 @@ export class Point {
 export class Polygon {
     points: Point[] = []
     area: number = 0
+    logArea: number = 0
     clipped: boolean = false;
     centroid: Point = new Point(0, 0)
     dataPoint: Point = new Point(0, 0)
@@ -30,7 +31,7 @@ export class Polygon {
         outputPolygon = new Polygon();
 
         this.points.forEach(point => {
-            outputPolygon.points.push({x: Math.round(point.x), y: Math.round(point.y)})
+            outputPolygon.points.push({ x: Math.round(point.x), y: Math.round(point.y) })
         });
 
         let newPolygonSize = this.points.length
@@ -219,6 +220,7 @@ export class VoronoiPlot extends Axis {
     setVoronoi(voronoi: Voronoi) {
         this.voronoi = voronoi;
 
+
         this.redrawVoronoi();
     }
 
@@ -227,12 +229,115 @@ export class VoronoiPlot extends Axis {
         voronoiCanvasCTX.clearRect(0, 0, this.voronoiCanvas.width, this.voronoiCanvas.height);
 
         this.drawVoronoi(voronoiCanvasCTX, 0, 0, this.getVoronoiDrawWidth(), this.getVoronoiDrawHeight(), false, false)
+        //this.drawPolygons(voronoiCanvasCTX, this.polygons);
 
         this.redraw()
     }
 
+    polygons: Polygon[] = []
+
+    convertVoronoiToPolygons(xOffset: number, yOffset: number, width: number, height: number, invertY: boolean, clipDiagonal: boolean): Polygon[] {
+        let polygons: Polygon[] = [];
+
+        let clipPolygon = new Polygon();
+
+        if (!clipDiagonal) {
+            clipPolygon.points.push({ x: this.minViewX, y: this.minViewY },
+                { x: this.maxViewX, y: this.minViewY },
+                { x: this.maxViewX, y: this.maxViewY },
+                { x: this.minViewX, y: this.maxViewY })
+        } else {
+            clipPolygon.points.push({ x: this.minViewX, y: this.minViewY },
+                { x: this.maxViewX, y: this.maxViewY },
+                { x: this.minViewX, y: this.maxViewY })
+        }
+
+
+        let binSizeX = (this.maxViewX - this.minViewX) / width
+        let binSizeY = (this.maxViewY - this.minViewY) / height
+
+        for (let i = 0; i < this.voronoi.polygons.length; i++) { //this.voronoi.polygons.length
+            let points = this.voronoi.polygons[i].clip(clipPolygon).points
+
+            if (points.length >= 3) {
+                for (let j = 0; j < points.length; j++) {
+                    points[j].y = ((points[j].y - this.minViewY) / binSizeY)
+                    points[j].x = ((points[j].x - this.minViewX) / binSizeX)
+                    if (invertY) {
+                        points[j].y = height - points[j].y + yOffset
+                    }
+
+                }
+
+                let polygon = new Polygon();
+                polygon.points = points;
+                polygon.area = this.voronoi.polygons[i].area;
+                polygon.logArea = this.voronoi.polygons[i].logArea;
+                polygon.centroid = { x: xOffset + ((this.voronoi.polygons[i].centroid.x - this.minViewX) / binSizeX), y: yOffset + ((this.voronoi.polygons[i].centroid.y - this.minViewY) / binSizeY) };
+                polygon.dataPoint = { x: xOffset + ((this.voronoi.polygons[i].dataPoint.x - this.minViewX) / binSizeX), y: yOffset + ((this.voronoi.polygons[i].dataPoint.y - this.minViewY) / binSizeY) };
+
+                polygons.push(polygon)
+            }
+
+            // Need to draw the other part of the voronoi as we only kept one part of triangle
+            if (this.sourceChrom == this.targetChrom) {
+                // Recreate opposite polygon
+                let oppPolygon = new Polygon()
+                for (let j = 0; j < this.voronoi.polygons[i].points.length; j++) {
+                    oppPolygon.points.push({ x: this.voronoi.polygons[i].points[j].y, y: this.voronoi.polygons[i].points[j].x })
+                }
+                points = oppPolygon.clip(clipPolygon).points
+
+                if (points.length >= 3) {
+                    for (let j = 0; j < points.length; j++) {
+                        points[j].y = ((points[j].y - this.minViewY) / binSizeY)
+                        points[j].x = ((points[j].x - this.minViewX) / binSizeX)
+                        if (invertY) {
+                            points[j].y = height - points[j].y + yOffset
+                        }
+
+                        // Remove odd edge that occurs when saving to SVG
+                        // TODO: Investigate cause? Why do we need this?
+                        if (points[j].y > height + yOffset) {
+                            points[j].y = height + yOffset
+                        }
+                    }
+
+                    let polygon = new Polygon();
+                    polygon.points = points;
+                    polygon.area = this.voronoi.polygons[i].area;
+                    polygon.logArea = this.voronoi.polygons[i].logArea;
+                    polygon.centroid = { x: xOffset + ((this.voronoi.polygons[i].centroid.x - this.minViewX) / binSizeX), y: yOffset + ((this.voronoi.polygons[i].centroid.y - this.minViewY) / binSizeY) };
+                    polygon.dataPoint = { x: xOffset + ((this.voronoi.polygons[i].dataPoint.x - this.minViewX) / binSizeX), y: yOffset + ((this.voronoi.polygons[i].dataPoint.y - this.minViewY) / binSizeY) };
+
+                    polygons.push(polygon)
+                }
+            }
+        }
+
+        return polygons;
+    }
 
     drawVoronoi(voronoiCanvasCTX: CanvasRenderingContext2D | SVGContext, xOffset: number, yOffset: number, width: number, height: number, invertY: boolean, clipDiagonal: boolean) {
+        let polygons = this.convertVoronoiToPolygons(xOffset, yOffset, width, height, invertY, clipDiagonal);
+
+        if(voronoiCanvasCTX instanceof CanvasRenderingContext2D) {
+            this.polygons = polygons;
+        }
+        
+        this.drawPolygons(voronoiCanvasCTX, polygons);
+    }
+
+    drawPolygonsCanvas() {
+        let voronoiCanvasCTX = <CanvasRenderingContext2D>this.voronoiCanvas.getContext("2d");
+        voronoiCanvasCTX.clearRect(0, 0, this.voronoiCanvas.width, this.voronoiCanvas.height);
+
+        this.drawPolygons(voronoiCanvasCTX, this.polygons)
+
+        this.redraw()
+    }
+
+    drawPolygons(voronoiCanvasCTX: CanvasRenderingContext2D | SVGContext, polygons: Polygon[]) {
         // Draw the polygons that are too small to be drawn with detail (between 1 and 2 pixels width/height)
         // If displaying edges, then display them with the same colour as the edges, otherwise same as the smallest value on colour scale
         if (this.displayVoronoiEdges || this.displayCentroid) {
@@ -253,120 +358,49 @@ export class VoronoiPlot extends Axis {
         // }
 
         //if(this.polygons && this.colourScale && this.scale) {
-        let clipPolygon = new Polygon();
-        
-        if(!clipDiagonal) {
-            clipPolygon.points.push({ x: this.minViewX, y: this.minViewY},
-                { x: this.maxViewX, y: this.minViewY},
-                { x: this.maxViewX, y: this.maxViewY},
-                { x: this.minViewX, y: this.maxViewY})
-        } else {
-            clipPolygon.points.push({ x: this.minViewX, y: this.minViewY},
-                { x: this.maxViewX, y: this.maxViewY},
-                { x: this.minViewX, y: this.maxViewY})
-        }
+
 
         if (this.colourScale && this.scale) {
-            let binSizeX = (this.maxViewX - this.minViewX) / width
-            let binSizeY = (this.maxViewY - this.minViewY) / height
-            
-            for (let i = 0; i < this.voronoi.polygons.length; i++) {
-                voronoiCanvasCTX.fillStyle = this.colourScale(this.scale(Math.log(this.voronoi.polygons[i].area)));
+            for (let i = 0; i < polygons.length; i++) {
+                voronoiCanvasCTX.fillStyle = this.colourScale(this.scale(Math.log(this.polygons[i].area)));
 
-                let points = this.voronoi.polygons[i].clip(clipPolygon).points
-                if(points.length >= 3) {
-                    voronoiCanvasCTX.beginPath();
-                    let y = ((points[0].y - this.minViewY) / binSizeY)
-                    let x = ((points[0].x - this.minViewX) / binSizeX)
-                    if (invertY) {
-                        y = height - y + yOffset
-                    }
+                voronoiCanvasCTX.beginPath();
+                voronoiCanvasCTX.moveTo(polygons[i].points[0].x, polygons[i].points[0].y)
 
-                    voronoiCanvasCTX.moveTo(xOffset + x, y)
-                    for (let j = 1; j < points.length; j++) {
-                        let y = ((points[j].y - this.minViewY) / binSizeY)
-                        let x = ((points[j].x - this.minViewX) / binSizeX)
-                        if (invertY) {
-                            y = height - y + yOffset
-                        }
-
-                        voronoiCanvasCTX.lineTo(xOffset + x, y)
-                    }
-                    voronoiCanvasCTX.closePath();
-                    voronoiCanvasCTX.fill();
-
-                    if (this.displayVoronoiEdges) {
-                        voronoiCanvasCTX.stroke();
-                    }
+                for (let j = 1; j < polygons[i].points.length; j++) {
+                    voronoiCanvasCTX.lineTo(polygons[i].points[j].x, polygons[i].points[j].y)
                 }
 
-                // Need to draw the other part of the voronoi as we only kept one part of triangle
-                if (this.sourceChrom == this.targetChrom) {
-                    // Recreate opposite polygon
-                    let oppPolygon = new Polygon()
-                    for (let j = 0; j < this.voronoi.polygons[i].points.length; j++) {
-                        oppPolygon.points.push({ x: this.voronoi.polygons[i].points[j].y, y: this.voronoi.polygons[i].points[j].x })
-                    }
-                    points = oppPolygon.clip(clipPolygon).points
-                    if(points.length >= 3) {
-                        voronoiCanvasCTX.beginPath();
-                        let y = ((points[0].y - this.minViewY) / binSizeY)
-                        let x = ((points[0].x - this.minViewX) / binSizeX)
-                        if (invertY) {
-                            y = height - y + yOffset
-                        }
+                voronoiCanvasCTX.fill();
 
-                        voronoiCanvasCTX.moveTo(xOffset + x, y)
-                        for (let j = 1; j < points.length; j++) {
-                            let y = ((points[j].y - this.minViewY) / binSizeY)
-                            let x = ((points[j].x - this.minViewX) / binSizeX)
-                            if (invertY) {
-                                y = height - y + yOffset
-                            }
-
-                            // Remove odd edge that occurs when saving to SVG
-                            // TODO: Investigate cause? Why do we need this?
-                            if(y > height + yOffset) {
-                                y = height + yOffset
-                            }
-
-                            voronoiCanvasCTX.lineTo(xOffset + x, y)
-                        }
-                        voronoiCanvasCTX.closePath();
-                        voronoiCanvasCTX.fill();
-
-                        if (this.displayVoronoiEdges) {
-                            voronoiCanvasCTX.stroke();
-                        }
-                    }
-                }
-            }
-
-            voronoiCanvasCTX.fillStyle = 'rgb(0, 0, 0)'
-
-            let pointSize = 7
-
-            if (this.displayCentroid) {
-                    for (let i = 0; i < this.voronoi.polygons.length; i++) {
-                        //voronoiCanvasCTX.fillRect(this.voronoi.polygons[i].centroid.x-1, this.voronoi.polygons[i].centroid.y-1, 2, 2);
-                        voronoiCanvasCTX.fillRect(xOffset + ((this.voronoi.polygons[i].centroid.x - this.minViewX) / binSizeX), yOffset + ((this.voronoi.polygons[i].centroid.y - this.minViewY) / binSizeY), pointSize, pointSize);
-                        //     voronoiCanvasCTX.fillRect(this.polygons[i]['DataPoint'][0], this.polygons[i]['DataPoint'][1], 2, 2);
-
-                        if (this.sourceChrom == this.targetChrom) {
-                            voronoiCanvasCTX.fillRect(xOffset + ((this.voronoi.polygons[i].centroid.y - this.minViewX) / binSizeX), yOffset + ((this.voronoi.polygons[i].centroid.x - this.minViewY) / binSizeY), pointSize, pointSize);
-                        }
-                    }
-            }
-            if(this.displayVoronoiPoints) {
-                for (let i = 0; i < this.voronoi.polygons.length; i++) {
-                    voronoiCanvasCTX.fillRect(xOffset + ((this.voronoi.polygons[i].dataPoint.x - this.minViewX) / binSizeX), yOffset + ((this.voronoi.polygons[i].dataPoint.y - this.minViewY) / binSizeY), pointSize, pointSize);
-
-                    if (this.sourceChrom == this.targetChrom) {
-                        voronoiCanvasCTX.fillRect(xOffset + ((this.voronoi.polygons[i].dataPoint.y - this.minViewX) / binSizeX), yOffset + ((this.voronoi.polygons[i].dataPoint.x - this.minViewY) / binSizeY), pointSize, pointSize);
-                    }
+                if (this.displayVoronoiEdges) {
+                    voronoiCanvasCTX.stroke();
                 }
             }
         }
+        voronoiCanvasCTX.fillStyle = 'rgb(0, 0, 0)'
+
+        let pointSize = 5
+
+        if (this.displayCentroid) {
+            for (let i = 0; i < polygons.length; i++) {
+                voronoiCanvasCTX.fillRect(polygons[i].centroid.x - pointSize / 2, polygons[i].centroid.y - pointSize / 2, pointSize, pointSize);
+
+                if (this.sourceChrom == this.targetChrom) {
+                    voronoiCanvasCTX.fillRect(polygons[i].centroid.x - pointSize / 2, polygons[i].centroid.y - pointSize / 2, pointSize, pointSize);
+                }
+            }
+        }
+        if (this.displayVoronoiPoints) {
+            for (let i = 0; i < polygons.length; i++) {
+                voronoiCanvasCTX.fillRect(polygons[i].dataPoint.x - pointSize / 2, polygons[i].dataPoint.y - pointSize / 2, pointSize, pointSize);
+
+                if (this.sourceChrom == this.targetChrom) {
+                    voronoiCanvasCTX.fillRect(polygons[i].dataPoint.x - pointSize / 2, polygons[i].dataPoint.y - pointSize / 2, pointSize, pointSize);
+                }
+            }
+        }
+
     }
 
     setDisplayVoronoiEdges(display: boolean) {

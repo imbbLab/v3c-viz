@@ -33,7 +33,7 @@ var voronoiMap: VoronoiPlot;
 var imageMap: ImageMap;
 
 var chromosomes: Map<string, Chromosome> = new Map();
-var interactions: Map<string, Interaction[]> = new Map();
+var interactions: Map<string, Map<string, Interaction[]>> = new Map();
 var sourceChrom: Chromosome;
 var targetChrom: Chromosome;
 
@@ -375,7 +375,7 @@ function reposition() {
 
     let imageCanvasDiv = <HTMLDivElement>document.getElementById('image-canvas-div');
     let voronoiCanvasDiv = <HTMLDivElement>document.getElementById('voronoi-canvas-div');
-    let voronoiColourControls = <HTMLDivElement> document.getElementById('voronoi-colour-controls')
+    let voronoiColourControls = <HTMLDivElement>document.getElementById('voronoi-colour-controls')
     let geneBrowserBelow = <HTMLDivElement>document.getElementById('gene-browser-below');
     let geneBrowserRight = <HTMLDivElement>document.getElementById('gene-browser-right');
     let numDisplayedViews = 1
@@ -389,7 +389,7 @@ function reposition() {
 
     let startTop = 0;
 
-    if(displayColourControls) {
+    if (displayColourControls) {
         startTop += 100
     }
 
@@ -399,7 +399,7 @@ function reposition() {
     if (!intrachromosomeView) {
         maxWidth -= igvHeight;
     } else {
-        maxWidth -= 20 * (3-numDisplayedViews);
+        maxWidth -= 20 * (3 - numDisplayedViews);
     }
     maxHeight -= igvHeight;
 
@@ -512,6 +512,7 @@ interface ViewRequest {
 var xRequest: ViewRequest | null
 var yRequest: ViewRequest | null
 var timeoutFunction: any;
+var redrawTimeoutFunction: any;
 
 interface MinMax {
     Min: number
@@ -682,15 +683,18 @@ function requestViewUpdate(request: ViewRequest) {
                         }
 
                         response.arrayBuffer().then((buffer: ArrayBuffer) => {
-                            let interactionSet = interactions.get(sourceChrom.nameWithChr() + "-" + targetChrom.nameWithChr())
+                            interactions.forEach((interactionMap, name, map) => {
+                                let interactionSet = interactionMap.get(sourceChrom.nameWithChr() + "-" + targetChrom.nameWithChr())
 
-                            if (interactionSet) {
-                                imageMap.setInteractions(interactionSet);
-                                voronoiMap.setInteractions(interactionSet);
-                            } else {
-                                imageMap.setInteractions([])
-                                voronoiMap.setInteractions([]);
-                            }
+                                if (interactionSet) {
+                                    imageMap.setInteractions(name, interactionSet);
+                                    voronoiMap.setInteractions(name, interactionSet);
+                                } else {
+                                    imageMap.setInteractions(name, []);
+                                    voronoiMap.setInteractions(name, []);
+                                }
+
+                            })
 
                             let dataView = new DataView(buffer);
                             let offset = 0;
@@ -719,6 +723,8 @@ function requestViewUpdate(request: ViewRequest) {
                                 polygon.area = dataView.getFloat64(offset);
                                 offset += 8;
 
+                                //polygon.logArea = Math.log(polygon.area)
+
                                 polygon.clipped = dataView.getUint8(offset) == 1;
                                 offset += 1
 
@@ -736,9 +742,7 @@ function requestViewUpdate(request: ViewRequest) {
                                 vor.polygons.push(polygon)
                             }
 
-
-
-                            let minMaxArea = getMinMaxArea(vor);
+                            minMaxArea = getMinMaxArea(vor);
 
                             let colourCanvas = <HTMLCanvasElement>document.getElementById('voronoi-colour');
                             colourCanvas.width = imageMap.canvas.width;
@@ -777,56 +781,7 @@ function requestViewUpdate(request: ViewRequest) {
                                 colourCanvasCTX.stroke();
                             }
 
-                            //Mousedown
-                            let processMin = true;
-                            colourCanvas.oncontextmenu = function (e) { e.preventDefault(); e.stopPropagation(); }
-                            colourCanvas.addEventListener('mousedown', function (event: MouseEvent) {
-                                let colourCanvas = <HTMLCanvasElement>document.getElementById('voronoi-colour');
-                                let colourCanvasCTX = <CanvasRenderingContext2D>colourCanvas.getContext("2d");
-
-                                // Clear the colour bar region
-                                colourCanvasCTX.clearRect(0, histogramY, colourCanvas.width, colourCanvas.height)
-
-                                var rect = colourCanvas.getBoundingClientRect();
-                                let x = event.clientX - rect.left
-                                let y = event.clientY - rect.top
-
-                                let [minScale, maxScale] = voronoiMap.scale.domain();
-
-                                if (event.button == 0) {
-                                    voronoiMap.scale.domain([binWidth * x + minMaxArea.Min, maxScale]);
-                                } else {
-                                    voronoiMap.scale.domain([minScale, binWidth * x + minMaxArea.Min]);
-                                }
-
-                                [minScale, maxScale] = voronoiMap.scale.domain();
-
-                                for (let i = 0; i < numBins; i++) {
-                                    colourCanvasCTX.strokeStyle = voronoiMap.colourScale(voronoiMap.scale(binWidth * i + minMaxArea.Min))
-                                    colourCanvasCTX.beginPath();
-                                    colourCanvasCTX.moveTo(i, colourCanvas.height);
-                                    colourCanvasCTX.lineTo(i, histogramY)
-                                    colourCanvasCTX.stroke();
-                                }
-
-                                processMin = !processMin;
-
-
-                                colourCanvasCTX.strokeStyle = 'rgb(0, 0, 0)'
-                                let minScaleX = (minScale - minMaxArea.Min) / binWidth
-                                colourCanvasCTX.beginPath();
-                                colourCanvasCTX.moveTo(minScaleX, histogramY);
-                                colourCanvasCTX.lineTo(minScaleX - 5, colourCanvas.height);
-                                colourCanvasCTX.lineTo(minScaleX + 5, colourCanvas.height);
-                                colourCanvasCTX.fill();
-                                let maxScaleX = (maxScale - minMaxArea.Min) / binWidth
-                                colourCanvasCTX.beginPath();
-                                colourCanvasCTX.moveTo(maxScaleX, histogramY);
-                                colourCanvasCTX.lineTo(maxScaleX - 5, colourCanvas.height);
-                                colourCanvasCTX.lineTo(maxScaleX + 5, colourCanvas.height);
-                                colourCanvasCTX.fill();
-                                voronoiMap.redrawVoronoi();
-                            });
+                            
 
 
                             voronoiMap.setVoronoi(vor);
@@ -840,6 +795,67 @@ function requestViewUpdate(request: ViewRequest) {
         clearTimeout(timeoutFunction);
     }, 50);
 }
+
+
+//Mousedown
+var minMaxArea: MinMax
+let colourCanvas = <HTMLCanvasElement>document.getElementById('voronoi-colour');               
+colourCanvas.oncontextmenu = function (e) { e.preventDefault(); e.stopPropagation(); }
+colourCanvas.addEventListener('mousedown', function (event: MouseEvent) {
+    let colourCanvas = <HTMLCanvasElement>document.getElementById('voronoi-colour');
+    let colourCanvasCTX = <CanvasRenderingContext2D>colourCanvas.getContext("2d");
+
+    let numBins = colourCanvas.width
+    let histogramY = colourCanvas.height - 10
+    let binWidth = (minMaxArea.Max - minMaxArea.Min) / (numBins)
+
+    // Clear the colour bar region
+    colourCanvasCTX.clearRect(0, histogramY, colourCanvas.width, colourCanvas.height)
+
+    var rect = colourCanvas.getBoundingClientRect();
+    let x = event.clientX - rect.left
+    let y = event.clientY - rect.top
+
+    let [minScale, maxScale] = voronoiMap.scale.domain();
+
+    if (event.button == 0) {
+        voronoiMap.scale.domain([binWidth * x + minMaxArea.Min, maxScale]);
+    } else {
+        voronoiMap.scale.domain([minScale, binWidth * x + minMaxArea.Min]);
+    }
+
+    [minScale, maxScale] = voronoiMap.scale.domain();
+
+    for (let i = 0; i < numBins; i++) {
+        colourCanvasCTX.strokeStyle = voronoiMap.colourScale(voronoiMap.scale(binWidth * i + minMaxArea.Min))
+        colourCanvasCTX.beginPath();
+        colourCanvasCTX.moveTo(i, colourCanvas.height);
+        colourCanvasCTX.lineTo(i, histogramY)
+        colourCanvasCTX.stroke();
+    }
+
+
+    colourCanvasCTX.strokeStyle = 'rgb(0, 0, 0)'
+    let minScaleX = (minScale - minMaxArea.Min) / binWidth
+    colourCanvasCTX.beginPath();
+    colourCanvasCTX.moveTo(minScaleX, histogramY);
+    colourCanvasCTX.lineTo(minScaleX - 5, colourCanvas.height);
+    colourCanvasCTX.lineTo(minScaleX + 5, colourCanvas.height);
+    colourCanvasCTX.fill();
+    let maxScaleX = (maxScale - minMaxArea.Min) / binWidth
+    colourCanvasCTX.beginPath();
+    colourCanvasCTX.moveTo(maxScaleX, histogramY);
+    colourCanvasCTX.lineTo(maxScaleX - 5, colourCanvas.height);
+    colourCanvasCTX.lineTo(maxScaleX + 5, colourCanvas.height);
+    colourCanvasCTX.fill();
+
+
+    console.log("about to redraw")
+    voronoiMap.drawPolygonsCanvas();
+    //voronoiMap.redrawVoronoi();
+    console.log("redrawn")
+});
+
 
 window.addEventListener('resize', (event) => {
     reposition();
@@ -1298,7 +1314,6 @@ fetch('./genomes.json').then((response) => {
                                     imageMap.setPercentile(parseFloat(value));
                                 });
 
-                                imageMap.addContactMenu(imageGUI);
 
 
                                 // Set up the options for voronoi
@@ -1311,13 +1326,13 @@ fetch('./genomes.json').then((response) => {
                                 voronoiGUI.add(voronoiMap, 'displayVoronoiEdges').name('Display edges').onChange((value) => {
                                     //voronoiMap.drawVoronoi();
                                     //voronoiMap.redraw();
-                                    voronoiMap.redrawVoronoi();
+                                    voronoiMap.drawPolygonsCanvas();
                                 })
                                 voronoiGUI.add(voronoiMap, 'displayVoronoiPoints').name('Display data').onChange((value) => {
-                                    voronoiMap.redrawVoronoi();
+                                    voronoiMap.drawPolygonsCanvas();
                                 })
                                 voronoiGUI.add(voronoiMap, 'displayCentroid').name('Display centroid').onChange((value) => {
-                                    voronoiMap.redrawVoronoi();
+                                    voronoiMap.drawPolygonsCanvas();
                                 })
 
                                 const smoothingMenu = voronoiGUI.addFolder('Smoothing');
@@ -1335,7 +1350,6 @@ fetch('./genomes.json').then((response) => {
                                     voronoiMap.redraw();
                                 })*/
 
-                                voronoiMap.addContactMenu(voronoiGUI);
 
                                 // Hide the menus
                                 imageGUI.close();
@@ -1352,14 +1366,29 @@ fetch('./genomes.json').then((response) => {
                                             return;
                                         }
 
-                                        response.json().then(interact => {
-                                            for (var chromPair in interact['Interactions']) {
-                                                var interactionArray: Interaction[] = [];
-                                                interact['Interactions'][chromPair].forEach((interaction: any) => {
-                                                    interactionArray.push(Interaction.fromJSON(interaction, chromosomes));
-                                                });
+                                        response.json().then(interactFiles => {
 
-                                                interactions.set(chromPair, interactionArray)
+                                            for (const [name, interact] of Object.entries<any>(interactFiles)) {
+                                                if (interact == null) {
+                                                    continue
+                                                }
+
+                                                let serverInteractions = new Map<string, Interaction[]>();
+
+                                                for (var chromPair in interact['Interactions']) {
+
+                                                    imageMap.addContactMenu(name, imageGUI);
+                                                    voronoiMap.addContactMenu(name, voronoiGUI);
+
+                                                    var interactionArray: Interaction[] = [];
+                                                    interact['Interactions'][chromPair].forEach((interaction: any) => {
+                                                        interactionArray.push(Interaction.fromJSON(interaction, chromosomes));
+                                                    });
+
+                                                    serverInteractions.set(chromPair, interactionArray)
+                                                }
+
+                                                interactions.set(name, serverInteractions)
                                             }
 
                                             /*interact['Interactions'].forEach((interaction: any) => {

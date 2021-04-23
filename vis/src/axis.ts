@@ -35,6 +35,15 @@ export enum YAxisLocation {
     Right
 }
 
+class ContactOptions {
+    contactOpacity: number = 0.7;
+    contactEdgeColour: number = 0xc92730;
+    edgeWidth: number = 2;
+    contactFill: boolean = false;
+    contactFillColour: number = 0xc92730;
+    contactSize: number = 10;
+}
+
 export abstract class Axis {
     originLocation: OriginLocation = OriginLocation.BottomLeft;
     yAxisLocation: YAxisLocation = YAxisLocation.Right;
@@ -64,15 +73,10 @@ export abstract class Axis {
     tickDecimalPlaces = 2;
 
     // Editable contact options
-    contactOpacity = 0.7;
-    contactEdgeColour = 0xc92730;
-    edgeWidth = 2;
-    contactFill = false;
-    contactFillColour = 0xc92730;
-    contactSize = 10;
+    contactOptions: Map<string, ContactOptions>;
 
     // Contacts
-    interactions: Interaction[]
+    interactions: Map<string, Interaction[]>;
 
     axisWidth: number = 0;
     axisHeight: number = 0;
@@ -86,7 +90,8 @@ export abstract class Axis {
 
         this.setDimensions(this.canvas.width, this.canvas.height)
 
-        this.interactions = [];
+        this.interactions = new Map<string, Interaction[]>();
+        this.contactOptions = new Map<string, ContactOptions>();
 
         /*this.boxesToDraw[0] = new Array<number>(2);
         this.boxesToDraw[0][0] = 804435;
@@ -311,72 +316,79 @@ export abstract class Axis {
         let xScaleFactor = axisCanvas.width / (endX - startX);
         let yScaleFactor = axisCanvas.height / (endY - startY);
 
-        axisCanvasCTX.save();
-        axisCanvasCTX.globalAlpha = this.contactOpacity;
-        axisCanvasCTX.strokeStyle = "#" + this.contactEdgeColour.toString(16);
-        axisCanvasCTX.lineWidth = this.edgeWidth;
-        axisCanvasCTX.fillStyle = "#" + this.contactFillColour.toString(16);//"rgba(0, 0, 255, 0.75)";
-        for (let i = 0; i < this.interactions.length; i++) {
-            var x, y
+        this.contactOptions.forEach((options, key, map) => {
+            let interactions = <Interaction[]>this.interactions.get(key);
 
-            if ((this.interactions[i].sourceChrom == this.sourceChrom && this.interactions[i].targetChrom == this.targetChrom)) {
-                x = this.interactions[i].sourceStart;
-                y = this.interactions[i].targetStart;
-
-                let halfWidth = (this.interactions[i].sourceEnd - this.interactions[i].sourceStart)/2;
-                let halfHeight = (this.interactions[i].targetEnd - this.interactions[i].targetStart)/2;
-
-                x += halfWidth;
-                y += halfHeight;
-
-                // TODO: Possible performance improvement here - check whether any part of the contact box is visible
-                // and only draw if it is.
-
-                //if (x >= this.minViewX && x <= this.maxDataX && y >= this.minViewY && y <= this.maxViewY) {
-                    x = (x - startX) * xScaleFactor;
-                    y = (y - startY) * yScaleFactor;                    
-
-                    // Make sure it is visible
-                    halfWidth = Math.max(halfWidth * xScaleFactor, this.contactSize);
-                    halfHeight = Math.max(halfHeight * yScaleFactor, this.contactSize);
-
-                    axisCanvasCTX.beginPath();
-                    axisCanvasCTX.rect(x - halfWidth, y - halfHeight, halfWidth * 2, halfHeight * 2);
-                    if (this.contactFill) {
-                        axisCanvasCTX.fill();
-                    }
-                    axisCanvasCTX.stroke();
-               // }
+            axisCanvasCTX.save();
+            axisCanvasCTX.globalAlpha = options.contactOpacity;
+            axisCanvasCTX.strokeStyle = "#" + options.contactEdgeColour.toString(16);
+            axisCanvasCTX.lineWidth = options.edgeWidth;
+            axisCanvasCTX.fillStyle = "#" + options.contactFillColour.toString(16);//"rgba(0, 0, 255, 0.75)";
+    
+            for (let i = 0; i < interactions.length; i++) {
+                var x, y
+    
+                if ((interactions[i].sourceChrom == this.sourceChrom && interactions[i].targetChrom == this.targetChrom)) {
+                    x = interactions[i].sourceStart;
+                    y = interactions[i].targetStart;
+    
+                    let halfWidth = (interactions[i].sourceEnd - interactions[i].sourceStart)/2;
+                    let halfHeight = (interactions[i].targetEnd - interactions[i].targetStart)/2;
+    
+                    x += halfWidth;
+                    y += halfHeight;
+    
+                    // TODO: Possible performance improvement here - check whether any part of the contact box is visible
+                    // and only draw if it is.
+    
+                    //if (x >= this.minViewX && x <= this.maxDataX && y >= this.minViewY && y <= this.maxViewY) {
+                        x = (x - startX) * xScaleFactor;
+                        y = (y - startY) * yScaleFactor;                    
+    
+                        // Make sure it is visible
+                        halfWidth = Math.max(halfWidth * xScaleFactor, options.contactSize);
+                        halfHeight = Math.max(halfHeight * yScaleFactor, options.contactSize);
+    
+                        axisCanvasCTX.beginPath();
+                        axisCanvasCTX.rect(x - halfWidth, y - halfHeight, halfWidth * 2, halfHeight * 2);
+                        if (options.contactFill) {
+                            axisCanvasCTX.fill();
+                        }
+                        axisCanvasCTX.stroke();
+                   // }
+                }
+    
+                if (interactions[i].sourceChrom == this.targetChrom && interactions[i].targetChrom == this.sourceChrom) {
+                    y = interactions[i].sourceStart;
+                    x = interactions[i].targetStart;
+    
+                    let halfHeight = (interactions[i].sourceEnd - interactions[i].sourceStart)/2;
+                    let halfWidth = (interactions[i].targetEnd - interactions[i].targetStart)/2;
+    
+                    x += halfWidth;
+                    y += halfHeight;
+    
+                   // if (x >= this.minViewX && x <= this.maxDataX && y >= this.minViewY && y <= this.maxViewY) {
+                        x = (x - startX) * xScaleFactor;
+                        y = (y - startY) * yScaleFactor;
+    
+                        // Make sure it is visible
+                        halfWidth = Math.max(halfWidth * xScaleFactor, options.contactSize);
+                        halfHeight = Math.max(halfHeight * yScaleFactor, options.contactSize);
+    
+                        axisCanvasCTX.beginPath();
+                        axisCanvasCTX.rect(x - halfWidth, y - halfHeight, halfWidth * 2, halfHeight * 2);
+                        if (options.contactFill) {
+                            axisCanvasCTX.fill();
+                        }
+                        axisCanvasCTX.stroke();
+                    //}
+                }
             }
+            axisCanvasCTX.restore();
+        })
 
-            if (this.interactions[i].sourceChrom == this.targetChrom && this.interactions[i].targetChrom == this.sourceChrom) {
-                y = this.interactions[i].sourceStart;
-                x = this.interactions[i].targetStart;
-
-                let halfHeight = (this.interactions[i].sourceEnd - this.interactions[i].sourceStart)/2;
-                let halfWidth = (this.interactions[i].targetEnd - this.interactions[i].targetStart)/2;
-
-                x += halfWidth;
-                y += halfHeight;
-
-               // if (x >= this.minViewX && x <= this.maxDataX && y >= this.minViewY && y <= this.maxViewY) {
-                    x = (x - startX) * xScaleFactor;
-                    y = (y - startY) * yScaleFactor;
-
-                    // Make sure it is visible
-                    halfWidth = Math.max(halfWidth * xScaleFactor, this.contactSize);
-                    halfHeight = Math.max(halfHeight * yScaleFactor, this.contactSize);
-
-                    axisCanvasCTX.beginPath();
-                    axisCanvasCTX.rect(x - halfWidth, y - halfHeight, halfWidth * 2, halfHeight * 2);
-                    if (this.contactFill) {
-                        axisCanvasCTX.fill();
-                    }
-                    axisCanvasCTX.stroke();
-                //}
-            }
-        }
-        axisCanvasCTX.restore();
+        
     }
 
     abstract redraw(): void;
@@ -389,8 +401,8 @@ export abstract class Axis {
         this.boxesToDraw.push(contact)
     }*/
 
-    setInteractions(interactions: Interaction[]) {
-        this.interactions = interactions;
+    setInteractions(name:string, interactions: Interaction[]) {
+        this.interactions.set(name, interactions);
     }
 
     sourceChrom: Chromosome = new Chromosome("", 0)
@@ -417,28 +429,30 @@ export abstract class Axis {
     }
 
 
-    addContactMenu(gui: dat.GUI) {
+    addContactMenu(name: string, gui: dat.GUI) {
         //gui.add(this, 'originLocation', {"Top Left": OriginLocation.TopLeft, "Bottom Left": OriginLocation.BottomLeft}).name("Origin Location").onChange((value) => {
         //    this.redraw();
         //})
 
-        const imageContactFolder = gui.addFolder('Contacts');
-        imageContactFolder.add(this, 'contactSize', 1, 20).name("Contact size").onChange((value) => {
+        this.contactOptions.set(name, new ContactOptions());
+
+        const imageContactFolder = gui.addFolder('Contacts: ' + name);
+        imageContactFolder.add(<ContactOptions>this.contactOptions.get(name), 'contactSize', 1, 20).name("Contact size").onChange((value) => {
             this.redraw();
         });
-        imageContactFolder.add(this, 'contactOpacity', 0, 1).name("Opacity").onChange((value) => {
+        imageContactFolder.add(<ContactOptions>this.contactOptions.get(name), 'contactOpacity', 0, 1).name("Opacity").onChange((value) => {
             this.redraw();
         });
-        imageContactFolder.addColor(this, 'contactEdgeColour').name("Edge colour").onChange((value) => {
+        imageContactFolder.addColor(<ContactOptions>this.contactOptions.get(name), 'contactEdgeColour').name("Edge colour").onChange((value) => {
             this.redraw();
         });
-        imageContactFolder.add(this, 'edgeWidth', 0, 10).name("Edge width").onChange((value) => {
+        imageContactFolder.add(<ContactOptions>this.contactOptions.get(name), 'edgeWidth', 0, 10).name("Edge width").onChange((value) => {
             this.redraw();
         });
-        imageContactFolder.add(this, 'contactFill').name("Fill").onChange((value) => {
+        imageContactFolder.add(<ContactOptions>this.contactOptions.get(name), 'contactFill').name("Fill").onChange((value) => {
             this.redraw();
         });
-        imageContactFolder.addColor(this, 'contactFillColour').name("Fill colour").onChange((value) => {
+        imageContactFolder.addColor(<ContactOptions>this.contactOptions.get(name), 'contactFillColour').name("Fill colour").onChange((value) => {
             this.redraw();
         });
     }
