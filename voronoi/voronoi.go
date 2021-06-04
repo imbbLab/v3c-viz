@@ -199,6 +199,10 @@ func calculateVoronoi(triangulation *delaunay.Triangulation, boundingPolygon Pol
 		go func(p int, edges []int) {
 			defer wg.Done()
 
+			if p-toSkip >= len(data) {
+				return
+			}
+
 			var polygon Polygon
 			if p >= toSkip {
 				polygon.DataPoint = data[p-toSkip] //triangulation.Points[p]

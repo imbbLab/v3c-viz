@@ -61,7 +61,7 @@ type File interface {
 	ChromPairList() []string
 	Search(pairsQuery Query) ([]*Entry, error)
 
-	Image(query Query, numBins uint64) ([]uint32, error)
+	Image(query Query, viewQuery Query, numBins uint64) ([]uint32, error)
 
 	Chromsizes() map[string]Chromsize
 	Chromosomes() []string
@@ -346,13 +346,13 @@ func (file *bgzfFile) Search(query Query) ([]*Entry, error) {
 	return pairs, err
 }
 
-func (file *bgzfFile) Image(query Query, numBins uint64) ([]uint32, error) {
+func (file *bgzfFile) Image(query Query, viewQuery Query, numBins uint64) ([]uint32, error) {
 	fmt.Printf("Processing Image query %v\n", query)
 	imageData := make([]uint32, numBins*numBins)
 
 	// Convert to float to make sure that when
-	binSizeX := (float64(query.SourceEnd-query.SourceStart) / float64(numBins)) //+ 1
-	binSizeY := (float64(query.TargetEnd-query.TargetStart) / float64(numBins)) //+ 1
+	binSizeX := (float64(viewQuery.SourceEnd-viewQuery.SourceStart) / float64(numBins)) //+ 1
+	binSizeY := (float64(viewQuery.TargetEnd-viewQuery.TargetStart) / float64(numBins)) //+ 1
 
 	sameChrom := query.SourceChrom == query.TargetChrom
 
@@ -363,11 +363,11 @@ func (file *bgzfFile) Image(query Query, numBins uint64) ([]uint32, error) {
 	err := file.Query(query, func(entry *Entry) {
 		pointCounter++
 		if entry.SourceChrom != query.SourceChrom {
-			xPos = int64(float64(entry.TargetPosition-query.SourceStart) / binSizeX)
-			yPos = int64(float64(entry.SourcePosition-query.TargetStart) / binSizeY)
+			xPos = int64(float64(entry.TargetPosition-viewQuery.SourceStart) / binSizeX)
+			yPos = int64(float64(entry.SourcePosition-viewQuery.TargetStart) / binSizeY)
 		} else {
-			xPos = int64(float64(entry.SourcePosition-query.SourceStart) / binSizeX)
-			yPos = int64(float64(entry.TargetPosition-query.TargetStart) / binSizeY)
+			xPos = int64(float64(entry.SourcePosition-viewQuery.SourceStart) / binSizeX)
+			yPos = int64(float64(entry.TargetPosition-viewQuery.TargetStart) / binSizeY)
 		}
 		//fmt.Printf("(%d)[%f, %f]%v -> (%d, %d)\n", numBins, binSizeX, binSizeY, entry, xPos, yPos)
 		if xPos >= 0 && yPos >= 0 && xPos < int64(numBins) && yPos < int64(numBins) {
@@ -377,8 +377,8 @@ func (file *bgzfFile) Image(query Query, numBins uint64) ([]uint32, error) {
 
 		// Check if reverse is within view, as we only store diagonal
 		if sameChrom {
-			xPos = int64(float64(entry.TargetPosition-query.SourceStart) / binSizeX)
-			yPos = int64(float64(entry.SourcePosition-query.TargetStart) / binSizeY)
+			xPos = int64(float64(entry.TargetPosition-viewQuery.SourceStart) / binSizeX)
+			yPos = int64(float64(entry.SourcePosition-viewQuery.TargetStart) / binSizeY)
 
 			if xPos >= 0 && yPos >= 0 && xPos < int64(numBins) && yPos < int64(numBins) {
 				imageIndex := int(yPos)*int(numBins) + int(xPos)
@@ -432,7 +432,7 @@ func EntriesToImage(entries []*Entry, query Query, numBins uint64) []uint32 {
 }
 
 type indexConf struct {
-	Preset  int32
+	Format  int32
 	SeqCol  int32
 	SeqBeg  int32
 	EndCol  int32
@@ -470,8 +470,15 @@ func (index indexHeader) getChunksFromQuery(query Query) []fileChunk {
 	chromPairName := query.SourceChrom + string(index.Conf.RegionSplitCharacter) + query.TargetChrom
 
 	if _, ok := index.BinIndex[chromPairName]; ok {
-		startBin := query.SourceStart >> TAD_LIDX_SHIFT
-		endBin := query.SourceEnd >> TAD_LIDX_SHIFT
+		var startBin, endBin uint64
+		// PX2.002
+		if index.Magic[6] == 50 {
+			startBin = query.SourceStart >> TAD_LIDX_SHIFT_ORIGINAL
+			endBin = query.SourceEnd >> TAD_LIDX_SHIFT_ORIGINAL
+		} else {
+			startBin = query.SourceStart >> TAD_LIDX_SHIFT
+			endBin = query.SourceEnd >> TAD_LIDX_SHIFT
+		}
 		endBin += 1
 
 		if endBin >= uint64(len(index.LinearIndex[chromPairName])) {
@@ -579,7 +586,17 @@ func ParseIndex(filename string) (*indexHeader, error) {
 	header.LinearIndex = make(map[string][]uint64)
 	binary.Read(indexReader, binary.LittleEndian, &header.Magic)
 	binary.Read(indexReader, binary.LittleEndian, &header.NumSequences)
-	binary.Read(indexReader, binary.LittleEndian, &header.LineCount)
+
+	// PX2.002
+	if header.Magic[6] == 50 {
+		var lineCount32 int32
+		binary.Read(indexReader, binary.LittleEndian, &lineCount32)
+
+		//fmt.Println(lineCount32)
+		header.LineCount = uint64(lineCount32)
+	} else {
+		binary.Read(indexReader, binary.LittleEndian, &header.LineCount)
+	}
 
 	binary.Read(indexReader, binary.LittleEndian, &header.Conf)
 
@@ -611,6 +628,7 @@ func ParseIndex(filename string) (*indexHeader, error) {
 			targetNameIndex++
 		}
 	}
+
 	//fmt.Println(header.TargetNames)
 
 	//fmt.Println(header.NumSequences)
@@ -688,6 +706,7 @@ func getBGZFOffset(location uint64) bgzf.Offset {
 }
 
 const TAD_LIDX_SHIFT = 15
+const TAD_LIDX_SHIFT_ORIGINAL = 14
 
 func ParseBGZF(filename string) (File, error) {
 

@@ -478,24 +478,7 @@ func GetVoronoiAndImage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	pairsQuery := pairs.Query{SourceChrom: sourceChrom, SourceStart: uint64(minX), SourceEnd: uint64(maxX), TargetChrom: targetChrom, TargetStart: uint64(minY), TargetEnd: uint64(maxY)}
-
-	overviewImage, err := pairsFile.Image(pairsQuery, uint64(numBins))
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	buf := new(bytes.Buffer)
-	binary.Write(buf, binary.BigEndian, uint32(numBins))
-	err = binary.Write(buf, binary.BigEndian, overviewImage)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	sumPoints := 0
-	for _, count := range overviewImage {
-		sumPoints += int(count)
-	}
+	viewQuery := pairs.Query{SourceChrom: sourceChrom, SourceStart: uint64(minX), SourceEnd: uint64(maxX), TargetChrom: targetChrom, TargetStart: uint64(minY), TargetEnd: uint64(maxY)}
 
 	fmt.Println(pairsQuery)
 
@@ -519,6 +502,24 @@ func GetVoronoiAndImage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	fmt.Println(pairsQuery)
+
+	overviewImage, err := pairsFile.Image(pairsQuery, viewQuery, uint64(numBins))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	buf := new(bytes.Buffer)
+	binary.Write(buf, binary.BigEndian, uint32(numBins))
+	err = binary.Write(buf, binary.BigEndian, overviewImage)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	sumPoints := 0
+	for _, count := range overviewImage {
+		sumPoints += int(count)
+	}
 
 	//var result *voronoi.Int16VoronoiResult
 	var result *voronoi.Voronoi
@@ -772,7 +773,8 @@ func GetDensityImage(w http.ResponseWriter, r *http.Request) {
 
 	}*/
 
-	overviewImage, err := pairsFile.Image(pairs.Query{SourceChrom: sourceChrom, SourceStart: uint64(minX), SourceEnd: uint64(maxX), TargetChrom: targetChrom, TargetStart: uint64(minY), TargetEnd: uint64(maxY)}, uint64(numBins))
+	overviewImage, err := pairsFile.Image(pairs.Query{SourceChrom: sourceChrom, SourceStart: uint64(minX), SourceEnd: uint64(maxX), TargetChrom: targetChrom, TargetStart: uint64(minY), TargetEnd: uint64(maxY)},
+		pairs.Query{SourceChrom: sourceChrom, SourceStart: uint64(minX), SourceEnd: uint64(maxX), TargetChrom: targetChrom, TargetStart: uint64(minY), TargetEnd: uint64(maxY)}, uint64(numBins))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
