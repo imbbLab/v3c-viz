@@ -319,6 +319,10 @@ export abstract class Axis {
         this.contactOptions.forEach((options, key, map) => {
             let interactions = <Interaction[]>this.interactions.get(key);
 
+            if(interactions == null) {
+                return
+            }
+
             axisCanvasCTX.save();
             axisCanvasCTX.globalAlpha = options.contactOpacity;
             axisCanvasCTX.strokeStyle = "#" + options.contactEdgeColour.toString(16);

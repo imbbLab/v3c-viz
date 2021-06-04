@@ -205,16 +205,25 @@ export class CanvasGradient {
     };
 }
 
-export class SVGCanvasPattern extends CanvasPattern {
+
+
+export class SVGCanvasPattern implements CanvasPattern {
 
     __root: any
     __ctx: SVGContext
 
+    pattern = new CanvasPattern();
+
     constructor(pattern: any, ctx: SVGContext) {
-        super();
+        //super();
+
 
         this.__root = pattern;
         this.__ctx = ctx;
+    }
+
+    setTransform(transform?: DOMMatrix2DInit): void {
+        this.pattern.setTransform(transform)
     }
 };
 

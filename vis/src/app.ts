@@ -397,6 +397,9 @@ function renderSVGAxis(context: SVGContext, track: igv.ITrack, axisCanvas: HTMLC
 }
 
 function reposition() {
+    if(!imageMap) {
+        return
+    }
     // TODO: Only reposition maximum once every 50 ms as this requires loading data (voronoi)
 
     let navBarDiv = <HTMLDivElement>document.getElementById('menubar-div');
@@ -711,18 +714,20 @@ function requestViewUpdate(request: ViewRequest) {
                         }
 
                         response.arrayBuffer().then((buffer: ArrayBuffer) => {
-                            interactions.forEach((interactionMap, name, map) => {
-                                let interactionSet = interactionMap.get(sourceChrom.nameWithChr() + "-" + targetChrom.nameWithChr())
+                            if(interactions) {
+                                interactions.forEach((interactionMap, name, map) => {
+                                    let interactionSet = interactionMap.get(sourceChrom.nameWithChr() + "-" + targetChrom.nameWithChr())
 
-                                if (interactionSet) {
-                                    imageMap.setInteractions(name, interactionSet);
-                                    voronoiMap.setInteractions(name, interactionSet);
-                                } else {
-                                    imageMap.setInteractions(name, []);
-                                    voronoiMap.setInteractions(name, []);
-                                }
+                                    if (interactionSet) {
+                                        imageMap.setInteractions(name, interactionSet);
+                                        voronoiMap.setInteractions(name, interactionSet);
+                                    } else {
+                                        imageMap.setInteractions(name, []);
+                                        voronoiMap.setInteractions(name, []);
+                                    }
 
-                            })
+                                })
+                            }
 
                             let dataView = new DataView(buffer);
                             let offset = 0;
@@ -1394,6 +1399,7 @@ fetch('./genomes.json').then((response) => {
                                 //document.getElementById('image-canvas-div')?.insertBefore(imageGUI.domElement, document.getElementById('image-canvas'));
                                 imageGUI.add(imageMap, 'numBins').name('Number of bins').onChange((value) => {
                                     imageMap.setNumberBins(parseInt(value));
+                                    requestViewUpdate({ dimension: "x", locus: getLocusFromBrowser(bottomBrowser) })
                                 });
                                 imageGUI.add(imageMap, 'percentile', 0, 1, 0.001).name('Percentile (threshold) ').onChange((value) => {
                                     imageMap.setPercentile(parseFloat(value));
@@ -1458,12 +1464,12 @@ fetch('./genomes.json').then((response) => {
                                                     continue
                                                 }
 
+                                                imageMap.addContactMenu(name, imageGUI);
+                                                voronoiMap.addContactMenu(name, voronoiGUI);
+
                                                 let serverInteractions = new Map<string, Interaction[]>();
 
                                                 for (var chromPair in interact['Interactions']) {
-
-                                                    imageMap.addContactMenu(name, imageGUI);
-                                                    voronoiMap.addContactMenu(name, voronoiGUI);
 
                                                     var interactionArray: Interaction[] = [];
                                                     interact['Interactions'][chromPair].forEach((interaction: any) => {

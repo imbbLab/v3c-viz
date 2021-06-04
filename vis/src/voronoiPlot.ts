@@ -410,7 +410,7 @@ export class VoronoiPlot extends Axis {
                 voronoiCanvasCTX.fillRect(polygons[i].centroid.x - pointSize / 2, polygons[i].centroid.y - pointSize / 2, pointSize, pointSize);
 
                 if (this.sourceChrom == this.targetChrom) {
-                    voronoiCanvasCTX.fillRect(polygons[i].centroid.x - pointSize / 2, polygons[i].centroid.y - pointSize / 2, pointSize, pointSize);
+                    voronoiCanvasCTX.fillRect(polygons[i].centroid.y - pointSize / 2, polygons[i].centroid.x - pointSize / 2, pointSize, pointSize);
                 }
             }
         }
@@ -419,7 +419,7 @@ export class VoronoiPlot extends Axis {
                 voronoiCanvasCTX.fillRect(polygons[i].dataPoint.x - pointSize / 2, polygons[i].dataPoint.y - pointSize / 2, pointSize, pointSize);
 
                 if (this.sourceChrom == this.targetChrom) {
-                    voronoiCanvasCTX.fillRect(polygons[i].dataPoint.x - pointSize / 2, polygons[i].dataPoint.y - pointSize / 2, pointSize, pointSize);
+                    voronoiCanvasCTX.fillRect(polygons[i].dataPoint.y - pointSize / 2, polygons[i].dataPoint.x - pointSize / 2, pointSize, pointSize);
                 }
             }
         }

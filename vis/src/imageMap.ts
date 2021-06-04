@@ -5,8 +5,8 @@ import { VoronoiPlot } from './voronoiPlot'
 export class ImageMap extends Axis {
     //numBinsForDensity = 300;
     //isImageLocked = false;
-    //imageCanvas: HTMLCanvasElement;
-    //imageCTX: CanvasRenderingContext2D;
+    imageCanvas: HTMLCanvasElement;
+    imageCTX: CanvasRenderingContext2D;
     //imageDiv : HTMLDivElement;
 
     //numPointsLabel: HTMLLabelElement
@@ -21,12 +21,17 @@ export class ImageMap extends Axis {
     imageData: Uint32Array
     buffer: Uint8ClampedArray
     iData: ImageData
-    bitmapData: ImageBitmap | undefined
+    //bitmapData: ImageBitmap | undefined
 
     //axis: Axis;
 
     setNumberBins(numBins: number) {
         this.numBins = numBins;
+
+        if(this.imageCanvas) {
+            this.imageCanvas.width = this.numBins;
+            this.imageCanvas.height = this.numBins;
+        }
 
 
         //this.updateView(this.minDataX, this.maxDataX, this.minDataY, this.maxDataY);
@@ -41,6 +46,10 @@ export class ImageMap extends Axis {
 
 
         var axisCanvasCTX = <CanvasRenderingContext2D>this.getAxisCanvas().getContext('2d');
+        this.imageCanvas = document.createElement("canvas");
+        this.imageCanvas.width = this.numBins;
+        this.imageCanvas.height = this.numBins;
+        this.imageCTX = <CanvasRenderingContext2D>this.imageCanvas.getContext('2d');
         this.iData = axisCanvasCTX.createImageData(this.numBins, this.numBins);
 
 
@@ -60,7 +69,7 @@ export class ImageMap extends Axis {
 
     setDimensions(width: number, height: number) {
         super.setDimensions(width, height);
-        this.setNumberBins(this.axisWidth);
+        //this.setNumberBins(this.axisWidth);
     }
 
     setChromPair(sourceChrom: Chromosome, targetChrom: Chromosome) {
@@ -115,20 +124,24 @@ export class ImageMap extends Axis {
             }
         }
 
-        this.updateBitmap();
+        this.redraw();
     }
 
     updateBitmap() {
-        createImageBitmap(this.iData).then(bitmapData => {
+        this.redraw();
+        /*createImageBitmap(this.iData).then(bitmapData => {
             this.bitmapData = bitmapData;
 
             this.redraw();
-        });
+        });*/
     }
 
     redraw() {
         // update canvas with new data
         //ctx.putImageData(idata, 0, 0);
+
+        this.imageCTX.imageSmoothingEnabled = false;
+        this.imageCTX.putImageData(this.iData, 0, 0);
 
         var axisCanvas = this.getAxisCanvas();
         var axisCanvasCTX = <CanvasRenderingContext2D>axisCanvas.getContext('2d');
@@ -139,14 +152,19 @@ export class ImageMap extends Axis {
         if (this.intrachromosomeView) {
             axisCanvasCTX.rotate(-45 * Math.PI / 180)
             axisCanvasCTX.scale(1 / Math.sqrt(2), 1 / Math.sqrt(2))
-            axisCanvasCTX.imageSmoothingEnabled = true;
+            axisCanvasCTX.imageSmoothingEnabled = false;
         } else {
             axisCanvasCTX.imageSmoothingEnabled = false;
         }
-        if (this.bitmapData) {
-            axisCanvasCTX.drawImage(this.bitmapData, 0, 0, this.bitmapData.width, this.bitmapData.height,
-                0, 0, axisCanvas.width, axisCanvas.height);
-        }
+        //if (this.bitmapData) {
+        //    axisCanvasCTX.drawImage(this.bitmapData, 0, 0, this.bitmapData.width, this.bitmapData.height,
+        //        0, 0, axisCanvas.width, axisCanvas.height);
+        //} else {
+        
+        //}
+        
+        axisCanvasCTX.drawImage(this.imageCanvas, 0, 0, this.imageCanvas.width, this.imageCanvas.height,
+                    0, 0, axisCanvas.width, axisCanvas.height);
 
         this.drawContacts();
         axisCanvasCTX.restore();
