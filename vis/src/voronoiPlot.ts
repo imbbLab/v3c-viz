@@ -240,14 +240,14 @@ export class VoronoiPlot extends Axis {
         let voronoiCanvasCTX = <CanvasRenderingContext2D>this.voronoiCanvas.getContext("2d");
         voronoiCanvasCTX.clearRect(0, 0, this.voronoiCanvas.width, this.voronoiCanvas.height);
 
-        this.drawVoronoi(voronoiCanvasCTX, 0, 0, this.getVoronoiDrawWidth(), this.getVoronoiDrawHeight(), false, false)
+        this.drawVoronoi(voronoiCanvasCTX,this.getVoronoiDrawWidth(), this.getVoronoiDrawHeight(), false)
         //this.drawPolygons(voronoiCanvasCTX, this.polygons);
 
         this.redraw()
     }
 
 
-    convertVoronoiToPolygons(xOffset: number, yOffset: number, width: number, height: number, invertY: boolean, clipDiagonal: boolean): Polygon[] {
+    convertVoronoiToPolygons(width: number, height: number, clipDiagonal: boolean): Polygon[] {
         let polygons: Polygon[] = [];
 
         let clipPolygon = new Polygon();
@@ -273,18 +273,15 @@ export class VoronoiPlot extends Axis {
             if (points.length >= 3) {
                 for (let j = 0; j < points.length; j++) {
                     points[j].y = ((points[j].y - this.minViewY) / binSizeY)
-                    points[j].x = xOffset + ((points[j].x - this.minViewX) / binSizeX)
-                    if (invertY) {
-                        points[j].y = height - points[j].y + yOffset
-                    }
+                    points[j].x = ((points[j].x - this.minViewX) / binSizeX)
 
                     // Remove odd edge that occurs when saving to SVG
                     // TODO: Investigate cause? Why do we need this?
-                    if (points[j].y > height + yOffset) {
-                        points[j].y = height + yOffset
+                    if (points[j].y > height) {
+                        points[j].y = height
                     }
-                    if (points[j].x > width + xOffset) {
-                        points[j].x = width + xOffset
+                    if (points[j].x > width) {
+                        points[j].x = width
                     }
                 }
 
@@ -292,8 +289,8 @@ export class VoronoiPlot extends Axis {
                 polygon.points = points;
                 polygon.area = this.voronoi.polygons[i].area;
                 polygon.logArea = this.voronoi.polygons[i].logArea;
-                polygon.centroid = { x: xOffset + ((this.voronoi.polygons[i].centroid.x - this.minViewX) / binSizeX), y: yOffset + ((this.voronoi.polygons[i].centroid.y - this.minViewY) / binSizeY) };
-                polygon.dataPoint = { x: xOffset + ((this.voronoi.polygons[i].dataPoint.x - this.minViewX) / binSizeX), y: yOffset + ((this.voronoi.polygons[i].dataPoint.y - this.minViewY) / binSizeY) };
+                polygon.centroid = { x: ((this.voronoi.polygons[i].centroid.x - this.minViewX) / binSizeX), y: ((this.voronoi.polygons[i].centroid.y - this.minViewY) / binSizeY) };
+                polygon.dataPoint = { x: ((this.voronoi.polygons[i].dataPoint.x - this.minViewX) / binSizeX), y: ((this.voronoi.polygons[i].dataPoint.y - this.minViewY) / binSizeY) };
 
                 polygons.push(polygon)
             }
@@ -310,18 +307,15 @@ export class VoronoiPlot extends Axis {
                 if (points.length >= 3) {
                     for (let j = 0; j < points.length; j++) {
                         points[j].y = ((points[j].y - this.minViewY) / binSizeY)
-                        points[j].x = xOffset + ((points[j].x - this.minViewX) / binSizeX)
-                        if (invertY) {
-                            points[j].y = height - points[j].y + yOffset
-                        }
+                        points[j].x = ((points[j].x - this.minViewX) / binSizeX)
 
                         // Remove odd edge that occurs when saving to SVG
                         // TODO: Investigate cause? Why do we need this?
-                        if (points[j].y > height + yOffset) {
-                            points[j].y = height + yOffset
+                        if (points[j].y > height) {
+                            points[j].y = height
                         }
-                        if (points[j].x > width + xOffset) {
-                            points[j].x = width + xOffset
+                        if (points[j].x > width) {
+                            points[j].x = width
                         }
                     }
 
@@ -329,8 +323,8 @@ export class VoronoiPlot extends Axis {
                     polygon.points = points;
                     polygon.area = this.voronoi.polygons[i].area;
                     polygon.logArea = this.voronoi.polygons[i].logArea;
-                    polygon.centroid = { x: xOffset + ((this.voronoi.polygons[i].centroid.y - this.minViewX) / binSizeX), y: yOffset + ((this.voronoi.polygons[i].centroid.x - this.minViewY) / binSizeY) };
-                    polygon.dataPoint = { x: xOffset + ((this.voronoi.polygons[i].dataPoint.y - this.minViewX) / binSizeX), y: yOffset + ((this.voronoi.polygons[i].dataPoint.x - this.minViewY) / binSizeY) };
+                    polygon.centroid = { x: ((this.voronoi.polygons[i].centroid.y - this.minViewX) / binSizeX), y: ((this.voronoi.polygons[i].centroid.x - this.minViewY) / binSizeY) };
+                    polygon.dataPoint = { x:  ((this.voronoi.polygons[i].dataPoint.y - this.minViewX) / binSizeX), y: ((this.voronoi.polygons[i].dataPoint.x - this.minViewY) / binSizeY) };
 
                     polygons.push(polygon)
                 }
@@ -340,8 +334,8 @@ export class VoronoiPlot extends Axis {
         return polygons;
     }
 
-    drawVoronoi(voronoiCanvasCTX: CanvasRenderingContext2D | SVGContext, xOffset: number, yOffset: number, width: number, height: number, invertY: boolean, clipDiagonal: boolean) {
-        let polygons = this.convertVoronoiToPolygons(xOffset, yOffset, width, height, invertY, clipDiagonal);
+    drawVoronoi(voronoiCanvasCTX: CanvasRenderingContext2D | SVGContext, width: number, height: number, clipDiagonal: boolean) {
+        let polygons = this.convertVoronoiToPolygons(width, height, clipDiagonal);
 
         if (voronoiCanvasCTX instanceof CanvasRenderingContext2D) {
             this.polygons = polygons;
@@ -360,7 +354,7 @@ export class VoronoiPlot extends Axis {
     }
 
     drawPolygons(voronoiCanvasCTX: CanvasRenderingContext2D | SVGContext, polygons: Polygon[]) {
-        console.log("HELLO")
+        
         // Draw the polygons that are too small to be drawn with detail (between 1 and 2 pixels width/height)
         // If displaying edges, then display them with the same colour as the edges, otherwise same as the smallest value on colour scale
         if (this.displayVoronoiEdges || this.displayCentroid) {
@@ -453,7 +447,7 @@ console.log(polygons)
         axisCanvasCTX.drawImage(this.voronoiCanvas, 0, 0, this.getVoronoiDrawWidth(), this.getVoronoiDrawHeight(),
             0, 0, this.axisCanvas.width, this.axisCanvas.height);
 
-        this.drawContacts();
+        this.drawContacts(axisCanvasCTX, axisCanvas.width, axisCanvas.height, false);
 
         axisCanvasCTX.restore();
 

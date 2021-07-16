@@ -296,15 +296,20 @@ function exportToImage(drawSVG: boolean): void {
 
         downloadCanvasCTX.save()
         downloadCanvasCTX.lineWidth = 0.25
+
+        // Flip canvas (SVG is opposite to canvas) and move to start of axis
+        downloadCanvasCTX.transform(1, 0, 0, -1, voronoiMap.axisOffsetX, voronoiMap.axisHeight + voronoiMap.axisOffsetY)
+
         if (intrachromosomeView) {
-            downloadCanvasCTX.translate(voronoiMap.axisWidth / 2 + voronoiMap.axisOffsetX, -voronoiMap.axisOffsetY)
-            downloadCanvasCTX.rotate(45 * Math.PI / 180)
-            downloadCanvasCTX.scale(1 / Math.sqrt(2), 1 / Math.sqrt(2))
-            downloadCanvasCTX.imageSmoothingEnabled = true;
-            voronoiMap.drawVoronoi(downloadCanvasCTX, voronoiMap.axisOffsetX, voronoiMap.axisOffsetY, voronoiMap.axisWidth, voronoiMap.axisWidth, true, true)
+            // Transformation for triangle view
+            downloadCanvasCTX.transform(0.5, -0.5, 0.5, 0.5, 0, 0)
+
+            voronoiMap.drawVoronoi(downloadCanvasCTX, voronoiMap.axisWidth, voronoiMap.axisWidth, true);
+            voronoiMap.drawContacts(downloadCanvasCTX, voronoiMap.axisWidth, voronoiMap.axisWidth, true);
         } else {
             downloadCanvasCTX.imageSmoothingEnabled = false;
-            voronoiMap.drawVoronoi(downloadCanvasCTX, voronoiMap.axisOffsetX, voronoiMap.axisOffsetY, voronoiMap.axisWidth, voronoiMap.axisHeight, true, false)
+            voronoiMap.drawVoronoi(downloadCanvasCTX, voronoiMap.axisWidth, voronoiMap.axisHeight, false)
+            voronoiMap.drawContacts(downloadCanvasCTX, voronoiMap.axisWidth, voronoiMap.axisHeight, false);
         }
         downloadCanvasCTX.restore()
         voronoiMap.drawTicks(downloadCanvasCTX)

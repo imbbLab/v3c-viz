@@ -166,7 +166,7 @@ export class ImageMap extends Axis {
         axisCanvasCTX.drawImage(this.imageCanvas, 0, 0, this.imageCanvas.width, this.imageCanvas.height,
                     0, 0, axisCanvas.width, axisCanvas.height);
 
-        this.drawContacts();
+        this.drawContacts(axisCanvasCTX, axisCanvas.width, axisCanvas.height, false);
         axisCanvasCTX.restore();
 
         this.tickDecimalPlaces = 0;

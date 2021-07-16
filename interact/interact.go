@@ -3,6 +3,7 @@ package interact
 import (
 	"bufio"
 	"encoding/csv"
+	"fmt"
 	"io"
 	"os"
 	"strconv"
@@ -42,6 +43,8 @@ func Parse(filename string) (*InteractFile, error) {
 		return nil, nil
 	}
 
+	fmt.Println("Loading interact file: " + filename)
+
 	iFile, err := os.Open(filename)
 	if err != nil {
 		return nil, err
@@ -63,6 +66,8 @@ func Parse(filename string) (*InteractFile, error) {
 
 	var interactFile InteractFile
 	interactFile.Interactions = make(map[string][]Interaction)
+
+	interactionCount := 0
 
 	for {
 		row, err := reader.Read()
@@ -118,7 +123,10 @@ func Parse(filename string) (*InteractFile, error) {
 		interaction.TargetStrand = row[17]
 
 		interactFile.Interactions[interaction.ChromPairName()] = append(interactFile.Interactions[interaction.ChromPairName()], interaction)
+		interactionCount++
 	}
+
+	fmt.Printf("Loaded %d interactions.\n", interactionCount)
 
 	return &interactFile, nil
 }

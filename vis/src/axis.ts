@@ -304,17 +304,12 @@ export abstract class Axis {
 
     //    abstract updateView(minX: number, maxX: number, minY: number, maxY: number): void;
 
-    protected drawContacts() {
-        var axisCanvas = this.getAxisCanvas();
-        var axisCanvasCTX = <CanvasRenderingContext2D>axisCanvas.getContext('2d');
+    drawContacts(axisCanvasCTX: CanvasRenderingContext2D | SVGContext, width: number, height: number, clipDiagonal: boolean) {
+        //var axisCanvas = this.getAxisCanvas();
+        //var axisCanvasCTX = <CanvasRenderingContext2D>axisCanvas.getContext('2d');
 
-        let startX = this.minViewX;
-        let endX = this.maxViewX;
-        let startY = this.minViewY;
-        let endY = this.maxViewY;
-
-        let xScaleFactor = axisCanvas.width / (endX - startX);
-        let yScaleFactor = axisCanvas.height / (endY - startY);
+        let binSizeX = (this.maxViewX - this.minViewX) / width;
+        let binSizeY = (this.maxViewY - this.minViewY) / height;
 
         this.contactOptions.forEach((options, key, map) => {
             let interactions = <Interaction[]>this.interactions.get(key);
@@ -322,7 +317,7 @@ export abstract class Axis {
             if(interactions == null) {
                 return
             }
-
+            
             axisCanvasCTX.save();
             axisCanvasCTX.globalAlpha = options.contactOpacity;
             axisCanvasCTX.strokeStyle = "#" + options.contactEdgeColour.toString(16);
@@ -346,12 +341,16 @@ export abstract class Axis {
                     // and only draw if it is.
     
                     //if (x >= this.minViewX && x <= this.maxDataX && y >= this.minViewY && y <= this.maxViewY) {
-                        x = (x - startX) * xScaleFactor;
-                        y = (y - startY) * yScaleFactor;                    
+                        x = (x - this.minViewX) / binSizeX;
+                        y = (y - this.minViewY) / binSizeY; 
+                        
+                        if(x < 0 || x > width || y < 0 || y > height) {
+                            continue;
+                        }
     
                         // Make sure it is visible
-                        halfWidth = Math.max(halfWidth * xScaleFactor, options.contactSize);
-                        halfHeight = Math.max(halfHeight * yScaleFactor, options.contactSize);
+                        halfWidth = Math.max(halfWidth / binSizeX, options.contactSize);
+                        halfHeight = Math.max(halfHeight / binSizeY, options.contactSize);
     
                         axisCanvasCTX.beginPath();
                         axisCanvasCTX.rect(x - halfWidth, y - halfHeight, halfWidth * 2, halfHeight * 2);
@@ -373,13 +372,21 @@ export abstract class Axis {
                     y += halfHeight;
     
                    // if (x >= this.minViewX && x <= this.maxDataX && y >= this.minViewY && y <= this.maxViewY) {
-                        x = (x - startX) * xScaleFactor;
-                        y = (y - startY) * yScaleFactor;
+                        x = (x - this.minViewX) / binSizeX;
+                        y = (y - this.minViewY) / binSizeY; 
+
+                        if(x < 0 || x > width || y < 0 || y > height) {
+                            continue;
+                        }
+
+                        if(x > y && clipDiagonal) {
+                            continue;
+                        }
     
                         // Make sure it is visible
-                        halfWidth = Math.max(halfWidth * xScaleFactor, options.contactSize);
-                        halfHeight = Math.max(halfHeight * yScaleFactor, options.contactSize);
-    
+                        halfWidth = Math.max(halfWidth / binSizeX, options.contactSize);
+                        halfHeight = Math.max(halfHeight / binSizeY, options.contactSize);
+
                         axisCanvasCTX.beginPath();
                         axisCanvasCTX.rect(x - halfWidth, y - halfHeight, halfWidth * 2, halfHeight * 2);
                         if (options.contactFill) {
@@ -543,6 +550,13 @@ export abstract class Axis {
         let xDiff = this.maxViewX - this.minViewX;
         let yDiff = this.maxViewY - this.minViewY;
 
+        let textYOffset = 0;
+        let textXOffset = 10;
+        if(ctx instanceof CanvasRenderingContext2D) {
+            textXOffset = 0;
+            textYOffset = -10;
+        }
+
         // Draw x-axis ticks
         for (let i = 0; i < this.numTicks; i++) {
             let curTickPct = i * tickPct;
@@ -559,11 +573,11 @@ export abstract class Axis {
 
             // TODO: Ideally would check the number of digits to display
             if (i == 0 && xPosition > 100) {
-                ctx.fillText("" + xPosition.toFixed(this.tickDecimalPlaces), xPos + this.axisOffsetX / 2, yPos + this.axisOffsetY / 2);
+                ctx.fillText("" + xPosition.toFixed(this.tickDecimalPlaces), xPos + this.axisOffsetX / 2, yPos + this.axisOffsetY / 2 + textXOffset);
             } else if (i == this.numTicks - 1 && xPosition > 100) {
-                ctx.fillText("" + xPosition.toFixed(this.tickDecimalPlaces), xPos - this.axisOffsetX / 2, yPos + this.axisOffsetY / 2);
+                ctx.fillText("" + xPosition.toFixed(this.tickDecimalPlaces), xPos - this.axisOffsetX / 2, yPos + this.axisOffsetY / 2 + textXOffset);
             } else {
-                ctx.fillText("" + xPosition.toFixed(this.tickDecimalPlaces), xPos, yPos + this.axisOffsetY / 2);
+                ctx.fillText("" + xPosition.toFixed(this.tickDecimalPlaces), xPos, yPos + this.axisOffsetY / 2 + textXOffset);
             }
         }
 
@@ -594,11 +608,11 @@ export abstract class Axis {
 
                 // TODO: Ideally would check the number of digits to display
                 if (i == 0 && yPosition > 100) {
-                    ctx.fillText("" + yPosition.toFixed(this.tickDecimalPlaces), this.axisOffsetX / 2, -this.axisOffsetY / 2 - 10);
+                    ctx.fillText("" + yPosition.toFixed(this.tickDecimalPlaces), this.axisOffsetX / 2, -this.axisOffsetY / 2 + textYOffset);
                 } else if (i == this.numTicks - 1 && yPosition > 100) {
-                    ctx.fillText("" + yPosition.toFixed(this.tickDecimalPlaces), -this.axisOffsetX / 2, -this.axisOffsetY / 2 - 10);
+                    ctx.fillText("" + yPosition.toFixed(this.tickDecimalPlaces), -this.axisOffsetX / 2, -this.axisOffsetY / 2 + textYOffset);
                 } else {
-                    ctx.fillText("" + yPosition.toFixed(this.tickDecimalPlaces), 0, -this.axisOffsetY / 2 - 10);
+                    ctx.fillText("" + yPosition.toFixed(this.tickDecimalPlaces), 0, -this.axisOffsetY / 2 + textYOffset);
                 }
 
                 ctx.restore();
