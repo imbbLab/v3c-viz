@@ -748,12 +748,15 @@ function requestViewUpdate(request: ViewRequest) {
 
                             let numPolygons = dataView.getUint32(offset);
                             offset += 4;
+
+                            let area_scale = (voronoiMap.getVoronoiDrawWidth() * voronoiMap.getVoronoiDrawHeight()) / ((endX - startX) * (endY - startY));
+
                             for (let i = 0; i < numPolygons; i++) {
                                 let polygon = new Polygon();
                                 let numPoints = dataView.getUint32(offset);
                                 offset += 4;
 
-                                polygon.area = dataView.getFloat64(offset);
+                                polygon.area = dataView.getFloat64(offset) * area_scale;
                                 offset += 8;
 
                                 //polygon.logArea = Math.log(polygon.area)

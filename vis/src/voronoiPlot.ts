@@ -268,6 +268,10 @@ export class VoronoiPlot extends Axis {
         let binSizeY = (this.maxViewY - this.minViewY) / height
 
         for (let i = 0; i < this.voronoi.polygons.length; i++) { //this.voronoi.polygons.length
+            if(this.voronoi.polygons[i].area < 14) {
+                continue;
+            }
+
             let points = this.voronoi.polygons[i].clip(clipPolygon).points
 
             if (points.length >= 3) {
@@ -329,8 +333,8 @@ export class VoronoiPlot extends Axis {
                     polygon.points = points;
                     polygon.area = this.voronoi.polygons[i].area;
                     polygon.logArea = this.voronoi.polygons[i].logArea;
-                    polygon.centroid = { x: xOffset + ((this.voronoi.polygons[i].centroid.y - this.minViewX) / binSizeX), y: yOffset + ((this.voronoi.polygons[i].centroid.x - this.minViewY) / binSizeY) };
-                    polygon.dataPoint = { x: xOffset + ((this.voronoi.polygons[i].dataPoint.y - this.minViewX) / binSizeX), y: yOffset + ((this.voronoi.polygons[i].dataPoint.x - this.minViewY) / binSizeY) };
+                    polygon.centroid = { x: xOffset + ((this.voronoi.polygons[i].centroid.x - this.minViewX) / binSizeX), y: yOffset + ((this.voronoi.polygons[i].centroid.y - this.minViewY) / binSizeY) };
+                    polygon.dataPoint = { x: xOffset + ((this.voronoi.polygons[i].dataPoint.x - this.minViewX) / binSizeX), y: yOffset + ((this.voronoi.polygons[i].dataPoint.y - this.minViewY) / binSizeY) };
 
                     polygons.push(polygon)
                 }
@@ -341,13 +345,20 @@ export class VoronoiPlot extends Axis {
     }
 
     drawVoronoi(voronoiCanvasCTX: CanvasRenderingContext2D | SVGContext, xOffset: number, yOffset: number, width: number, height: number, invertY: boolean, clipDiagonal: boolean) {
+        let startTime = performance.now();
         let polygons = this.convertVoronoiToPolygons(xOffset, yOffset, width, height, invertY, clipDiagonal);
+        let endTime = performance.now();
+        console.log(`Call to convertVoronoiToPolygons took ${endTime - startTime} milliseconds`)
+
 
         if (voronoiCanvasCTX instanceof CanvasRenderingContext2D) {
             this.polygons = polygons;
         }
 
+        startTime = performance.now();
         this.drawPolygons(voronoiCanvasCTX, polygons);
+        endTime = performance.now();
+        console.log(`Call to convertVoronoiToPolygons took ${endTime - startTime} milliseconds`)
     }
 
     drawPolygonsCanvas() {
@@ -360,7 +371,6 @@ export class VoronoiPlot extends Axis {
     }
 
     drawPolygons(voronoiCanvasCTX: CanvasRenderingContext2D | SVGContext, polygons: Polygon[]) {
-        console.log("HELLO")
         // Draw the polygons that are too small to be drawn with detail (between 1 and 2 pixels width/height)
         // If displaying edges, then display them with the same colour as the edges, otherwise same as the smallest value on colour scale
         if (this.displayVoronoiEdges || this.displayCentroid) {
@@ -410,21 +420,21 @@ export class VoronoiPlot extends Axis {
             for (let i = 0; i < polygons.length; i++) {
                 voronoiCanvasCTX.fillRect(polygons[i].centroid.x - pointSize / 2, polygons[i].centroid.y - pointSize / 2, pointSize, pointSize);
 
-                //if (this.sourceChrom == this.targetChrom) {
-                //    voronoiCanvasCTX.fillRect(polygons[i].centroid.y - pointSize / 2, polygons[i].centroid.x - pointSize / 2, pointSize, pointSize);
-                //}
+                if (this.sourceChrom == this.targetChrom) {
+                    voronoiCanvasCTX.fillRect(polygons[i].centroid.x - pointSize / 2, polygons[i].centroid.y - pointSize / 2, pointSize, pointSize);
+                }
             }
         }
         if (this.displayVoronoiPoints) {
             for (let i = 0; i < polygons.length; i++) {
                 voronoiCanvasCTX.fillRect(polygons[i].dataPoint.x - pointSize / 2, polygons[i].dataPoint.y - pointSize / 2, pointSize, pointSize);
 
-                //if (this.sourceChrom == this.targetChrom) {
-                //    voronoiCanvasCTX.fillRect(polygons[i].dataPoint.y - pointSize / 2, polygons[i].dataPoint.x - pointSize / 2, pointSize, pointSize);
-                //}
+                if (this.sourceChrom == this.targetChrom) {
+                    voronoiCanvasCTX.fillRect(polygons[i].dataPoint.x - pointSize / 2, polygons[i].dataPoint.y - pointSize / 2, pointSize, pointSize);
+                }
             }
         }
-console.log(polygons)
+
     }
 
     setDisplayVoronoiEdges(display: boolean) {
