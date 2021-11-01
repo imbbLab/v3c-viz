@@ -14,6 +14,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	//"github.com/biogo/hts/bgzf"
 	"github.com/imbbLab/hicvis/pairs/bgzf"
@@ -348,6 +349,7 @@ func (file *bgzfFile) Search(query Query) ([]*Entry, error) {
 
 func (file *bgzfFile) Image(query Query, viewQuery Query, numBins uint64) ([]uint32, error) {
 	fmt.Printf("Processing Image query %v\n", query)
+	start := time.Now()
 	imageData := make([]uint32, numBins*numBins)
 
 	// Convert to float to make sure that when
@@ -387,7 +389,8 @@ func (file *bgzfFile) Image(query Query, viewQuery Query, numBins uint64) ([]uin
 		}
 	})
 
-	fmt.Printf("Image query finished having processed %d points\n", pointCounter)
+	elapsed := time.Since(start)
+	fmt.Printf("Image query finished having processed %d points, taking %s\n", pointCounter, elapsed)
 
 	return imageData, err
 }
@@ -732,10 +735,13 @@ func ParseBGZF(filename string) (File, error) {
 
 	log.Println("Finished parsing header, reading index...")
 
+	start := time.Now()
 	pairsFile.index, err = ParseIndex(strings.Replace(filename, ".gz", ".gz.px2", 1))
 	if err != nil {
 		return nil, err
 	}
+	elapsed := time.Since(start)
+	log.Printf("Parsing index took %s", elapsed)
 
 	// for i := 0; i < 10; i++ {
 	// 	go func(i int) {

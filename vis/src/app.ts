@@ -71,6 +71,8 @@ loadTrackButton.addEventListener('mouseenter', (event) => {
     let buttonPosition = loadTrackButton.getBoundingClientRect()
     dropdown.style.display = 'block';
     dropdown.style.top = buttonPosition.top + "px"
+
+    dropdown.style.position = "fixed";
 })
 loadTrackButton.addEventListener('mouseleave', (event) => {
     let dropdown = <HTMLDivElement>document.getElementById('loadTrackMenu');
@@ -82,6 +84,8 @@ loadTrackMenu.addEventListener('mouseenter', (event) => {
     let buttonPosition = loadTrackButton.getBoundingClientRect()
     dropdown.style.display = 'block';
     dropdown.style.top = buttonPosition.top + "px"
+
+    dropdown.style.position = "fixed";
 })
 loadTrackMenu.addEventListener('mouseleave', (event) => {
     let dropdown = <HTMLDivElement>document.getElementById('saveImageMenu');
@@ -96,7 +100,9 @@ saveImageButton.addEventListener('mouseenter', (event) => {
     let dropdown = <HTMLDivElement>document.getElementById('saveImageMenu');
     let buttonPosition = saveImageButton.getBoundingClientRect()
     dropdown.style.display = 'block';
-    dropdown.style.top = buttonPosition.top + "px"
+    dropdown.style.top = buttonPosition.top + "px";
+
+    dropdown.style.position = "fixed";
 })
 saveImageButton.addEventListener('mouseleave', (event) => {
     let dropdown = <HTMLDivElement>document.getElementById('saveImageMenu');
@@ -1428,6 +1434,9 @@ fetch('./genomes.json').then((response) => {
                                     voronoiMap.drawPolygonsCanvas();
                                 })
                                 voronoiGUI.add(voronoiMap, 'displayCentroid').name('Display centroid').onChange((value) => {
+                                    voronoiMap.drawPolygonsCanvas();
+                                })
+                                voronoiGUI.add(voronoiMap, 'dataPointSize', 0, 10, 0.1).name('Point size').onChange((value) => {
                                     voronoiMap.drawPolygonsCanvas();
                                 })
 

@@ -133,6 +133,8 @@ export class VoronoiPlot extends Axis {
 
     generateVoronoiOnServer: boolean = true
 
+    dataPointSize = 5
+
     boxesToDraw: Array<number[]>;
 
     //axis: Axis;
@@ -398,11 +400,11 @@ export class VoronoiPlot extends Axis {
         }
         voronoiCanvasCTX.fillStyle = 'rgb(0, 0, 0)'
 
-        let pointSize = 5
+        
 
         if (this.displayCentroid) {
             for (let i = 0; i < polygons.length; i++) {
-                voronoiCanvasCTX.fillRect(polygons[i].centroid.x - pointSize / 2, polygons[i].centroid.y - pointSize / 2, pointSize, pointSize);
+                voronoiCanvasCTX.fillRect(polygons[i].centroid.x - this.dataPointSize / 2, polygons[i].centroid.y - this.dataPointSize / 2, this.dataPointSize, this.dataPointSize);
 
                 //if (this.sourceChrom == this.targetChrom) {
                 //    voronoiCanvasCTX.fillRect(polygons[i].centroid.y - pointSize / 2, polygons[i].centroid.x - pointSize / 2, pointSize, pointSize);
@@ -411,14 +413,14 @@ export class VoronoiPlot extends Axis {
         }
         if (this.displayVoronoiPoints) {
             for (let i = 0; i < polygons.length; i++) {
-                voronoiCanvasCTX.fillRect(polygons[i].dataPoint.x - pointSize / 2, polygons[i].dataPoint.y - pointSize / 2, pointSize, pointSize);
+                voronoiCanvasCTX.fillRect(polygons[i].dataPoint.x - this.dataPointSize / 2, polygons[i].dataPoint.y - this.dataPointSize / 2, this.dataPointSize, this.dataPointSize);
 
                 //if (this.sourceChrom == this.targetChrom) {
                 //    voronoiCanvasCTX.fillRect(polygons[i].dataPoint.y - pointSize / 2, polygons[i].dataPoint.x - pointSize / 2, pointSize, pointSize);
                 //}
             }
         }
-console.log(polygons)
+//console.log(polygons)
     }
 
     setDisplayVoronoiEdges(display: boolean) {

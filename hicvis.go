@@ -69,12 +69,15 @@ func main() {
 		return
 	}
 
+	start := time.Now()
 	pairsFile, err = pairs.Parse(opts.DataFile)
 	if err != nil {
 		log.Fatal(err)
 		return
 	}
 	defer pairsFile.Close()
+	elapsed := time.Since(start)
+	fmt.Printf("Processing index took %s\n", elapsed)
 
 	if (pairsFile.Genome() == "" || pairsFile.Genome() == "unknown") && opts.Genome == "" {
 		fmt.Println("No genome specified in pairs file or as command line argument. Please specify the genome using the -g option.")
@@ -318,7 +321,7 @@ func performVoronoi(points []*pairs.Entry, query pairs.Query, smoothingIteration
 	vor, err := voronoi.FromPoints(dPoints, boundingPolygon, normalisation, smoothingIterations)
 	elapsed := time.Since(start)
 	//fmt.Println(triangulation)
-	fmt.Printf("Finishing voronoi calculation: %s [%d polygons]\n", elapsed, len(vor.Polygons))
+	fmt.Printf("Finishing voronoi calculation: %s [%d polygons] (%d iterations)\n", elapsed, len(vor.Polygons), smoothingIterations)
 
 	//elapsed = time.Since(start)
 	//fmt.Printf("[%s] Originally had %d polygons, but now have %d\n", elapsed, len(vor.Polygons), len(result.Polygons))
