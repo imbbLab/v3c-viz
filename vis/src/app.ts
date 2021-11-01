@@ -210,7 +210,7 @@ function exportToImage(drawSVG: boolean): void {
         let lastY = voronoiMap.canvas.height;
 
         console.log("DRAWING!!")
-        
+
         bottomBrowser.trackViews.forEach((trackView: igv.TrackView) => {
             const visibleViewports = trackView.viewports.filter(vp => vp.isVisible())
 
@@ -220,12 +220,12 @@ function exportToImage(drawSVG: boolean): void {
                 console.log(viewport.referenceFrame)
 
                 lastY += 50
-                
+
                 downloadCanvasCTX.save();
                 downloadCanvasCTX.translate(0, lastY);
-                viewport.trackView.track.draw({ 
-                    context: downloadCanvasCTX, 
-                    referenceFrame: viewport.referenceFrame, 
+                viewport.trackView.track.draw({
+                    context: downloadCanvasCTX,
+                    referenceFrame: viewport.referenceFrame,
                     pixelTop: Math.max(0, -(viewport.$content.position().top) - viewportHeight),
                     bpStart: 0,
                     bpEnd: 10000,
@@ -233,22 +233,23 @@ function exportToImage(drawSVG: boolean): void {
                     pixelWidth: viewport.$viewport.width(),
                     pixelHeight: viewport.$viewport.height(),
                     viewport: viewport,
-                    viewportWidth: viewport.$viewport.width()})
+                    viewportWidth: viewport.$viewport.width()
+                })
                 downloadCanvasCTX.restore();
             })
             //trackView.track.draw()
-           /* let trackCanvas = trackView.viewports[0].canvas
-
-            if (trackCanvas && trackCanvas.width > 0) {
-                let canvasXOffset = 0;
-
-                if (trackCanvas.style.left != "") {
-                    canvasXOffset = -parseInt(trackCanvas.style.left.replace("px", ""))
-                }
-
-                downloadCanvasCTX.drawImage(trackCanvas, canvasXOffset, 0, voronoiMap.axisWidth, trackCanvas.height, voronoiMap.axisOffsetX, lastY, voronoiMap.axisWidth, trackCanvas.height);
-                lastY += trackView.viewports[0].canvas.height;
-            }*/
+            /* let trackCanvas = trackView.viewports[0].canvas
+ 
+             if (trackCanvas && trackCanvas.width > 0) {
+                 let canvasXOffset = 0;
+ 
+                 if (trackCanvas.style.left != "") {
+                     canvasXOffset = -parseInt(trackCanvas.style.left.replace("px", ""))
+                 }
+ 
+                 downloadCanvasCTX.drawImage(trackCanvas, canvasXOffset, 0, voronoiMap.axisWidth, trackCanvas.height, voronoiMap.axisOffsetX, lastY, voronoiMap.axisWidth, trackCanvas.height);
+                 lastY += trackView.viewports[0].canvas.height;
+             }*/
         })
 
         let lastX = voronoiMap.canvas.width;
@@ -408,7 +409,7 @@ function renderSVGAxis(context: SVGContext, track: igv.ITrack, axisCanvas: HTMLC
 }
 
 function reposition() {
-    if(!imageMap) {
+    if (!imageMap) {
         return
     }
     // TODO: Only reposition maximum once every 50 ms as this requires loading data (voronoi)
@@ -725,7 +726,7 @@ function requestViewUpdate(request: ViewRequest) {
                         }
 
                         response.arrayBuffer().then((buffer: ArrayBuffer) => {
-                            if(interactions) {
+                            if (interactions) {
                                 interactions.forEach((interactionMap, name, map) => {
                                     let interactionSet = interactionMap.get(sourceChrom.nameWithChr() + "-" + targetChrom.nameWithChr())
 
@@ -752,6 +753,7 @@ function requestViewUpdate(request: ViewRequest) {
                                 overviewImage[i] = dataView.getUint32(offset);
                                 offset += 4;
                             }
+
                             imageMap.updateFromArray(overviewImage);
 
                             // TODO: Create voronoi representation from binary data
@@ -759,12 +761,15 @@ function requestViewUpdate(request: ViewRequest) {
 
                             let numPolygons = dataView.getUint32(offset);
                             offset += 4;
+
+                            let area_scale = (voronoiMap.getVoronoiDrawWidth() * voronoiMap.getVoronoiDrawHeight()) / ((endX - startX) * (endY - startY));
+
                             for (let i = 0; i < numPolygons; i++) {
                                 let polygon = new Polygon();
                                 let numPoints = dataView.getUint32(offset);
                                 offset += 4;
 
-                                polygon.area = dataView.getFloat64(offset);
+                                polygon.area = dataView.getFloat64(offset) * area_scale;
                                 offset += 8;
 
                                 //polygon.logArea = Math.log(polygon.area)
