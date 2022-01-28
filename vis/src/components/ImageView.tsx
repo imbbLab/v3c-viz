@@ -1,4 +1,4 @@
-import { GUI } from "dat.gui";
+import { GUI } from "lil-gui";
 import React = require("react");
 import { View } from "../App";
 import { Rectangle } from "../axis";
@@ -33,7 +33,7 @@ export class ImageView extends React.Component<ImageViewProps, ImageViewState> {
     imageMap: ImageMap | undefined
     canvas: HTMLCanvasElement | undefined
 
-    voronoiGUI: GUI | undefined
+    imageGUI: GUI | undefined
 
     componentDidMount() {
         this.resizeCanvas();
@@ -48,6 +48,20 @@ export class ImageView extends React.Component<ImageViewProps, ImageViewState> {
             if (this.props.imageData) {
                 this.imageMap.updateFromArray(this.props.imageData)
             }
+
+            // Set up the options for voronoi
+            this.imageGUI = new GUI({ title: "Image Options", autoPlace: false });
+            this.menuDiv!.appendChild(this.imageGUI.domElement);
+
+            this.imageGUI.add(this.imageMap, 'numBins').name('Number of bins').onChange((value: number) => {
+                this.imageMap!.setNumberBins(value);
+                //requestViewUpdate({ dimension: "x", locus: getLocusFromBrowser(bottomBrowser) })
+            });
+            this.imageGUI.add(this.imageMap, 'percentile', 0, 1, 0.001).name('Percentile (threshold) ').onChange((value: number) => {
+                this.imageMap!.setPercentile(value);
+            });
+
+            this.imageGUI.close();
         }
     }
 
@@ -95,9 +109,9 @@ export class ImageView extends React.Component<ImageViewProps, ImageViewState> {
 
     positionMenu() {
         // Make sure that the menu is always at the top right of the canvas
-        if (this.menuDiv && this.voronoiGUI && this.canvas) {
+        if (this.menuDiv && this.imageGUI && this.canvas) {
             let canvasPosition = this.canvas.getBoundingClientRect();
-            let menuPosition = this.voronoiGUI.domElement.getBoundingClientRect();
+            let menuPosition = this.imageGUI.domElement.getBoundingClientRect();
 
             this.menuDiv.style.position = 'absolute';
             this.menuDiv.style.left = ((canvasPosition.left + canvasPosition.width) - menuPosition.width) + 'px';

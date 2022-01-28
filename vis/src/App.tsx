@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Menu } from "./components/menu"
+import { Menu, UploadedTrack } from "./components/menu"
 import { lazy, useEffect, useState } from "react"
 import { Chromosome, getChromosomeFromMap, Interaction, Locus } from "./chromosome";
 import { GenomeDetails } from "./genome";
@@ -33,16 +33,12 @@ interface AppProps {
 }
 
 interface AppState {
-
     view: View
 
     sourceChrom: Chromosome,
-    //    srcStart: number,
-    //    srcEnd: number,
-
     targetChrom: Chromosome,
-    //    tarStart: number,
-    //    tarEnd: number
+
+    tracks: UploadedTrack[]
 
     intrachromosomeView: boolean
     hideImageMap: boolean
@@ -89,6 +85,7 @@ export class App extends React.Component<AppProps, AppState> {
             intrachromosomeView: false,
             hideImageMap: false,
             smoothingIterations: 1,
+            tracks: new Array(),
             voronoi: null,
             imageData: null,
             histogram: null,
@@ -327,7 +324,12 @@ export class App extends React.Component<AppProps, AppState> {
             <React.Fragment>
                 <Menu onColourButtonClicked={() => this.setState({ colourMapVisible: !this.state.colourMapVisible })}
                     onHideImageButtonClicked={() => this.setState({ hideImageMap: !this.state.hideImageMap })}
-                    onTriangleButtonClicked={() => this.setState({ intrachromosomeView: !this.state.intrachromosomeView })}></Menu>
+                    onTriangleButtonClicked={() => this.setState({ intrachromosomeView: !this.state.intrachromosomeView })}
+
+                    loadUploadedTrack={(uploadedTrack: UploadedTrack) => {
+                        this.setState({ tracks: this.state.tracks.concat(uploadedTrack) })
+                    }}
+                ></Menu>
                 {
                     this.state.colourMapVisible && this.state.histogram &&
                     <ColourBar scale={this.state.scale!}
@@ -380,7 +382,9 @@ export class App extends React.Component<AppProps, AppState> {
                                     locus: this.state.sourceChrom.name + ":" + this.state.view.startX + "-" + this.state.view.endX,
 
                                     reference: this.props.genome,
-                                }} dimension="x" requestViewUpdate={this.requestViewUpdate}></IGViewer>
+                                }} dimension="x"
+                                tracks={this.state.tracks}
+                                requestViewUpdate={this.requestViewUpdate}></IGViewer>
                         </div>
                         {!this.state.intrachromosomeView &&
                             <div style={{ width: this.canvasWidth(), position: "absolute", left: this.browserRightPosition(), top: this.canvasWidth() }}>
@@ -390,7 +394,9 @@ export class App extends React.Component<AppProps, AppState> {
                                         locus: this.state.targetChrom.name + ":" + this.state.view.startY + "-" + this.state.view.endY,
 
                                         reference: this.props.genome,
-                                    }} dimension="y" requestViewUpdate={this.requestViewUpdate}></IGViewer>
+                                    }} dimension="y"
+                                    tracks={this.state.tracks}
+                                    requestViewUpdate={this.requestViewUpdate}></IGViewer>
                             </div>
                         }
                     </div>

@@ -2,13 +2,12 @@ import React = require("react");
 import { Chromosome, Locus } from "../chromosome";
 import { GenomeDetails } from "../genome";
 import * as igv from 'igv';
+import { UploadedTrack } from "./menu";
 
 
 export interface ViewRequest {
     dimension: "x" | "y"
     locus: Locus
-
-    //    callback?: Function
 }
 
 interface IGViewerProps {
@@ -16,6 +15,8 @@ interface IGViewerProps {
     className?: string;
     dimension: "x" | "y"
     browserOptions: igv.IIGVBrowserOptions
+
+    tracks: UploadedTrack[]
 
     requestViewUpdate: (request: ViewRequest) => void;
 }
@@ -57,6 +58,32 @@ export class IGViewer extends React.Component<IGViewerProps, IGViewerState> {
         return { chr: "", start: 0, end: 0 }
     }
 
+    addTrack(track: UploadedTrack) {
+        if (!this.browser) {
+            return;
+        }
+
+        const extension = track.filename.split('.').pop();
+        console.log(extension);
+        var format: string = 'unknown'
+        var type: 'annotation' | 'wig' | 'alignment' | 'variant' | 'seg' = 'annotation'
+        if (extension?.localeCompare("bed") == 0) {
+            type = 'annotation';
+            format = 'bed';
+        } else if (extension?.localeCompare("bw") == 0) {
+            type = 'wig';
+            format = 'bigwig';
+        }
+
+        this.browser.loadTrack({
+            type: type,
+            format: format,
+            //sourceType: "file",
+            url: track.location,
+            name: track.filename
+        })
+    }
+
     componentDidMount() {
         let self = this;
 
@@ -76,6 +103,10 @@ export class IGViewer extends React.Component<IGViewerProps, IGViewerState> {
                     self.props.requestViewUpdate({ dimension: self.props.dimension, locus: self.getLocus() })
 
                 }
+
+                for (let track of self.props.tracks) {
+                    self.addTrack(track)
+                }
             });
         }
     }
@@ -87,6 +118,15 @@ export class IGViewer extends React.Component<IGViewerProps, IGViewerState> {
 
         if (prevProps.browserOptions.locus != this.props.browserOptions.locus) {
             this.browser.search(this.props.browserOptions.locus);
+        }
+
+        if (prevProps.tracks != this.props.tracks) {
+            // Only add new tracks
+            let difference = this.props.tracks.filter(x => !prevProps.tracks.includes(x));
+
+            for (let track of difference) {
+                this.addTrack(track)
+            }
         }
     }
 
