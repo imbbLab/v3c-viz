@@ -6,17 +6,15 @@ import { GenomeDetails } from "./genome";
 import { IGViewer, ViewRequest } from "./components/IGViewer";
 import { ImageView } from "./components/ImageView";
 import { VoronoiView } from "./components/VoronoiView";
-import { TriangleView } from "./components/TriangleView";
 import { parseVoronoiAndImage } from "./server";
 import { Voronoi, MinMax } from "./voronoi";
 import { VoronoiPlot } from "./voronoiPlot";
 import { Rectangle } from "./axis";
 import { ColourBar, Histogram } from "./components/ColourBar";
 import d3 = require("d3");
-import { histogram } from "d3";
 
 
-interface View {
+export interface View {
     startX: number,
     endX: number,
     startY: number,
@@ -47,10 +45,12 @@ interface AppState {
     //    tarEnd: number
 
     intrachromosomeView: boolean
+    hideImageMap: boolean
 
     smoothingIterations: number,
 
     voronoi: Voronoi | null
+    imageData: Uint32Array | null
     histogram: Histogram | null
 
     // Scales for the colour map
@@ -70,6 +70,7 @@ export class App extends React.Component<AppProps, AppState> {
     timeoutFunction: any;
 
     voronoiView: VoronoiView | undefined
+    imageView: ImageView | undefined
 
     // Keep track of the last request to avoid duplicates
 
@@ -86,8 +87,10 @@ export class App extends React.Component<AppProps, AppState> {
             },
 
             intrachromosomeView: false,
+            hideImageMap: false,
             smoothingIterations: 1,
             voronoi: null,
+            imageData: null,
             histogram: null,
             scale: null,
             colourScale: null,
@@ -99,6 +102,7 @@ export class App extends React.Component<AppProps, AppState> {
         this.onRegionSelect = this.onRegionSelect.bind(this);
         this.setSmoothingIterations = this.setSmoothingIterations.bind(this);
         this.generateHistogram = this.generateHistogram.bind(this);
+        this.canvasWidth = this.canvasWidth.bind(this);
     }
 
     // Perform once when first initialising the app: load details
@@ -122,7 +126,8 @@ export class App extends React.Component<AppProps, AppState> {
         lastLocus.start = startX;
         lastLocus.end = endX;*/
 
-        if (!this.voronoiView || !this.voronoiView.voronoiPlot) {
+
+        if (!this.voronoiView || !this.voronoiView.voronoiPlot || (!this.state.hideImageMap && (!this.imageView || !this.imageView.imageMap))) {
             return;
         }
 
@@ -164,8 +169,13 @@ export class App extends React.Component<AppProps, AppState> {
                             })
                         }
 
-                        voronoiPlot.setChromPair(this.state.sourceChrom, this.state.targetChrom);
+                        /*voronoiPlot.setChromPair(this.state.sourceChrom, this.state.targetChrom);
                         voronoiPlot.updateViewLimits(view.startX, view.endX, view.startY, view.endY);
+
+                        if (this.imageView && this.imageView.imageMap) {
+                            this.imageView.imageMap.setChromPair(this.state.sourceChrom, this.state.targetChrom);
+                            this.imageView.imageMap.updateViewLimits(view.startX, view.endX, view.startY, view.endY);
+                        }*/
 
                         let area_scale = (voronoiPlot.getVoronoiDrawWidth() * voronoiPlot.getVoronoiDrawHeight()) / ((view.endX - view.startX) * (view.endY - view.startY));
 
@@ -174,6 +184,7 @@ export class App extends React.Component<AppProps, AppState> {
 
                         this.setState({
                             voronoi: response.vor,
+                            imageData: response.overviewImage,
                             histogram: histogram,
                             scale: d3.scaleQuantize().range(d3.range(NUM_COLOURS)).domain([histogram.minMax.Min, histogram.minMax.Max]),
                             colourScale: d3.scaleLinear<string>().range(["saddlebrown", "lightgreen", "steelblue"]).domain([0, NUM_COLOURS / 2, NUM_COLOURS])
@@ -295,10 +306,27 @@ export class App extends React.Component<AppProps, AppState> {
         return histogram;
     }
 
+    canvasWidth(): string {
+        if (this.state.hideImageMap) {
+            return "calc(50vw - 50px)"
+        } else {
+            return "calc(33vw - 25px)"
+        }
+    }
+
+    browserRightPosition(): string {
+        if (this.state.hideImageMap) {
+            return "50vw"
+        } else {
+            return "66vw"
+        }
+    }
+
     render() {
         return (
             <React.Fragment>
                 <Menu onColourButtonClicked={() => this.setState({ colourMapVisible: !this.state.colourMapVisible })}
+                    onHideImageButtonClicked={() => this.setState({ hideImageMap: !this.state.hideImageMap })}
                     onTriangleButtonClicked={() => this.setState({ intrachromosomeView: !this.state.intrachromosomeView })}></Menu>
                 {
                     this.state.colourMapVisible && this.state.histogram &&
@@ -311,20 +339,41 @@ export class App extends React.Component<AppProps, AppState> {
                         height={100}
                         width={COLOURMAP_WIDTH} ></ColourBar>
                 }
-                <div style={{ marginLeft: 40, width: "calc(100vw - 40px)", height: "100vh", display: "flex" }}>
-                    <div style={{ width: "100%", height: "100%" }}>
-                        <div style={{ width: "calc(50vw - 50px)" }}>
-                            <ImageView></ImageView>
+                <div style={{ marginLeft: 40, width: "calc(100vw - 40px)", height: "100vh" }}>
+                    <div style={{ width: "100%" }}>
+                        {!this.state.hideImageMap &&
+                            <div style={{ width: this.canvasWidth(), display: "inline-block" }}>
+                                <ImageView ref={(view: ImageView) => this.imageView = view}
+                                    imageData={this.state.imageData}
+                                    view={this.state.view}
+                                    sourceChrom={this.state.sourceChrom}
+                                    targetChrom={this.state.targetChrom}
+                                    numBins={200}
+                                    intrachromosomeView={this.state.intrachromosomeView}
+                                    scale={this.state.scale}
+                                    colourScale={this.state.colourScale!}
+                                    onRegionSelect={this.onRegionSelect}
+                                    onSetSmoothing={this.setSmoothingIterations}></ImageView>
+                            </div>
+                        }
+                        <div style={{ width: this.canvasWidth(), display: "inline-block" }}>
                             <VoronoiView ref={(view: VoronoiView) => this.voronoiView = view}
                                 voronoi={this.state.voronoi}
+                                view={this.state.view}
+                                sourceChrom={this.state.sourceChrom}
+                                targetChrom={this.state.targetChrom}
                                 intrachromosomeView={this.state.intrachromosomeView}
                                 scale={this.state.scale}
                                 colourScale={this.state.colourScale!}
                                 onRegionSelect={this.onRegionSelect}
                                 onSetSmoothing={this.setSmoothingIterations}></VoronoiView>
-                            <TriangleView></TriangleView>
                         </div>
-                        <div style={{ width: "calc(50vw - 50px)" }}>
+                    </div>
+                    <div style={{ width: "100%", height: "100%" }}>
+                        {!this.state.hideImageMap &&
+                            <div style={{ width: this.canvasWidth(), display: "inline-block" }}></div>
+                        }
+                        <div style={{ width: this.canvasWidth(), display: "inline-block" }}>
                             <IGViewer id={"gene-browser-below"}
                                 browserOptions={{
                                     palette: ['#00A0B0', '#6A4A3C', '#CC333F', '#EB6841'],
@@ -334,7 +383,7 @@ export class App extends React.Component<AppProps, AppState> {
                                 }} dimension="x" requestViewUpdate={this.requestViewUpdate}></IGViewer>
                         </div>
                         {!this.state.intrachromosomeView &&
-                            <div style={{ width: "calc(50vw - 50px)", position: "absolute", left: "50vw", top: "calc(50vw - 50px)" }}>
+                            <div style={{ width: this.canvasWidth(), position: "absolute", left: this.browserRightPosition(), top: this.canvasWidth() }}>
                                 <IGViewer id={"gene-browser-right"} className="rotated"
                                     browserOptions={{
                                         palette: ['#00A0B0', '#6A4A3C', '#CC333F', '#EB6841'],

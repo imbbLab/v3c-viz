@@ -3,9 +3,16 @@ import GUI from 'lil-gui';
 import { Rectangle } from "../axis";
 import { Voronoi } from "../voronoi";
 import { VoronoiPlot } from "../voronoiPlot";
+import { Chromosome } from "../chromosome";
+import { View } from "../App";
 
 interface VoronoiViewProps {
     voronoi: Voronoi | null
+
+    view: View
+
+    sourceChrom: Chromosome,
+    targetChrom: Chromosome,
 
     intrachromosomeView: boolean
 
@@ -34,6 +41,8 @@ export class VoronoiView extends React.Component<VoronoiViewProps, VoronoiViewSt
         if (this.canvas) {
             this.voronoiPlot = new VoronoiPlot(this.canvas);
             this.voronoiPlot.addRegionSelectEventListener(this.props.onRegionSelect);
+            this.voronoiPlot.updateViewLimits(this.props.view.startX, this.props.view.endX, this.props.view.startY, this.props.view.endY);
+            this.voronoiPlot.setChromPair(this.props.sourceChrom, this.props.targetChrom);
             this.voronoiPlot.setIntrachromosomeView(this.props.intrachromosomeView);
 
             if (this.props.colourScale && this.props.scale) {
@@ -83,6 +92,12 @@ export class VoronoiView extends React.Component<VoronoiViewProps, VoronoiViewSt
 
                 requiresUpdate = true;
             }
+            if (this.props.view != prevProps.view) {
+                this.voronoiPlot.updateViewLimits(this.props.view.startX, this.props.view.endX, this.props.view.startY, this.props.view.endY);
+            }
+            if (this.props.sourceChrom != prevProps.sourceChrom || this.props.targetChrom != prevProps.targetChrom) {
+                this.voronoiPlot.setChromPair(this.props.sourceChrom, this.props.targetChrom);
+            }
             if (this.props.intrachromosomeView != prevProps.intrachromosomeView) {
                 this.voronoiPlot.setIntrachromosomeView(this.props.intrachromosomeView);
                 this.resizeCanvas();
@@ -96,6 +111,8 @@ export class VoronoiView extends React.Component<VoronoiViewProps, VoronoiViewSt
             if (requiresUpdate) {
                 this.voronoiPlot.redrawVoronoi();
             }
+
+            this.voronoiPlot.redraw();
         }
 
         this.positionMenu();
@@ -128,6 +145,10 @@ export class VoronoiView extends React.Component<VoronoiViewProps, VoronoiViewSt
                 this.canvas.height = newHeight;
 
                 this.parentDiv.style.height = newHeight + "px";
+
+                if (this.voronoiPlot) {
+                    this.voronoiPlot.setDimensions(newWidth, newHeight);
+                }
             }
         }
 

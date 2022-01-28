@@ -3,6 +3,7 @@ import * as React from 'react'
 
 interface MenuProps {
     onColourButtonClicked: () => void
+    onHideImageButtonClicked: () => void
     onTriangleButtonClicked: () => void
 }
 
@@ -62,6 +63,7 @@ export class Menu extends React.Component<MenuProps, MenuState> {
                         }}></span>
 
                     <span className="menubtn icon-hide-image" title="Hide image view" id="hideButton"
+                        onClick={this.props.onHideImageButtonClicked}
                         onMouseOver={() => {
                             this.setState({ menuToShow: MenuToShow.None })
                         }}></span>
