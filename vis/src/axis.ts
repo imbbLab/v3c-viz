@@ -432,7 +432,7 @@ export abstract class Axis {
     setIntrachromosomeView(value: boolean) {
         this.intrachromosomeView = value;
 
-        this.redraw();
+        //this.redraw();
     }
 
     setChromPair(sourceChrom: Chromosome, targetChrom: Chromosome) {

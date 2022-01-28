@@ -48,12 +48,16 @@ interface AppState {
 
     intrachromosomeView: boolean
 
+    smoothingIterations: number,
+
     voronoi: Voronoi | null
     histogram: Histogram | null
 
     // Scales for the colour map
     scale: d3.ScaleQuantize<number, never> | null
     colourScale: d3.ScaleContinuousNumeric<string, string, never> | null
+
+    colourMapVisible: boolean
 }
 
 // The number of colours to use when generating a colour scale
@@ -82,28 +86,33 @@ export class App extends React.Component<AppProps, AppState> {
             },
 
             intrachromosomeView: false,
+            smoothingIterations: 1,
             voronoi: null,
             histogram: null,
             scale: null,
             colourScale: null,
+            colourMapVisible: false,
         };
 
         this.viewRequest = this.viewRequest.bind(this);
         this.requestViewUpdate = this.requestViewUpdate.bind(this);
         this.onRegionSelect = this.onRegionSelect.bind(this);
+        this.setSmoothingIterations = this.setSmoothingIterations.bind(this);
         this.generateHistogram = this.generateHistogram.bind(this);
     }
 
     // Perform once when first initialising the app: load details
     componentDidMount() {
         // Load the dataset list from server
-        console.log("state", this.state)
-
         this.updateView(this.state.view);
     }
 
     componentDidUpdate(prevProps: AppProps, prevState: AppState) {
-        if (this.state.view != prevState.view) {
+        if (this.state.intrachromosomeView != prevState.intrachromosomeView) {
+            // If we have swapped view, then we might need to update the view parameters
+            // /            this.requestViewUpdate({ dimension: "x", locus: { chr: this.state.sourceChrom.name, start: this.state.view.startX, end: this.state.view.endX } });
+            this.requestViewUpdate({ dimension: "y", locus: { chr: this.state.sourceChrom.name, start: this.state.view.startX, end: this.state.view.endX } });
+        } else if (this.state.view != prevState.view || this.state.smoothingIterations != prevState.smoothingIterations) {
             this.updateView(this.state.view);
         }
     }
@@ -128,10 +137,9 @@ export class App extends React.Component<AppProps, AppState> {
 
         let pixelsX = 100; // voronoiMap.getVoronoiDrawWidth()
         let pixelsY = 100; // voronoiMap.getVoronoiDrawHeight()
-        let smoothingIters = 1; //voronoiMap.smoothingRepetitions
         let numBins = 200; // imageMap.numBins
 
-        fetch('./voronoiandimage?pixelsX=' + pixelsX + '&pixelsY=' + pixelsY + '&smoothingIterations=' + smoothingIters + '&numBins=' + numBins + '&sourceChrom=' + this.state.sourceChrom.name + '&targetChrom=' + this.state.targetChrom.name + '&xStart=' + view.startX + '&xEnd=' + view.endX + '&yStart=' + view.startY + '&yEnd=' + view.endY)
+        fetch('./voronoiandimage?pixelsX=' + pixelsX + '&pixelsY=' + pixelsY + '&smoothingIterations=' + this.state.smoothingIterations + '&numBins=' + numBins + '&sourceChrom=' + this.state.sourceChrom.name + '&targetChrom=' + this.state.targetChrom.name + '&xStart=' + view.startX + '&xEnd=' + view.endX + '&yStart=' + view.startY + '&yEnd=' + view.endY)
             .then(
                 (response) => {
                     if (response.status !== 200) {
@@ -267,6 +275,10 @@ export class App extends React.Component<AppProps, AppState> {
         this.requestViewUpdate({ dimension: "y", locus: { chr: this.state.targetChrom.name, start: Math.round(region.min.y), end: Math.round(region.max.y) } });
     }
 
+    setSmoothingIterations(iterations: number) {
+        this.setState({ smoothingIterations: iterations })
+    }
+
     generateHistogram(voronoi: Voronoi, numBins: number): Histogram {
         let minMax: MinMax = voronoi.getMinMaxArea();
         let histogram = new Histogram(numBins, minMax);
@@ -286,22 +298,30 @@ export class App extends React.Component<AppProps, AppState> {
     render() {
         return (
             <React.Fragment>
-                <Menu></Menu>
-                {this.state.histogram &&
+                <Menu onColourButtonClicked={() => this.setState({ colourMapVisible: !this.state.colourMapVisible })}
+                    onTriangleButtonClicked={() => this.setState({ intrachromosomeView: !this.state.intrachromosomeView })}></Menu>
+                {
+                    this.state.colourMapVisible && this.state.histogram &&
                     <ColourBar scale={this.state.scale!}
                         colourScale={this.state.colourScale!}
                         histogram={this.state.histogram}
                         onScaleChange={(scale: d3.ScaleQuantize<number, never>) => {
-                            this.voronoiView!.voronoiPlot!.redrawVoronoi();
+                            this.voronoiView!.voronoiPlot!.drawPolygonsCanvas();
                         }}
                         height={100}
                         width={COLOURMAP_WIDTH} ></ColourBar>
                 }
                 <div style={{ marginLeft: 40, width: "calc(100vw - 40px)", height: "100vh", display: "flex" }}>
                     <div style={{ width: "100%", height: "100%" }}>
-                        <div style={{ height: "calc(50vw - 50px)", width: "calc(50vw - 50px)" }}>
+                        <div style={{ width: "calc(50vw - 50px)" }}>
                             <ImageView></ImageView>
-                            <VoronoiView ref={(view: VoronoiView) => this.voronoiView = view} voronoi={this.state.voronoi} scale={this.state.scale} colourScale={this.state.colourScale!} onRegionSelect={this.onRegionSelect}></VoronoiView>
+                            <VoronoiView ref={(view: VoronoiView) => this.voronoiView = view}
+                                voronoi={this.state.voronoi}
+                                intrachromosomeView={this.state.intrachromosomeView}
+                                scale={this.state.scale}
+                                colourScale={this.state.colourScale!}
+                                onRegionSelect={this.onRegionSelect}
+                                onSetSmoothing={this.setSmoothingIterations}></VoronoiView>
                             <TriangleView></TriangleView>
                         </div>
                         <div style={{ width: "calc(50vw - 50px)" }}>
@@ -313,15 +333,17 @@ export class App extends React.Component<AppProps, AppState> {
                                     reference: this.props.genome,
                                 }} dimension="x" requestViewUpdate={this.requestViewUpdate}></IGViewer>
                         </div>
-                        <div style={{ width: "calc(50vw - 50px)", position: "absolute", left: "50vw", top: "calc(50vw - 50px)" }}>
-                            <IGViewer id={"gene-browser-right"} className="rotated"
-                                browserOptions={{
-                                    palette: ['#00A0B0', '#6A4A3C', '#CC333F', '#EB6841'],
-                                    locus: this.state.targetChrom.name + ":" + this.state.view.startY + "-" + this.state.view.endY,
+                        {!this.state.intrachromosomeView &&
+                            <div style={{ width: "calc(50vw - 50px)", position: "absolute", left: "50vw", top: "calc(50vw - 50px)" }}>
+                                <IGViewer id={"gene-browser-right"} className="rotated"
+                                    browserOptions={{
+                                        palette: ['#00A0B0', '#6A4A3C', '#CC333F', '#EB6841'],
+                                        locus: this.state.targetChrom.name + ":" + this.state.view.startY + "-" + this.state.view.endY,
 
-                                    reference: this.props.genome,
-                                }} dimension="y" requestViewUpdate={this.requestViewUpdate}></IGViewer>
-                        </div>
+                                        reference: this.props.genome,
+                                    }} dimension="y" requestViewUpdate={this.requestViewUpdate}></IGViewer>
+                            </div>
+                        }
                     </div>
                 </div>
             </React.Fragment >
