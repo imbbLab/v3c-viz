@@ -270,12 +270,12 @@ export class SVGContext implements CanvasRenderingContext2D {
 
     globalAlpha: any
 
-    __currentDefaultPath:any
-    __currentPosition:any
+    __currentDefaultPath: any
+    __currentPosition: any
 
     fillStyle: any
-    strokeStyle:any
-    lineWidth:any
+    strokeStyle: any
+    lineWidth: any
 
     constructor(config: any) {
         /*if (!(this instanceof ctx)) {
@@ -354,6 +354,9 @@ export class SVGContext implements CanvasRenderingContext2D {
         // point current element to root group
         this.__currentElement = this.__rootGroup;
     }
+    getContextAttributes(): CanvasRenderingContext2DSettings {
+        throw new Error("Method not implemented.");
+    }
     isPointInPath(x: number, y: number, fillRule?: CanvasFillRule): boolean;
     isPointInPath(path: Path2D, x: number, y: number, fillRule?: CanvasFillRule): boolean;
     isPointInPath(path: any, x: any, y?: any, fillRule?: any): boolean {
@@ -388,7 +391,7 @@ export class SVGContext implements CanvasRenderingContext2D {
     }
 
     canvas: HTMLCanvasElement = document.createElement('canvas');
-    
+
     filter: string = "";
     imageSmoothingEnabled: boolean = false;
     imageSmoothingQuality: ImageSmoothingQuality = "high";
@@ -399,10 +402,10 @@ export class SVGContext implements CanvasRenderingContext2D {
     miterLimit: number = 0;
     shadowBlur: number = 0;
     shadowColor: string = "black";
-    shadowOffsetX: number =  0;
+    shadowOffsetX: number = 0;
     shadowOffsetY: number = 0;
     direction: CanvasDirection = "inherit";
-    
+
 
     setWidth(width: number) {
         this.width = width;
@@ -428,7 +431,7 @@ export class SVGContext implements CanvasRenderingContext2D {
      * Creates the specified svg element
      * @private
      */
-     __createElement(elementName: any, properties?: any, resetFill?: boolean) {
+    __createElement(elementName: any, properties?: any, resetFill?: boolean) {
 
         if (typeof properties === "undefined") {
             properties = {};
@@ -545,7 +548,7 @@ export class SVGContext implements CanvasRenderingContext2D {
                         }));
                         //should take globalAlpha here
                         var opacity = <any>matches[4];
-                        
+
                         var globalAlpha = this.globalAlpha;
                         if (globalAlpha != null) {
                             opacity *= globalAlpha;
@@ -594,7 +597,7 @@ export class SVGContext implements CanvasRenderingContext2D {
      *                           If true, we attempt to find all named entities and encode it as a numeric entity.
      * @return serialized svg
      */
-     getSerializedSvg(fixNamedEntities: boolean): string {
+    getSerializedSvg(fixNamedEntities: boolean): string {
         var serialized = new XMLSerializer().serializeToString(this.__root),
             keys, i, key, value, regexp, xmlns;
 
@@ -682,7 +685,7 @@ export class SVGContext implements CanvasRenderingContext2D {
         this.__currentElement.setAttribute("transform", transform);
     };
 
-    addTrackGroupWithTranslationAndClipRect(id: any, tx: any, ty: number, width: number, height:number, clipYOffset:number) {
+    addTrackGroupWithTranslationAndClipRect(id: any, tx: any, ty: number, width: number, height: number, clipYOffset: number) {
 
         // clip rect
         const clip_id = id + '_clip_rect';
@@ -698,7 +701,7 @@ export class SVGContext implements CanvasRenderingContext2D {
 
         let group = this.__createElement('g');
         this.__rootGroup.appendChild(group);
-        
+
         group.setAttribute('transform', format('translate({x},{y})', { x: tx, y: ty }));
         group.setAttribute('id', (id + '_group'));
 
@@ -1067,7 +1070,7 @@ export class SVGContext implements CanvasRenderingContext2D {
      * Adds a linear gradient to a defs tag.
      * Returns a canvas gradient object that has a reference to it's parent def
      */
-   createLinearGradient(x1: number, y1: number, x2: number, y2: number) {
+    createLinearGradient(x1: number, y1: number, x2: number, y2: number) {
         var grad = this.__createElement("linearGradient", {
             id: randomString(this.__ids),
             x1: x1 + "px",
@@ -1084,7 +1087,7 @@ export class SVGContext implements CanvasRenderingContext2D {
      * Adds a radial gradient to a defs tag.
      * Returns a canvas gradient object that has a reference to it's parent def
      */
-   createRadialGradient(x0: number, y0: number, r0: number, x1: number, y1: number, r1: number) {
+    createRadialGradient(x0: number, y0: number, r0: number, x1: number, y1: number, r1: number) {
         var grad = this.__createElement("radialGradient", {
             id: randomString(this.__ids),
             cx: x1 + "px",
@@ -1101,7 +1104,7 @@ export class SVGContext implements CanvasRenderingContext2D {
 
     font: any
     __fontUnderline: any
-    __fontHref:any
+    __fontHref: any
     textAlign: any
     textBaseline: any
 
@@ -1141,7 +1144,7 @@ export class SVGContext implements CanvasRenderingContext2D {
      * @return {*}
      * @private
      */
-   __wrapTextLink(font:any, element: Element) {
+    __wrapTextLink(font: any, element: Element) {
         if (font.href) {
             var a = this.__createElement("a");
             a.setAttributeNS("http://www.w3.org/1999/xlink", "xlink:href", font.href);
@@ -1186,7 +1189,7 @@ export class SVGContext implements CanvasRenderingContext2D {
      * @param x
      * @param y
      */
-    fillText(text:string, x:number, y:number) {
+    fillText(text: string, x: number, y: number) {
         this.__applyText(text, x, y, "fill");
     };
 
@@ -1196,7 +1199,7 @@ export class SVGContext implements CanvasRenderingContext2D {
      * @param x
      * @param y
      */
-    strokeText(text:string, x:number, y:number) {
+    strokeText(text: string, x: number, y: number) {
         this.__applyText(text, x, y, "stroke");
     };
 
@@ -1205,11 +1208,11 @@ export class SVGContext implements CanvasRenderingContext2D {
      * @param text
      * @return {TextMetrics}
      */
-    measureText(text:string): TextMetrics {
-        if(this.__ctx) {
+    measureText(text: string): TextMetrics {
+        if (this.__ctx) {
             this.__ctx.font = this.font;
             return this.__ctx.measureText(text);
-        } 
+        }
 
         return new TextMetrics()
     };
@@ -1294,7 +1297,7 @@ export class SVGContext implements CanvasRenderingContext2D {
      * Note that all svg dom manipulation uses node.childNodes rather than node.children for IE support.
      * http://www.whatwg.org/specs/web-apps/current-work/multipage/the-canvas-element.html#dom-context-2d-drawimage
      */
-    drawImage(image:any, sx1:any, sy1:any, sWidth?:any, sHeight?:any, dx?:any, dy?:any, dWidth?:any, dHeight?:any) {
+    drawImage(image: any, sx1: any, sy1: any, sWidth?: any, sHeight?: any, dx?: any, dy?: any, dWidth?: any, dHeight?: any) {
         //convert arguments to a real array
         var args = Array.prototype.slice.call(arguments),
             image = args[0],
@@ -1383,7 +1386,7 @@ export class SVGContext implements CanvasRenderingContext2D {
     /**
      * Generates a pattern tag
      */
-    createPattern(image: CanvasImageSource, repetition: string | null): CanvasPattern | null{
+    createPattern(image: CanvasImageSource, repetition: string | null): CanvasPattern | null {
 
         let pattern = this.__createElement("pattern");
         let id = randomString(this.__ids);
@@ -1409,7 +1412,7 @@ export class SVGContext implements CanvasRenderingContext2D {
 
     lineDash: any
 
-    setLineDash(dashArray:any) {
+    setLineDash(dashArray: any) {
         if (dashArray && dashArray.length > 0) {
             this.lineDash = dashArray.join(",");
         } else {
@@ -1423,10 +1426,10 @@ export class SVGContext implements CanvasRenderingContext2D {
     drawFocusRing() {
     };
     createImageData(): ImageData {
-        return {data: new Uint8ClampedArray(), height: 0, width: 0}
+        return { data: new Uint8ClampedArray(), height: 0, width: 0 }
     };
     getImageData(): ImageData {
-        return {data: new Uint8ClampedArray(), height: 0, width: 0}
+        return { data: new Uint8ClampedArray(), height: 0, width: 0 }
     };
     putImageData() {
     };
@@ -1448,7 +1451,7 @@ function normalize(vector: any) {
 };
 
 
-function intersectRect(rect1:any, rect2:any) {
+function intersectRect(rect1: any, rect2: any) {
     return (rect1.x < rect2.x + rect2.width &&
         rect1.x + rect1.width > rect2.x &&
         rect1.y < rect2.y + rect2.height &&

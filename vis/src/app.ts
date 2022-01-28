@@ -1,7 +1,7 @@
 //import { Delaunay } from "d3-delaunay";
 //import { createGzip } from "zlib";
 import { ImageMap } from "./imageMap";
-import { Point, Polygon, Voronoi, VoronoiPlot } from "./voronoiPlot";
+import { VoronoiPlot } from "./voronoiPlot";
 
 import * as dat from 'dat.gui';
 
@@ -14,7 +14,7 @@ import { SVGContext } from "./canvas2svg"
 
 
 import * as d3 from 'd3';
-import { start } from "node:repl";
+import { Point, Polygon, Voronoi } from "./voronoi";
 
 //import igv = require('igv');
 //import { browser } from "igv_wrapper";
@@ -811,7 +811,7 @@ function requestViewUpdate(request: ViewRequest) {
                                 }
                             }
 
-                            let lastMin = voronoiMap.colourMinArea;
+                            /*let lastMin = voronoiMap.colourMinArea;
                             let lastMax = voronoiMap.colourMaxArea;
 
                             voronoiMap.scale = d3.scaleQuantize()
@@ -853,7 +853,7 @@ function requestViewUpdate(request: ViewRequest) {
                             colourCanvasCTX.lineTo(maxScaleX + 5, colourCanvas.height);
                             colourCanvasCTX.fill();
 
-                            voronoiMap.setVoronoi(vor);
+                            voronoiMap.setVoronoi(vor);*/
                         })
                     });
 
@@ -885,7 +885,7 @@ colourCanvas.addEventListener('mousedown', function (event: MouseEvent) {
     let x = event.clientX - rect.left
     let y = event.clientY - rect.top
 
-    let [minScale, maxScale] = voronoiMap.scale.domain();
+    /*let [minScale, maxScale] = voronoiMap.scale.domain();
 
     if (event.button == 0) {
         //voronoiMap.scale.domain([binWidth * x + minMaxArea.Min, maxScale]);
@@ -921,7 +921,7 @@ colourCanvas.addEventListener('mousedown', function (event: MouseEvent) {
     colourCanvasCTX.fill();
 
 
-    voronoiMap.drawPolygonsCanvas();
+    voronoiMap.drawPolygonsCanvas();*/
 });
 
 
@@ -1368,8 +1368,8 @@ fetch('./genomes.json').then((response) => {
                                 //console.log(belowBrowser.trackContainer);
                                 //console.log(belowBrowser.trackViews);
 
-                                voronoiMap = new VoronoiPlot(belowBrowser, rightBrowser);
-                                imageMap = new ImageMap(numBins, voronoiMap);
+                                voronoiMap = new VoronoiPlot(<HTMLCanvasElement>document.getElementById("voronoi-canvas"));
+                                imageMap = new ImageMap(<HTMLCanvasElement>document.getElementById("image-canvas"), numBins);
 
                                 voronoiMap.setIntrachromosomeView(intrachromosomeView)
                                 imageMap.setIntrachromosomeView(intrachromosomeView)

@@ -1,117 +1,9 @@
 import { Axis } from './axis'
-import { Locus, Chromosome } from './chromosome'
 //import { Delaunay, Voronoi } from "d3-delaunay";
-import * as igv from 'igv';
 import * as d3 from 'd3';
 import { SVGContext } from './canvas2svg';
+import { Polygon, Voronoi } from './voronoi';
 
-export class Point {
-    x: number
-    y: number
-
-    constructor(x: number, y: number) {
-        this.x = x;
-        this.y = y;
-    }
-}
-
-export class Polygon {
-    points: Point[] = []
-    area: number = 0
-    logArea: number = 0
-    clipped: boolean = false;
-    centroid: Point = new Point(0, 0)
-    dataPoint: Point = new Point(0, 0)
-
-    clip(clipPolygon: Polygon): Polygon {
-        var cp1: Point, cp2: Point, s: Point, e: Point
-
-        var inputPolygon: Polygon, outputPolygon: Polygon
-        inputPolygon = new Polygon();
-        outputPolygon = new Polygon();
-
-        this.points.forEach(point => {
-            outputPolygon.points.push({ x: Math.round(point.x), y: Math.round(point.y) })
-        });
-
-        let newPolygonSize = this.points.length
-
-        for (let j = 0; j < clipPolygon.points.length; j++) {
-            // copy new polygon to input polygon & set counter to 0
-            inputPolygon.points = []
-
-            for (let k = 0; k < newPolygonSize; k++) {
-                inputPolygon.points.push(outputPolygon.points[k])
-                //inputPolygon.Points = append(inputPolygon.Points, outputPolygon.Points[k])
-            }
-
-            let counter = 0
-            outputPolygon.points = []
-
-            // get clipping polygon edge
-            cp1 = clipPolygon.points[j]
-            cp2 = clipPolygon.points[(j + 1) % (clipPolygon.points.length)]
-
-            for (let i = 0; i < newPolygonSize; i++) {
-                // get subject polygon edge
-                s = inputPolygon.points[i]
-                e = inputPolygon.points[(i + 1) % newPolygonSize]
-
-                // Case 1: Both vertices are inside:
-                // Only the second vertex is added to the output list
-                if (inside(s, cp1, cp2) && inside(e, cp1, cp2)) {
-                    outputPolygon.points.push(e)
-                    counter++
-
-                    // Case 2: First vertex is outside while second one is inside:
-                    // Both the point of intersection of the edge with the clip boundary
-                    // and the second vertex are added to the output list
-                } else if (!inside(s, cp1, cp2) && inside(e, cp1, cp2)) {
-                    outputPolygon.points.push(intersection(cp1, cp2, s, e))
-                    outputPolygon.points.push(e)
-                    counter++
-                    counter++
-
-                    // Case 3: First vertex is inside while second one is outside:
-                    // Only the point of intersection of the edge with the clip boundary
-                    // is added to the output list
-                } else if (inside(s, cp1, cp2) && !inside(e, cp1, cp2)) {
-                    outputPolygon.points.push(intersection(cp1, cp2, s, e))
-                    counter++
-
-                    // Case 4: Both vertices are outside
-                    //} else if !inside(s, cp1, cp2) && !inside(e, cp1, cp2) {
-                    // No vertices are added to the output list
-                }
-            }
-            // set new polygon size
-            newPolygonSize = counter
-        }
-
-        return outputPolygon
-    }
-}
-
-function inside(p: Point, p1: Point, p2: Point): boolean {
-    return (p2.y - p1.y) * p.x + (p1.x - p2.x) * p.y + (p2.x * p1.y - p1.x * p2.y) < 0
-}
-
-function intersection(cp1: Point, cp2: Point, s: Point, e: Point): Point {
-    let dc = { x: cp1.x - cp2.x, y: cp1.y - cp2.y }
-    let dp = { x: s.x - e.x, y: s.y - e.y }
-
-    let n1 = cp1.x * cp2.y - cp1.y * cp2.x
-    let n2 = s.x * e.y - s.y * e.x
-
-    let n3 = 1.0 / (dc.x * dp.y - dc.y * dp.x)
-
-    return { x: (n1 * dp.x - n2 * dc.x) * n3, y: (n1 * dp.y - n2 * dc.y) * n3 }
-
-}
-
-export class Voronoi {
-    polygons: Polygon[] = []
-}
 
 export class VoronoiPlot extends Axis {
 
@@ -124,8 +16,8 @@ export class VoronoiPlot extends Axis {
     smoothingRepetitions: number;
     omega: number;
 
-    belowBrowser: igv.Browser
-    rightBrowser: igv.Browser
+    //belowBrowser: igv.Browser
+    //rightBrowser: igv.Browser
 
     displayVoronoiEdges: boolean;
     displayCentroid: boolean = false;
@@ -147,11 +39,11 @@ export class VoronoiPlot extends Axis {
     polygons: Polygon[] = []
 
 
-    constructor(belowBrowser: igv.Browser, rightBrowser: igv.Browser) {
-        super(<HTMLCanvasElement>document.getElementById("voronoi-canvas"));
+    constructor(canvas: HTMLCanvasElement) {
+        super(canvas);
 
         //this.imageDiv = <HTMLDivElement>document.getElementById("figure-div");
-        this.imageCanvas = <HTMLCanvasElement>document.getElementById("voronoi-canvas");
+        this.imageCanvas = canvas; //<HTMLCanvasElement>document.getElementById("voronoi-canvas");
         this.imageCTX = <CanvasRenderingContext2D>this.imageCanvas.getContext('2d')
         this.imageCTX.imageSmoothingEnabled = false;
 
@@ -163,8 +55,8 @@ export class VoronoiPlot extends Axis {
         this.normPoints = new Array<number[]>();
         this.boxesToDraw = new Array<number[]>();
 
-        this.belowBrowser = belowBrowser;
-        this.rightBrowser = rightBrowser;
+        //this.belowBrowser = belowBrowser;
+        //this.rightBrowser = rightBrowser;
 
         this.displayVoronoiEdges = true;
         this.displayVoronoiPoints;
@@ -195,22 +87,22 @@ export class VoronoiPlot extends Axis {
         return this.voronoiCanvas.height //Math.max(this.axisHeight, this.voronoiCanvas.height)
     }
 
-    colours = 100
-    scale: d3.ScaleQuantize<number, never> = d3.scaleQuantize()
-        .range(d3.range(this.colours))
-        .domain([Math.log(1e20), Math.log(1e50)]);
-    colourScale: d3.ScaleContinuousNumeric<string, string, never> = d3.scaleLinear<string>()
-        .range(["saddlebrown", "lightgreen", "steelblue"])
-        .domain([0, this.colours / 2, this.colours]);
+
+    scale: d3.ScaleQuantize<number, never> | undefined;
+    colourScale: d3.ScaleContinuousNumeric<string, string, never> | undefined;
 
     // TODO: Put colour bar in its own class..
-    colourMinArea: number = -1
-    colourMaxArea: number = -1
+    //colourMinArea: number = -1
+    //colourMaxArea: number = -1
 
-    setColourRange(min: number, max: number) {
-        this.scale.domain([min, max]);
-        this.colourMinArea = min;
-        this.colourMaxArea = max;
+    setColourScale(colourScale: d3.ScaleContinuousNumeric<string, string, never>) {
+        this.colourScale = colourScale;
+        //this.colourMinArea = min;
+        //this.colourMaxArea = max;
+    }
+
+    setScale(scale: d3.ScaleQuantize<number, never>) {
+        this.scale = scale;
     }
 
     // singlePoints: any
@@ -233,7 +125,6 @@ export class VoronoiPlot extends Axis {
 
     setVoronoi(voronoi: Voronoi) {
         this.voronoi = voronoi;
-
 
         this.redrawVoronoi();
     }
@@ -342,6 +233,10 @@ export class VoronoiPlot extends Axis {
     }
 
     drawVoronoi(voronoiCanvasCTX: CanvasRenderingContext2D | SVGContext, width: number, height: number, clipDiagonal: boolean) {
+        if (!this.scale || !this.colourScale) {
+            return;
+        }
+
         if (this.displayVoronoiEdges || this.displayCentroid) {
             voronoiCanvasCTX.fillStyle = 'rgb(0, 0, 0)'
         } else {
@@ -367,6 +262,10 @@ export class VoronoiPlot extends Axis {
     }
 
     drawPolygonsCanvas() {
+        if (!this.scale || !this.colourScale) {
+            return;
+        }
+
         let voronoiCanvasCTX = <CanvasRenderingContext2D>this.voronoiCanvas.getContext("2d");
         voronoiCanvasCTX.clearRect(0, 0, this.voronoiCanvas.width, this.voronoiCanvas.height);
 
@@ -383,6 +282,10 @@ export class VoronoiPlot extends Axis {
     }
 
     drawPolygons(voronoiCanvasCTX: CanvasRenderingContext2D | SVGContext, polygons: Polygon[]) {
+        if (!this.scale || !this.colourScale) {
+            return;
+        }
+
         // Draw the polygons that are too small to be drawn with detail (between 1 and 2 pixels width/height)
         // If displaying edges, then display them with the same colour as the edges, otherwise same as the smallest value on colour scale
         if (this.displayVoronoiEdges || this.displayCentroid) {

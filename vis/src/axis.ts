@@ -123,8 +123,8 @@ export abstract class Axis {
                     ctx.lineWidth = 2;
                     ctx.stroke();
                 } else {
-                        // Reset the image
-                        self.drawAxisCanvas();
+                    // Reset the image
+                    self.drawAxisCanvas();
                 }
 
                 // Always draw the box, even when zooming
@@ -153,8 +153,8 @@ export abstract class Axis {
                 }
 
                 if (displayText) {
-                    let textLength = Math.floor(Math.log10(xPosition+1)) + Math.floor(Math.log10(yPosition+1)) + 4
-                    boxWidth = textLength * 8 + margin*2
+                    let textLength = Math.floor(Math.log10(xPosition + 1)) + Math.floor(Math.log10(yPosition + 1)) + 4
+                    boxWidth = textLength * 8 + margin * 2
 
                     ctx.fillStyle = "lightblue";
                     ctx.fillRect(mousePos.x + margin, mousePos.y - boxHeight, boxWidth, boxHeight);
@@ -163,16 +163,16 @@ export abstract class Axis {
                     ctx.fillStyle = "black";
                     ctx.textBaseline = "middle";
                     ctx.textAlign = "left";
-                    ctx.fillText("" + xPosition.toFixed(0) + ", " + yPosition.toFixed(0), mousePos.x + margin * 2, mousePos.y - margin*2.4);
+                    ctx.fillText("" + xPosition.toFixed(0) + ", " + yPosition.toFixed(0), mousePos.x + margin * 2, mousePos.y - margin * 2.4);
 
                     if (!self.mouseDown) {
 
 
                         let canvasLocation = self.canvas.getBoundingClientRect();
 
-                        if(self.intrachromosomeView) {
-                            let minCanvasX = self.axisOffsetX + (axisPos.x - axisPos.y)*self.axisWidth;
-                            let maxCanvasX = self.axisOffsetX + (axisPos.x + axisPos.y)*self.axisWidth;
+                        if (self.intrachromosomeView) {
+                            let minCanvasX = self.axisOffsetX + (axisPos.x - axisPos.y) * self.axisWidth;
+                            let maxCanvasX = self.axisOffsetX + (axisPos.x + axisPos.y) * self.axisWidth;
 
                             ctx.beginPath();
                             ctx.moveTo(minCanvasX, self.canvas.height - self.axisOffsetY);
@@ -183,16 +183,20 @@ export abstract class Axis {
                             ctx.stroke();
 
                             let vertline = (<HTMLDivElement>document.getElementById('vertline'))
-                            vertline.style.width = "1px"
-                            vertline.style.height = (window.innerHeight - canvasLocation.bottom) + "px";
-                            vertline.style.top = (window.pageYOffset + canvasLocation.bottom - self.axisOffsetY) + "px";
-                            vertline.style.left = (canvasLocation.left + minCanvasX) + "px";
-                            
+                            if (vertline) {
+                                vertline.style.width = "1px"
+                                vertline.style.height = (window.innerHeight - canvasLocation.bottom) + "px";
+                                vertline.style.top = (window.pageYOffset + canvasLocation.bottom - self.axisOffsetY) + "px";
+                                vertline.style.left = (canvasLocation.left + minCanvasX) + "px";
+                            }
+
                             let horline = (<HTMLDivElement>document.getElementById('horline'))
-                            horline.style.width = "1px"
-                            horline.style.height = (window.innerHeight - canvasLocation.bottom) + "px";
-                            horline.style.top = (window.pageYOffset + canvasLocation.bottom - self.axisOffsetY) + "px";
-                            horline.style.left = (canvasLocation.left + maxCanvasX) + "px";
+                            if (horline) {
+                                horline.style.width = "1px"
+                                horline.style.height = (window.innerHeight - canvasLocation.bottom) + "px";
+                                horline.style.top = (window.pageYOffset + canvasLocation.bottom - self.axisOffsetY) + "px";
+                                horline.style.left = (canvasLocation.left + maxCanvasX) + "px";
+                            }
                         } else {
                             ctx.beginPath();
                             ctx.moveTo(self.axisOffsetX, mousePos.y);
@@ -203,16 +207,20 @@ export abstract class Axis {
                             ctx.stroke();
 
                             let vertline = (<HTMLDivElement>document.getElementById('vertline'))
-                            vertline.style.height = (window.innerHeight - event.pageY - self.axisOffsetY) + "px";
-                            vertline.style.width = "1px"
-                            vertline.style.top = (event.pageY + 5) + "px";
-                            vertline.style.left = event.pageX + "px";
+                            if (vertline) {
+                                vertline.style.height = (window.innerHeight - event.pageY - self.axisOffsetY) + "px";
+                                vertline.style.width = "1px"
+                                vertline.style.top = (event.pageY + 5) + "px";
+                                vertline.style.left = event.pageX + "px";
+                            }
 
                             let horline = (<HTMLDivElement>document.getElementById('horline'))
-                            horline.style.width = (window.innerWidth - event.pageX - 5) + "px";
-                            horline.style.height = "1px"
-                            horline.style.top = event.pageY + "px";
-                            horline.style.left = (event.pageX + 5) + "px";
+                            if (horline) {
+                                horline.style.width = (window.innerWidth - event.pageX - 5) + "px";
+                                horline.style.height = "1px"
+                                horline.style.top = event.pageY + "px";
+                                horline.style.left = (event.pageX + 5) + "px";
+                            }
                         }
                     }
                 }
@@ -314,92 +322,92 @@ export abstract class Axis {
         this.contactOptions.forEach((options, key, map) => {
             let interactions = <Interaction[]>this.interactions.get(key);
 
-            if(interactions == null) {
+            if (interactions == null) {
                 return
             }
-            
+
             axisCanvasCTX.save();
             axisCanvasCTX.globalAlpha = options.contactOpacity;
             axisCanvasCTX.strokeStyle = "#" + options.contactEdgeColour.toString(16);
             axisCanvasCTX.lineWidth = options.edgeWidth;
             axisCanvasCTX.fillStyle = "#" + options.contactFillColour.toString(16);//"rgba(0, 0, 255, 0.75)";
-    
+
             for (let i = 0; i < interactions.length; i++) {
                 var x, y
-    
+
                 if ((interactions[i].sourceChrom == this.sourceChrom && interactions[i].targetChrom == this.targetChrom)) {
                     x = interactions[i].sourceStart;
                     y = interactions[i].targetStart;
-    
-                    let halfWidth = (interactions[i].sourceEnd - interactions[i].sourceStart)/2;
-                    let halfHeight = (interactions[i].targetEnd - interactions[i].targetStart)/2;
-    
+
+                    let halfWidth = (interactions[i].sourceEnd - interactions[i].sourceStart) / 2;
+                    let halfHeight = (interactions[i].targetEnd - interactions[i].targetStart) / 2;
+
                     x += halfWidth;
                     y += halfHeight;
-    
+
                     // TODO: Possible performance improvement here - check whether any part of the contact box is visible
                     // and only draw if it is.
-    
+
                     //if (x >= this.minViewX && x <= this.maxDataX && y >= this.minViewY && y <= this.maxViewY) {
-                        x = (x - this.minViewX) / binSizeX;
-                        y = (y - this.minViewY) / binSizeY; 
-                        
-                        if(x < 0 || x > width || y < 0 || y > height) {
-                            continue;
-                        }
-    
-                        // Make sure it is visible
-                        halfWidth = Math.max(halfWidth / binSizeX, options.contactSize);
-                        halfHeight = Math.max(halfHeight / binSizeY, options.contactSize);
-    
-                        axisCanvasCTX.beginPath();
-                        axisCanvasCTX.rect(x - halfWidth, y - halfHeight, halfWidth * 2, halfHeight * 2);
-                        if (options.contactFill) {
-                            axisCanvasCTX.fill();
-                        }
-                        axisCanvasCTX.stroke();
-                   // }
+                    x = (x - this.minViewX) / binSizeX;
+                    y = (y - this.minViewY) / binSizeY;
+
+                    if (x < 0 || x > width || y < 0 || y > height) {
+                        continue;
+                    }
+
+                    // Make sure it is visible
+                    halfWidth = Math.max(halfWidth / binSizeX, options.contactSize);
+                    halfHeight = Math.max(halfHeight / binSizeY, options.contactSize);
+
+                    axisCanvasCTX.beginPath();
+                    axisCanvasCTX.rect(x - halfWidth, y - halfHeight, halfWidth * 2, halfHeight * 2);
+                    if (options.contactFill) {
+                        axisCanvasCTX.fill();
+                    }
+                    axisCanvasCTX.stroke();
+                    // }
                 }
-    
+
                 if (interactions[i].sourceChrom == this.targetChrom && interactions[i].targetChrom == this.sourceChrom) {
                     y = interactions[i].sourceStart;
                     x = interactions[i].targetStart;
-    
-                    let halfHeight = (interactions[i].sourceEnd - interactions[i].sourceStart)/2;
-                    let halfWidth = (interactions[i].targetEnd - interactions[i].targetStart)/2;
-    
+
+                    let halfHeight = (interactions[i].sourceEnd - interactions[i].sourceStart) / 2;
+                    let halfWidth = (interactions[i].targetEnd - interactions[i].targetStart) / 2;
+
                     x += halfWidth;
                     y += halfHeight;
-    
-                   // if (x >= this.minViewX && x <= this.maxDataX && y >= this.minViewY && y <= this.maxViewY) {
-                        x = (x - this.minViewX) / binSizeX;
-                        y = (y - this.minViewY) / binSizeY; 
 
-                        if(x < 0 || x > width || y < 0 || y > height) {
-                            continue;
-                        }
+                    // if (x >= this.minViewX && x <= this.maxDataX && y >= this.minViewY && y <= this.maxViewY) {
+                    x = (x - this.minViewX) / binSizeX;
+                    y = (y - this.minViewY) / binSizeY;
 
-                        if(x > y && clipDiagonal) {
-                            continue;
-                        }
-    
-                        // Make sure it is visible
-                        halfWidth = Math.max(halfWidth / binSizeX, options.contactSize);
-                        halfHeight = Math.max(halfHeight / binSizeY, options.contactSize);
+                    if (x < 0 || x > width || y < 0 || y > height) {
+                        continue;
+                    }
 
-                        axisCanvasCTX.beginPath();
-                        axisCanvasCTX.rect(x - halfWidth, y - halfHeight, halfWidth * 2, halfHeight * 2);
-                        if (options.contactFill) {
-                            axisCanvasCTX.fill();
-                        }
-                        axisCanvasCTX.stroke();
+                    if (x > y && clipDiagonal) {
+                        continue;
+                    }
+
+                    // Make sure it is visible
+                    halfWidth = Math.max(halfWidth / binSizeX, options.contactSize);
+                    halfHeight = Math.max(halfHeight / binSizeY, options.contactSize);
+
+                    axisCanvasCTX.beginPath();
+                    axisCanvasCTX.rect(x - halfWidth, y - halfHeight, halfWidth * 2, halfHeight * 2);
+                    if (options.contactFill) {
+                        axisCanvasCTX.fill();
+                    }
+                    axisCanvasCTX.stroke();
                     //}
                 }
             }
             axisCanvasCTX.restore();
         })
 
-        
+
     }
 
     abstract redraw(): void;
@@ -412,7 +420,7 @@ export abstract class Axis {
         this.boxesToDraw.push(contact)
     }*/
 
-    setInteractions(name:string, interactions: Interaction[]) {
+    setInteractions(name: string, interactions: Interaction[]) {
         this.interactions.set(name, interactions);
     }
 
@@ -494,17 +502,17 @@ export abstract class Axis {
             mouseY = canvasCoord.y - (this.canvas.height - this.axisHeight - this.axisOffsetY);
         }
 
-        if(this.intrachromosomeView) {
+        if (this.intrachromosomeView) {
             return {
                 x: mouseX / this.axisWidth,
                 y: mouseY / this.axisWidth // Assume that we always have a square axis as in triangle view
             };
-        } 
+        }
 
         return {
             x: mouseX / this.axisWidth,
-            y: mouseY / this.axisHeight 
-        };  
+            y: mouseY / this.axisHeight
+        };
     }
 
     getAxisCanvas() {
@@ -552,7 +560,7 @@ export abstract class Axis {
 
         let textYOffset = 0;
         let textXOffset = 10;
-        if(ctx instanceof CanvasRenderingContext2D) {
+        if (ctx instanceof CanvasRenderingContext2D) {
             textXOffset = 0;
             textYOffset = -10;
         }

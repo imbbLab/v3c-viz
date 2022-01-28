@@ -1,0 +1,68 @@
+import * as React from "react";
+import * as ReactDOM from "react-dom";
+import { App } from "./App";
+import { Chromosome, getChromosomeFromMap } from "./chromosome";
+import { GenomeDetails, getGenomeDetails } from "./genome";
+
+
+
+fetch('/details').then(response => {
+    if (response.status !== 200) {
+        console.log('Looks like there was a problem. Status Code: ' +
+            response.status);
+        return;
+    }
+
+    const queryString = window.location.search;
+    const urlParams = new URLSearchParams(queryString);
+
+    var chromosomes: Map<string, Chromosome> = new Map();
+    var sourceChrom: Chromosome;
+    var targetChrom: Chromosome;
+
+
+    response.json().then(details => {
+        var chromosomeDetails = details['Chromosomes'];
+        chromosomeDetails.forEach((chromosome: any) => {
+            chromosomes.set(chromosome['Name'], Chromosome.fromJSON(chromosome))
+        });
+
+        var locusBottom: string
+        var locusRight: string
+
+
+        const srcChrom = urlParams.get('srcChrom');
+        const tarChrom = urlParams.get('tarChrom');
+        const srcStart = urlParams.get('srcStart');
+        const srcEnd = urlParams.get('srcEnd');
+        const tarStart = urlParams.get('tarStart');
+        const tarEnd = urlParams.get('tarEnd');
+
+
+        if (srcChrom && srcStart && srcEnd && tarChrom && tarStart && tarEnd) {
+            sourceChrom = getChromosomeFromMap(chromosomes, srcChrom)
+            targetChrom = getChromosomeFromMap(chromosomes, tarChrom)
+
+            locusBottom = sourceChrom.name + ":" + srcStart + "-" + srcEnd;
+            locusRight = targetChrom.name + ":" + tarStart + "-" + tarEnd;
+        } else {
+            sourceChrom = getChromosomeFromMap(chromosomes, details['Chromosomes'][0]['Name'])
+            targetChrom = sourceChrom
+
+            locusBottom = sourceChrom.name + ":0-" + sourceChrom.length; //'chr4:0-1348131'
+            locusRight = locusBottom
+        }
+        console.log(locusBottom)
+
+        let genomeDetails = getGenomeDetails(details['Genome']) as GenomeDetails;
+        console.log(genomeDetails)
+
+
+        ReactDOM.render(
+            <App chromosomes={chromosomes} genome={genomeDetails} sourceChrom={sourceChrom} targetChrom={targetChrom}></App>,
+            document.getElementById("output")
+        );
+
+        //this.setState({ genome: genomeDetails, sourceChrom: sourceChrom, targetChrom: targetChrom, chromosomes: chromosomes });
+    });
+})

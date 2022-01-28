@@ -18,3 +18,7 @@ vis/node_modules/
 vis/package-lock.json
 
 static/temp/
+
+vis/target/
+
+voronoiImage.svg

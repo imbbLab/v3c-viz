@@ -2,260 +2,248 @@
 <html>
 
 <head>
-  <title>hicvis: Visualising Hi-C data without binning</title>
-  <meta charset="utf-8" />
-  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
-  <link rel="stylesheet" href="igv-1.0.9.css">
-  <style>
-    .igv-root-div {
-      width: 700px !important
-    }
+    <title>hicvis: Visualising Hi-C data without binning</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    .igv-left-hand-gutter {
-      width: 0px !important
-    }
+    <style>
+        .igv-root-div {
+            width: 100% !important;
+            /*700px !important*/
+        }
 
-    .igv-navbar {
-      width: 650px;
-    }
+        .igv-logo {
+            margin-right: 0 !important;
+        }
 
-    .igv-viewport-container {
-      display: block !important;
-      width: 100% !important
-    }
+        .igv-chromosome-select-widget-container {
+            width: 100px !important;
+            margin-right: 0 !important;
+        }
 
-    /*.gene-browser {
-      width: 730px;
-    }*/
+        .igv-windowsize-panel-container {
+            min-width: 50px !important;
+        }
 
-    #gene-browser-below {
-      position: absolute;
-      left: 740px;
-      top: 700px;
-    }
+        .igv-zoom-widget-900 {
+            margin-right: 8px !important;
+            order: 1 !important;
+        }
 
-    .rotated {
-      transform-origin: top left;
-      -webkit-transform: rotate(270deg);
-      -moz-transform: rotate(270deg);
-      -o-transform: rotate(270deg);
-      -ms-transform: rotate(270deg);
-      transform: rotate(270deg);
+        .igv-navbar-toggle-button-container {
+            order: 2 !important;
+        }
 
-      position: absolute;
-      left: 1400px;
-      top: 660px;
-    }
+        .igv-search-container {
+            width: 150px !important;
+        }
 
-    .options-gui {
-      position: absolute;
-      top: 0px;
-      left: 450px;
-    }
+        .igv-left-hand-gutter {
+            width: 10px !important
+        }
 
-    .sidenav {
-      height: 100%;
-      /* 100% Full-height */
-      width: 40px;
-      /* 0 width - change this with JavaScript */
-      position: fixed;
-      /* Stay in place */
-      z-index: 1;
-      /* Stay on top */
-      top: 0;
-      /* Stay at the top */
-      left: 0;
-      background-color: rgb(99, 184, 214);
-      /* Black*/
-      overflow-x: hidden;
-      /* Disable horizontal scroll */
-      padding-top: 40px;
-      /* Place content 60px from the top */
-      transition: 0.5s;
-      /* 0.5 second transition effect to slide in the sidenav */
-    }
+        .igv-navbar {
+            /*width: 100% !important;
+            650px;*/
+        }
 
-    /* The navigation menu links */
-    .sidenav a {
-      /*padding: 8px 8px 8px 32px;*/
-      text-decoration: none;
-      font-size: 25px;
-      color: #818181;
-      display: block;
-      transition: 0.3s;
-    }
+        .igv-viewport-container {
+            display: block !important;
+            width: 100% !important
+        }
 
-    .menubtn {
-      /*background-color: DodgerBlue; /* Blue background */
-      border: none;
-      color: white;
-      padding: 5px;
-      font-size: 16px;
-      cursor: pointer;
+        .gene-browser {
+            /*width: 730px;*/
+        }
 
-      width: 30px;
-      height: 30px;
-      background-size: 30px 30px;
-      background-repeat: no-repeat;
-      background-position: center;
-      display: inline-block;
-    }
+        #gene-browser-below {
+            /*     position: absolute;
+            left: 740px;
+            top: 700px;*/
+        }
 
-    .dropbtn {
-      height: 30px;
-      margin: 5px 5px;
-    }
+        .rotated {
+            transform-origin: top left;
+            -webkit-transform: rotate(270deg);
+            -moz-transform: rotate(270deg);
+            -o-transform: rotate(270deg);
+            -ms-transform: rotate(270deg);
+            transform: rotate(270deg);
 
-    .menu-dropdown input  {
-      color: white;
-      height: 30px;
-      margin: 5px 5px;
-    }
+            /*position: absolute;
+            left: 1400px;
+            top: 660px;*/
+        }
 
-    .menu-dropdown {
-      display: none;
-      left: 40px;
-      height: 40px;
-      position: absolute;
-      background-color: rgb(99, 184, 214);
-      z-index: 1;
-    }
+        .options-gui {
+            position: absolute;
+            top: 0px;
+            left: 450px;
+        }
 
+        .sidenav {
+            height: 100%;
+            /* 100% Full-height */
+            width: 40px;
+            /* 0 width - change this with JavaScript */
+            position: fixed;
+            /* Stay in place */
+            z-index: 1;
+            /* Stay on top */
+            top: 0;
+            /* Stay at the top */
+            left: 0;
+            background-color: rgb(99, 184, 214);
+            /* Black*/
+            overflow-x: hidden;
+            /* Disable horizontal scroll */
+            padding-top: 40px;
+            /* Place content 60px from the top */
+            transition: 0.5s;
+            /* 0.5 second transition effect to slide in the sidenav */
+            display: block;
+        }
 
+        /* The navigation menu links */
+        .sidenav a {
+            /*padding: 8px 8px 8px 32px;*/
+            text-decoration: none;
+            font-size: 25px;
+            color: #818181;
+            display: block;
+            transition: 0.3s;
+        }
 
-    /*.btn:hover {
-    background-color: RoyalBlue;
-  }*/
-    .menubtn:hover,
-    .menubtn:focus {
-      filter: invert(27%) sepia(51%) saturate(2878%) hue-rotate(200deg) brightness(104%) contrast(97%);
-    }
+        .menubtn {
+            /*background-color: DodgerBlue; /* Blue background */
+            border: none;
+            color: white;
+            padding: 5px;
+            font-size: 16px;
+            cursor: pointer;
 
-    .icon-load-track {
-      background-image: url('icons/file-contract-solid.svg');
-      filter: brightness(0) invert(1);
-    }
+            width: 30px;
+            height: 30px;
+            background-size: 30px 30px;
+            background-repeat: no-repeat;
+            background-position: center;
+            display: inline-block;
+        }
 
-    .icon-save-image {
-      background-image: url('icons/image-solid.svg');
-      filter: brightness(0) invert(1);
-    }
+        .dropbtn {
+            height: 30px;
+            margin: 5px 5px;
+        }
 
-    .icon-full-view {
-      background-image: url('icons/square-regular.svg');
-      filter: brightness(0) invert(1);
-    }
+        .menu-dropdown input {
+            color: white;
+            height: 30px;
+            margin: 5px 5px;
+        }
 
-    .icon-triangle-view {
-      background-image: url('icons/caret-square-up-regular.svg');
-      filter: brightness(0) invert(1);
-    }
-
-    .icon-hide-image {
-      background-image: url('icons/eye-slash-solid.svg');
-      filter: brightness(0) invert(1);
-    }
-
-    .icon-show-image {
-      background-image: url('icons/eye-solid.svg');
-      filter: brightness(0) invert(1);
-    }
-
-    .icon-show-image {
-      background-image: url('icons/eye-solid.svg');
-      filter: brightness(0) invert(1);
-    }
-
-    .icon-show-colourmap {
-      background-image: url('icons/palette-solid.svg');
-      filter: brightness(0) invert(1);
-    }
-
-    /* Position and style the close button (top right corner) */
-    .sidenav .closebtn {
-      position: absolute;
-      top: 0;
-      right: 25px;
-      font-size: 36px;
-      margin-left: 50px;
-    }
-
-    /* Style page content - use this if you want to push the page content to the right when you open the side navigation */
-    #main {
-      transition: margin-left .5s;
-      padding: 20px;
-    }
-
-    /* On smaller screens, where height is less than 450px, change the style of the sidenav (less padding and a smaller font size) */
-    @media screen and (max-height: 450px) {
-      .sidenav {
-        padding-top: 15px;
-      }
-
-      .sidenav a {
-        font-size: 18px;
-      }
-    }
+        .menu-dropdown {
+            display: none;
+            left: 40px;
+            height: 40px;
+            position: absolute;
+            background-color: rgb(99, 184, 214);
+            z-index: 1;
+        }
 
 
-    /*#image-canvas-div {
-    }
 
-    #voronoi-canvas-div {
-    }*/
-  </style>
-  <!--<link rel="stylesheet" href="gui.css">-->
+        /*.btn:hover {
+        background-color: RoyalBlue;
+      }*/
+        .menubtn:hover,
+        .menubtn:focus {
+            filter: invert(27%) sepia(51%) saturate(2878%) hue-rotate(200deg) brightness(104%) contrast(97%);
+        }
+
+        .icon-load-track {
+            background-image: url('icons/file-contract-solid.svg');
+            filter: brightness(0) invert(1);
+        }
+
+        .icon-save-image {
+            background-image: url('icons/image-solid.svg');
+            filter: brightness(0) invert(1);
+        }
+
+        .icon-full-view {
+            background-image: url('icons/square-regular.svg');
+            filter: brightness(0) invert(1);
+        }
+
+        .icon-triangle-view {
+            background-image: url('icons/caret-square-up-regular.svg');
+            filter: brightness(0) invert(1);
+        }
+
+        .icon-hide-image {
+            background-image: url('icons/eye-slash-solid.svg');
+            filter: brightness(0) invert(1);
+        }
+
+        .icon-show-image {
+            background-image: url('icons/eye-solid.svg');
+            filter: brightness(0) invert(1);
+        }
+
+        .icon-show-image {
+            background-image: url('icons/eye-solid.svg');
+            filter: brightness(0) invert(1);
+        }
+
+        .icon-show-colourmap {
+            background-image: url('icons/palette-solid.svg');
+            filter: brightness(0) invert(1);
+        }
+
+        /* Position and style the close button (top right corner) */
+        .sidenav .closebtn {
+            position: absolute;
+            top: 0;
+            right: 25px;
+            font-size: 36px;
+            margin-left: 50px;
+        }
+
+        /* Style page content - use this if you want to push the page content to the right when you open the side navigation */
+        #main {
+            transition: margin-left .5s;
+            padding: 20px;
+        }
+
+        /* On smaller screens, where height is less than 450px, change the style of the sidenav (less padding and a smaller font size) */
+        @media screen and (max-height: 450px) {
+            .sidenav {
+                padding-top: 15px;
+            }
+
+            .sidenav a {
+                font-size: 18px;
+            }
+        }
+
+        html,
+        body,
+        #output {
+            width: 100vw;
+            height: 100vh;
+            /*height: 100%;
+            width: 100%;*/
+
+            margin: 0;
+        }
+    </style>
 </head>
 
 <body>
-  <a id="link"></a>
-  <div style="display:none">
-    <canvas id="downloadCanvas"></canvas>
-  </div>
+    <div id="output"></div>
 
-  <div id="menubar-div" class="sidenav">
-    <!--<a href="javascript:void(0)" class="closebtn" onclick="closeNav()">&times;</a>-->
-    <span class="menubtn icon-load-track" title="Load a track" id="loadTrack"></span>
-    <span class="menubtn icon-save-image" title="Save view to image" id="saveButton"></span>
-    <span class="menubtn icon-triangle-view" title="Swap to triangle view" id="viewChangeButton"></span>
-    <span class="menubtn icon-hide-image" title="Hide image view" id="hideButton"></span>
-    <span class="menubtn icon-show-colourmap" title="Edit colourmaps for data views" id="editColourmapButton"></span>
-  </div>
-  <div id="loadTrackMenu" class="menu-dropdown">
-    <input type="file" id="file-selector" accept=".bed, .bw">
-  </div>
-  <div id="saveImageMenu" class="menu-dropdown">
-    <button class="dropbtn " id="saveSVGButton">SVG</button>
-    <button class="dropbtn " id="savePNGButton" style="display:none">PNG</button>
-  </div>
-
-  <div id="voronoi-colour-controls" style="position:absolute; left:0px; top:0px">
-    <canvas id="voronoi-colour" width="700" height="100"></canvas>
-  </div>
-  <div>
-    <div>
-      <!--<input type="button" value="Triangle View" id="viewChangeButton"  style="position:absolute; left:0px; top:0px; z-index: 2;" />
-      <input type="button" value="Hide" id="hideButton"  style="position:absolute; left:0px; top:0px; z-index: 2;" />-->
-      <div id="image-canvas-div" class="options-gui" style="position:absolute; left:0px; top:0px">
-        <div id="image-controls" style="position:absolute; left:450px; top:0px"></div>
-        <canvas id="image-canvas" width="700" height="700"></canvas>
-      </div>
-
-      <div style="position:absolute; left:700px; top:0px" id="voronoi-canvas-div" class="options-gui">
-        <div id="voronoi-controls" style="position:absolute; left:450px; top:0px"></div>
-        <canvas id="voronoi-canvas" width="700" height="700"></canvas>
-      </div>
-      
-      <div id="gene-browser-below" class="gene-browser"></div>
-      <div id="gene-browser-right" class="gene-browser"></div>
-
-      <div id='vertline' style="width:1px;background-color:black;position:absolute;"></div>
-      <div id='horline' style="height:1px;background-color:black;position:absolute;"></div>
-    </div>
-    <div>
-    </div>
-  </div>
-  <script src="js/app.bundle.js"></script>
+    <!--<canvas id="overviewCanvas" width="500px" height="500px"></canvas>-->
+    <script src="js/app.bundle.js"></script>
 </body>
 
 </html>

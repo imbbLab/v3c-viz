@@ -1,7 +1,8 @@
 const path = require('path');
 
 module.exports = {
-  entry: './src/app.ts',
+  mode: 'development',
+  entry: './src/index.tsx',
   module: {
     rules: [
       {
@@ -11,14 +12,13 @@ module.exports = {
       }
     ]
   },
-  mode: 'development',
   resolve: {
-    extensions: [ '.tsx', '.ts', '.js', '.json' ]
+    extensions: ['.tsx', '.ts', '.js', '.json']
   },
   output: {
-    filename: 'bundle.js',
+    filename: 'app.bundle.js',
     path: path.resolve(__dirname, 'dist'),
-//    library: 'multimodal',
-//    libraryTarget: 'window'
+    //    library: 'multimodal',
+    //    libraryTarget: 'window'
   }
 };

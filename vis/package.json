@@ -5,9 +5,9 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "tsc && webpack src/app.js -o ../static/js/app.bundle.js --mode=production",
-    "build:dev": "tsc && webpack src/app.js -o ../static/js/app.bundle.js --mode=development",
-    "watch": "webpack src/app.ts --module-bind tsx=awesome-typescript-loader -o ../static/js/app.bundle.js --mode=development --watch",
+    "build": "tsc && webpack ./src/index.tsx -o ../static/js/ --mode=production",
+    "build:dev": "tsc && webpack ./src/index.tsx -o ../static/js/ --mode=development",
+    "watch": "webpack ./src/index.tsx -o ../static/js/ --mode=development --watch",
     "start": "node server.js"
   },
   "author": "Alan Race",
@@ -18,11 +18,12 @@
     "canvas": "^2.6.1",
     "d3": "^6.5.0",
     "d3-delaunay": "^5.3.0",
-    "dat.gui": "^0.7.7",
     "delaunator": "^4.0.1",
     "express": "^4.17.1",
-    "igv": "^2.7.9",
-    "n": "^6.7.0"
+    "igv": "2.7.9",
+    "n": "^6.7.0",
+    "react": "^17.0.2",
+    "react-dom": "^17.0.2"
   },
   "type": "module",
   "devDependencies": {
@@ -31,10 +32,12 @@
     "@types/dat.gui": "^0.7.6",
     "@types/jquery": "^3.5.5",
     "@types/node": "^14.10.2",
+    "@types/react": "^17.0.33",
+    "@types/react-dom": "^17.0.10",
     "btoa": "^1.2.1",
-    "ts-loader": "^8.0.3",
-    "typescript": "^4.0.2",
-    "webpack": "^4.44.1",
-    "webpack-cli": "^3.3.12"
+    "ts-loader": "^9.2.6",
+    "typescript": "^4.5.5",
+    "webpack": "^5.67.0",
+    "webpack-cli": "^4.9.2"
   }
 }

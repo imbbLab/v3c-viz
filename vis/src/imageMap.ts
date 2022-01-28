@@ -16,7 +16,7 @@ export class ImageMap extends Axis {
     percentile = 0.97;
     imageThreshold = -1;
 
-    voronoiPlot: VoronoiPlot
+    //voronoiPlot: VoronoiPlot
 
     imageData: Uint32Array
     buffer: Uint8ClampedArray
@@ -28,7 +28,7 @@ export class ImageMap extends Axis {
     setNumberBins(numBins: number) {
         this.numBins = numBins;
 
-        if(this.imageCanvas) {
+        if (this.imageCanvas) {
             this.imageCanvas.width = this.numBins;
             this.imageCanvas.height = this.numBins;
         }
@@ -37,13 +37,11 @@ export class ImageMap extends Axis {
         //this.updateView(this.minDataX, this.maxDataX, this.minDataY, this.maxDataY);
     }
 
-    constructor(numBins: number, voronoiPlot: VoronoiPlot) {
-        super(<HTMLCanvasElement>document.getElementById("image-canvas"))
+    constructor(canvas: HTMLCanvasElement, numBins: number) {
+        super(canvas)
 
         this.imageData = new Uint32Array();
         this.buffer = new Uint8ClampedArray();
-
-
 
         var axisCanvasCTX = <CanvasRenderingContext2D>this.getAxisCanvas().getContext('2d');
         this.imageCanvas = document.createElement("canvas");
@@ -55,7 +53,7 @@ export class ImageMap extends Axis {
 
         this.setNumberBins(numBins);
 
-        this.voronoiPlot = voronoiPlot;
+        //this.voronoiPlot = voronoiPlot;
 
         //this.axis = new Axis(this.imageCanvas);
         //this.axis.drawTicks();
@@ -160,11 +158,11 @@ export class ImageMap extends Axis {
         //    axisCanvasCTX.drawImage(this.bitmapData, 0, 0, this.bitmapData.width, this.bitmapData.height,
         //        0, 0, axisCanvas.width, axisCanvas.height);
         //} else {
-        
+
         //}
-        
+
         axisCanvasCTX.drawImage(this.imageCanvas, 0, 0, this.imageCanvas.width, this.imageCanvas.height,
-                    0, 0, axisCanvas.width, axisCanvas.height);
+            0, 0, axisCanvas.width, axisCanvas.height);
 
         this.drawContacts(axisCanvasCTX, axisCanvas.width, axisCanvas.height, false);
         axisCanvasCTX.restore();
@@ -179,7 +177,7 @@ export class ImageMap extends Axis {
 
 
         // Check whether the size of buffers are correct
-        if(this.iData.width != this.numBins || this.iData.height != this.numBins) {
+        if (this.iData.width != this.numBins || this.iData.height != this.numBins) {
             this.buffer = new Uint8ClampedArray(this.numBins * this.numBins * 4)
 
             var axisCanvas = this.getAxisCanvas();
@@ -205,7 +203,7 @@ export class ImageMap extends Axis {
         })
 
         this.setPercentile(this.percentile);
-        
+
         this.redraw();
     }
 }
