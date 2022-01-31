@@ -101,6 +101,26 @@ export class ImageMap extends Axis {
 
     }
 
+    scale: d3.ScaleQuantize<number, never> | undefined;
+    colourScale: d3.ScaleContinuousNumeric<string, string, never> | undefined;
+    dataTransform: ((value: number) => number) = (value: number) => { return value };
+
+    // TODO: Put colour bar in its own class..
+    //colourMinArea: number = -1
+    //colourMaxArea: number = -1
+
+    setColourScale(colourScale: d3.ScaleContinuousNumeric<string, string, never>) {
+        this.colourScale = colourScale;
+    }
+
+    setScale(scale: d3.ScaleQuantize<number, never>) {
+        this.scale = scale;
+    }
+
+    setDataTransform(dataTransform: ((value: number) => number)) {
+        this.dataTransform = dataTransform;
+    }
+
     thresholdImage() {
         var clamped = new Uint8ClampedArray([0]);
 
@@ -125,11 +145,32 @@ export class ImageMap extends Axis {
         this.redraw();
     }
 
+    recolourImage() {
+        if (!this.colourScale || !this.scale) {
+            return
+        }
+
+        for (var y = 0; y < this.iData.height; ++y) {
+            for (var x = 0; x < this.iData.width; ++x) {
+                let colour = this.colourScale(this.scale(this.dataTransform(this.imageData[y * this.iData.width + x])));
+                var rgb = colour.match(/\d+/g)!;
+
+                var pos = (y * this.iData.width + x) * 4; // position in buffer based on x and y
+                this.iData.data[pos] = parseInt(rgb[0]);           // some R value [0, 255]
+                this.iData.data[pos + 1] = parseInt(rgb[1]);           // some G value
+                this.iData.data[pos + 2] = parseInt(rgb[2]);           // some B value
+                this.iData.data[pos + 3] = 255;           // set alpha channel
+            }
+        }
+
+        //this.redraw();
+    }
+
     updateBitmap() {
         this.redraw();
         /*createImageBitmap(this.iData).then(bitmapData => {
             this.bitmapData = bitmapData;
-
+    
             this.redraw();
         });*/
     }
@@ -175,7 +216,6 @@ export class ImageMap extends Axis {
     async updateFromArray(imageData: Uint32Array) {
         this.imageData = imageData;
 
-
         // Check whether the size of buffers are correct
         if (this.iData.width != this.numBins || this.iData.height != this.numBins) {
             this.buffer = new Uint8ClampedArray(this.numBins * this.numBins * 4)
@@ -202,7 +242,8 @@ export class ImageMap extends Axis {
             }
         })
 
-        this.setPercentile(this.percentile);
+        //this.setPercentile(this.percentile);
+        this.recolourImage();
 
         this.redraw();
     }

@@ -49,10 +49,13 @@ interface AppState {
     voronoi: Voronoi | null
     imageData: Uint32Array | null
     histogram: Histogram | null
+    imageHistogram: Histogram | null
 
     // Scales for the colour map
     scale: d3.ScaleQuantize<number, never> | null
     colourScale: d3.ScaleContinuousNumeric<string, string, never> | null
+    imageScale: d3.ScaleQuantize<number, never> | null
+    imageColourScale: d3.ScaleContinuousNumeric<string, string, never> | null
 
     colourMapVisible: boolean
 }
@@ -60,6 +63,9 @@ interface AppState {
 // The number of colours to use when generating a colour scale
 const NUM_COLOURS = 100;
 const COLOURMAP_WIDTH = 700;
+const COLOURMAP_HEIGHT = 100;
+
+const IMAGE_MAP_DATA_TRANSFORM = (value: number) => { return Math.log(1 + value); };
 
 export class App extends React.Component<AppProps, AppState> {
     belowBrowser: IGViewer | undefined
@@ -93,8 +99,11 @@ export class App extends React.Component<AppProps, AppState> {
             voronoi: null,
             imageData: null,
             histogram: null,
+            imageHistogram: null,
             scale: null,
             colourScale: null,
+            imageScale: null,
+            imageColourScale: null,
             colourMapVisible: false,
         };
 
@@ -103,6 +112,7 @@ export class App extends React.Component<AppProps, AppState> {
         this.onRegionSelect = this.onRegionSelect.bind(this);
         this.setSmoothingIterations = this.setSmoothingIterations.bind(this);
         this.generateHistogram = this.generateHistogram.bind(this);
+        this.generateImageHistogram = this.generateImageHistogram.bind(this);
         this.canvasWidth = this.canvasWidth.bind(this);
         this.browserWidth = this.browserWidth.bind(this);
         this.rotatedBrowserWidth = this.rotatedBrowserWidth.bind(this);
@@ -184,14 +194,19 @@ export class App extends React.Component<AppProps, AppState> {
                         let area_scale = (voronoiPlot.getVoronoiDrawWidth() * voronoiPlot.getVoronoiDrawHeight()) / ((view.endX - view.startX) * (view.endY - view.startY));
 
                         let response = parseVoronoiAndImage(buffer, area_scale);
-                        let histogram = this.generateHistogram(response.vor, COLOURMAP_WIDTH);
+                        let histogram = this.generateHistogram(response.vor, this.canvasWidth() - 10);
+                        let imageHistogram = this.generateImageHistogram(response.overviewImage, this.canvasWidth() - 10, IMAGE_MAP_DATA_TRANSFORM);
+                        this.imageView?.imageMap?.setDataTransform(IMAGE_MAP_DATA_TRANSFORM);
 
                         this.setState({
                             voronoi: response.vor,
                             imageData: response.overviewImage,
                             histogram: histogram,
+                            imageHistogram: imageHistogram,
                             scale: d3.scaleQuantize().range(d3.range(NUM_COLOURS)).domain([histogram.minMax.Min, histogram.minMax.Max]),
-                            colourScale: d3.scaleLinear<string>().range(["saddlebrown", "lightgreen", "steelblue"]).domain([0, NUM_COLOURS / 2, NUM_COLOURS])
+                            colourScale: d3.scaleLinear<string>().range(["saddlebrown", "lightgreen", "steelblue"]).domain([0, NUM_COLOURS / 2, NUM_COLOURS]),
+                            imageScale: d3.scaleQuantize().range(d3.range(NUM_COLOURS)).domain([imageHistogram.minMax.Min, imageHistogram.minMax.Max]),
+                            imageColourScale: d3.scaleLinear<string>().range(["black", "white"]).domain([0, NUM_COLOURS]),
                         });
                     })
                 });
@@ -296,7 +311,7 @@ export class App extends React.Component<AppProps, AppState> {
 
     generateHistogram(voronoi: Voronoi, numBins: number): Histogram {
         let minMax: MinMax = voronoi.getMinMaxArea();
-        let histogram = new Histogram(numBins, minMax);
+        let histogram = new Histogram(numBins, minMax, Math.log);
 
         for (let i = 0; i < voronoi.polygons.length; i++) {
             if (voronoi.polygons[i].clipped) {
@@ -310,11 +325,39 @@ export class App extends React.Component<AppProps, AppState> {
         return histogram;
     }
 
-    canvasWidth(): string {
+    generateImageHistogram(imageData: Uint32Array, numBins: number, transform: (value: number) => number): Histogram {
+        let min = transform(imageData[0]);
+        let max = transform(imageData[0]);
+
+        for (let value of imageData) {
+            let trasformedValue = transform(value);
+
+            if (trasformedValue < min) {
+                min = trasformedValue;
+            }
+            if (trasformedValue > max) {
+                max = trasformedValue;
+            }
+        }
+
+        let minMax = { Min: min, Max: max };
+        let histogram = new Histogram(numBins, minMax, transform);
+
+        for (let value of imageData) {
+            let areaBin = Math.round((transform(value) - minMax.Min) / histogram.binWidth);
+            histogram.histogram[areaBin]++
+        }
+
+        return histogram;
+    }
+
+    canvasWidth(): number {
+        let vw = Math.max(document.documentElement.clientWidth || 0, window.innerWidth || 0);
+
         if (this.state.hideImageMap) {
-            return "calc(50vw - 50px)"
+            return 0.5 * vw - 50//"calc(50vw - 50px)"
         } else {
-            return "calc(33vw - 25px)"
+            return (vw / 3) - 25//"calc(33vw - 25px)"
         }
     }
 
@@ -344,10 +387,15 @@ export class App extends React.Component<AppProps, AppState> {
     }
 
     browserTopPosition(): string {
+        let extraShift = "";
+        if (this.state.colourMapVisible) {
+            extraShift = " + " + COLOURMAP_HEIGHT + "px";
+        }
+
         if (this.state.hideImageMap) {
-            return "calc(50vw - 65px)"
+            return "calc(50vw - 65px" + extraShift + ")"
         } else {
-            return "calc(33vw - 41px)"
+            return "calc(33vw - 41px" + extraShift + ")"
         }
     }
 
@@ -374,18 +422,33 @@ export class App extends React.Component<AppProps, AppState> {
                         exportToImage(true, this.voronoiView!.voronoiPlot!, this.belowBrowser!.browser!, this.rightBrowser?.browser)
                     }}
                 ></Menu>
-                {
-                    this.state.colourMapVisible && this.state.histogram &&
-                    <ColourBar scale={this.state.scale!}
-                        colourScale={this.state.colourScale!}
-                        histogram={this.state.histogram}
-                        onScaleChange={(scale: d3.ScaleQuantize<number, never>) => {
-                            this.voronoiView!.voronoiPlot!.drawPolygonsCanvas();
-                        }}
-                        height={100}
-                        width={COLOURMAP_WIDTH} ></ColourBar>
-                }
                 <div style={{ marginLeft: 40, width: "calc(100vw - 40px)", height: "100vh" }}>
+                    <div style={{ display: "flex" }}>
+                        {
+                            this.state.colourMapVisible && !this.state.hideImageMap &&
+                            <ColourBar scale={this.state.imageScale!}
+                                colourScale={this.state.imageColourScale!}
+                                histogram={this.state.imageHistogram}
+                                onScaleChange={(scale: d3.ScaleQuantize<number, never>) => {
+                                    console.log(this.imageView)
+                                    this.imageView!.imageMap!.recolourImage();
+                                    this.imageView!.imageMap!.redraw()
+                                }}
+                                height={COLOURMAP_HEIGHT}
+                                width={this.canvasWidth()} ></ColourBar>
+                        }
+                        {
+                            this.state.colourMapVisible && this.state.histogram &&
+                            <ColourBar scale={this.state.scale!}
+                                colourScale={this.state.colourScale!}
+                                histogram={this.state.histogram}
+                                onScaleChange={(scale: d3.ScaleQuantize<number, never>) => {
+                                    this.voronoiView!.voronoiPlot!.drawPolygonsCanvas();
+                                }}
+                                height={COLOURMAP_HEIGHT}
+                                width={this.canvasWidth()} ></ColourBar>
+                        }
+                    </div>
                     <div style={{ width: "100%" }}>
                         {!this.state.hideImageMap &&
                             <div style={{ width: this.canvasWidth(), display: "inline-block" }}>
@@ -396,8 +459,8 @@ export class App extends React.Component<AppProps, AppState> {
                                     targetChrom={this.state.targetChrom}
                                     numBins={200}
                                     intrachromosomeView={this.state.intrachromosomeView}
-                                    scale={this.state.scale}
-                                    colourScale={this.state.colourScale!}
+                                    scale={this.state.imageScale}
+                                    colourScale={this.state.imageColourScale!}
                                     onRegionSelect={this.onRegionSelect}
                                     onSetSmoothing={this.setSmoothingIterations}></ImageView>
                             </div>

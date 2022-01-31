@@ -45,6 +45,11 @@ export class ImageView extends React.Component<ImageViewProps, ImageViewState> {
             this.imageMap.updateViewLimits(this.props.view.startX, this.props.view.endX, this.props.view.startY, this.props.view.endY);
             this.imageMap.setChromPair(this.props.sourceChrom, this.props.targetChrom);
 
+            if (this.props.colourScale && this.props.scale) {
+                this.imageMap.setColourScale(this.props.colourScale)
+                this.imageMap.setScale(this.props.scale)
+            }
+
             if (this.props.imageData) {
                 this.imageMap.updateFromArray(this.props.imageData)
             }
@@ -57,9 +62,9 @@ export class ImageView extends React.Component<ImageViewProps, ImageViewState> {
                 this.imageMap!.setNumberBins(value);
                 //requestViewUpdate({ dimension: "x", locus: getLocusFromBrowser(bottomBrowser) })
             });
-            this.imageGUI.add(this.imageMap, 'percentile', 0, 1, 0.001).name('Percentile (threshold) ').onChange((value: number) => {
-                this.imageMap!.setPercentile(value);
-            });
+            //this.imageGUI.add(this.imageMap, 'percentile', 0, 1, 0.001).name('Percentile (threshold) ').onChange((value: number) => {
+            //    this.imageMap!.setPercentile(value);
+            //});
 
             this.imageGUI.close();
         }
@@ -71,11 +76,12 @@ export class ImageView extends React.Component<ImageViewProps, ImageViewState> {
 
         if (this.imageMap) {
             let requiresUpdate = false;
+            console.log("componnentDidUpdatE", this.props.colourScale!.domain())
 
             if (this.props.colourScale && this.props.scale &&
                 (this.props.colourScale != prevProps.colourScale || this.props.scale != prevProps.scale)) {
-                //this.imageMap.setColourScale(this.props.colourScale)
-                //this.imageMap.setScale(this.props.scale)
+                this.imageMap.setColourScale(this.props.colourScale)
+                this.imageMap.setScale(this.props.scale)
 
                 requiresUpdate = true;
             }

@@ -8,9 +8,12 @@ export class Histogram {
 
     histogram: Uint32Array
 
-    constructor(numBins: number, minMax: MinMax) {
+    transform: (value: number) => number;
+
+    constructor(numBins: number, minMax: MinMax, transform: (value: number) => number) {
         this.minMax = minMax;
         this.histogram = new Uint32Array(numBins);
+        this.transform = transform;
 
         this.binWidth = (minMax.Max - minMax.Min) / numBins;
     }
@@ -67,8 +70,15 @@ export class ColourBar extends React.Component<ColourBarProps, ColourBarState> {
                 }
 
                 var rect = this.canvas.getBoundingClientRect();
-                let x = event.clientX - rect.left
+                let x = event.clientX - rect.left - 5;
                 let y = event.clientY - rect.top
+
+                if (x < 0) {
+                    x = 0;
+                }
+                if (x > (this.props.width - 10)) {
+                    x = this.props.width - 10;
+                }
 
                 let [minScale, maxScale] = this.props.scale.domain();
 
@@ -86,6 +96,11 @@ export class ColourBar extends React.Component<ColourBarProps, ColourBarState> {
     }
 
     componentDidUpdate(prevProps: ColourBarProps, prevState: ColourBarState) {
+        if (this.canvas && this.canvas.width != this.props.width) {
+            this.canvas.width = this.props.width;
+            this.renderColourBar();
+        }
+
         if (prevProps.scale != this.props.scale || prevProps.colourScale != this.props.colourScale || prevProps.histogram != this.props.histogram) {
             this.renderColourBar();
         }
@@ -112,15 +127,12 @@ export class ColourBar extends React.Component<ColourBarProps, ColourBarState> {
 
         let histogramY = this.props.height - 10
 
-        let histogram = this.props.histogram;//(numBins);
+        let histogram = this.props.histogram;
 
-        console.log("renderColourBar()")
         // If there is no data loaded, then we don't need to draw the histogram
         if (!histogram) {
             return;
         }
-        console.log("renderColourBar2()")
-
         let bins = histogram.histogram;
 
         //this.scale = d3.scaleQuantize()
@@ -132,28 +144,28 @@ export class ColourBar extends React.Component<ColourBarProps, ColourBarState> {
         for (let i = 0; i < bins.length; i++) {
             ctx.strokeStyle = 'rgb(0, 0, 0)'
             ctx.beginPath();
-            ctx.moveTo(i, histogramY);
-            ctx.lineTo(i, histogramY - (Math.log(bins[i]) / Math.log(maxBin) * histogramY))
+            ctx.moveTo(i + 5, histogramY);
+            ctx.lineTo(i + 5, histogramY - (Math.log(bins[i]) / Math.log(maxBin) * histogramY))
             //colourCanvasCTX.lineTo(i, histogramY - (areaBins[i] / maxBin * colourCanvas.height))
             ctx.stroke();
 
             ctx.strokeStyle = this.props.colourScale(this.props.scale(histogram.binWidth * i + histogram.minMax.Min))
             ctx.beginPath();
-            ctx.moveTo(i, this.props.height);
-            ctx.lineTo(i, histogramY)
+            ctx.moveTo(i + 5, this.props.height);
+            ctx.lineTo(i + 5, histogramY)
             ctx.stroke();
         }
 
         let [minScale, maxScale] = this.props.scale.domain();
 
         ctx.strokeStyle = 'rgb(0, 0, 0)'
-        let minScaleX = (minScale - histogram.minMax.Min) / histogram.binWidth
+        let minScaleX = (minScale - histogram.minMax.Min) / histogram.binWidth + 5
         ctx.beginPath();
         ctx.moveTo(minScaleX, histogramY);
         ctx.lineTo(minScaleX - 5, this.props.height);
         ctx.lineTo(minScaleX + 5, this.props.height);
         ctx.fill();
-        let maxScaleX = (maxScale - histogram.minMax.Min) / histogram.binWidth
+        let maxScaleX = (maxScale - histogram.minMax.Min) / histogram.binWidth + 5
         ctx.beginPath();
         ctx.moveTo(maxScaleX, histogramY);
         ctx.lineTo(maxScaleX - 5, this.props.height);
@@ -164,7 +176,7 @@ export class ColourBar extends React.Component<ColourBarProps, ColourBarState> {
     render() {
         return (
             <div> {/* id="voronoi-colour-controls" style={{ position: "absolute", left: "0px", top: "0px" }}*/}
-                <canvas ref={(canvas: HTMLCanvasElement) => this.canvas = canvas} id="voronoi-colour" width={this.props.width} height={this.props.height}></canvas>
+                <canvas ref={(canvas: HTMLCanvasElement) => this.canvas = canvas} width={this.props.width} height={this.props.height}></canvas>
             </div>
         )
     }
