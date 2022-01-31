@@ -130,6 +130,50 @@ export class IGViewer extends React.Component<IGViewerProps, IGViewerState> {
         }
     }
 
+    refresh() {
+        if (this.browser) {
+            this.browser.search(this.props.browserOptions.locus);
+        }
+    }
+
+    setSize(size: number) {
+        let igvRootDivs = document.getElementsByClassName('igv-root-div') as HTMLCollectionOf<HTMLDivElement>;
+        for (let rootDiv of igvRootDivs) {
+            rootDiv.style.width = (size) + "px";
+        }
+
+        let viewports = document.getElementsByClassName('igv-viewport') as HTMLCollectionOf<HTMLDivElement>;
+        for (let viewport of viewports) {
+            viewport.style.width = (size) + "px";
+        }
+
+        let tracks = document.getElementsByClassName('igv-track') as HTMLCollectionOf<HTMLDivElement>;
+        for (let track of tracks) {
+            track.style.width = (size) + "px";
+        }
+
+        //let canvases = <HTMLCollectionOf<HTMLCanvasElement>>document.getElementsByClassName('igv-canvas');
+        //for (let canvas of canvases) {
+        //    canvas.style.width = (imageMap.axisWidth) + "px";
+        //}
+
+        let navBars = document.getElementsByClassName('igv-navbar') as HTMLCollectionOf<HTMLDivElement>;
+        for (let navBar of navBars) {
+            navBar.style.width = (size + 40) + "px";
+        }
+
+        let zoomWidgets = document.getElementsByClassName('igv-zoom-widget-900') as HTMLCollectionOf<HTMLDivElement>;
+        for (let zoomWidget of zoomWidgets) {
+            zoomWidget.style.marginRight = 5 + "px";
+        }
+
+        if (this.browser) {
+            for (let trackView of this.browser.trackViews) {
+                trackView.updateViews(true);
+            }
+        }
+    }
+
     render() {
         return (
             <div id={this.props.id} className={"gene-browser " + this.props.className} ref={(div: HTMLDivElement) => this.div = div} />

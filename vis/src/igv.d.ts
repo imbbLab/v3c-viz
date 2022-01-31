@@ -265,7 +265,7 @@ declare module 'igv' {
     isLoading(): boolean
 
     saveSVG(): void
-    renderSVGContext(context:SVGRenderingContext2D, offset: any): void
+    renderSVGContext(context: SVGRenderingContext2D, offset: any): void
     drawSVGWithContext(context: SVGRenderingContext2D): void
     drawSVGWithContect(context: SVGRenderingContext2D): void
 
@@ -286,7 +286,7 @@ declare module 'igv' {
 
     renderTrackLabelSVG(context: SVGRenderingContext2D): void
     getCachedFeatures(): any
-    createZoomInNotice($parent: JQuery): void 
+    createZoomInNotice($parent: JQuery): void
     viewIsReady(): boolean
     addMouseHandlers(): void
   }
@@ -538,6 +538,8 @@ declare module 'igv' {
 
     loadInProgress(): boolean;
     loadTrack(config: ITrack): Promise<ITrack>;
+
+    toSVG(): string // Promise<string>
 
     fireEvent(event: string): void
     updateLocusSearchWidget(referenceFrameList: ReferenceFrame[]): void

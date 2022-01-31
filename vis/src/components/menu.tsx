@@ -5,6 +5,7 @@ interface MenuProps {
     onColourButtonClicked: () => void
     onHideImageButtonClicked: () => void
     onTriangleButtonClicked: () => void
+    onSaveToSVGClicked: () => void
 
     loadUploadedTrack: (uploadedTrack: UploadedTrack) => void
 }
@@ -61,6 +62,7 @@ export class Menu extends React.Component<MenuProps, MenuState> {
                         }}></span>
 
                     <span ref={(saveImageButton: HTMLSpanElement) => this.saveImageButton = saveImageButton} className="menubtn icon-save-image" title="Save view to image" id="saveButton"
+
                         onMouseOver={() => {
                             this.setState({ menuToShow: MenuToShow.SaveImage })
                         }}></span>
@@ -144,7 +146,8 @@ export class Menu extends React.Component<MenuProps, MenuState> {
                 }
                 {this.state.menuToShow == MenuToShow.SaveImage &&
                     <div id="saveImageMenu" style={this.styleForMenu(this.saveImageButton!)} className="menu-dropdown">
-                        <button className="dropbtn " id="saveSVGButton">SVG</button>
+                        <button className="dropbtn " id="saveSVGButton"
+                            onClick={this.props.onSaveToSVGClicked}>SVG</button>
                         <button className="dropbtn " id="savePNGButton" style={{ display: "none" }}>PNG</button>
                     </div>
                 }

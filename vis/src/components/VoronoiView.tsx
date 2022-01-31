@@ -40,6 +40,7 @@ export class VoronoiView extends React.Component<VoronoiViewProps, VoronoiViewSt
 
         if (this.canvas) {
             this.voronoiPlot = new VoronoiPlot(this.canvas);
+            //this.voronoiPlot.onAxisSizeChange = this.props.onAxisSizeChange;
             this.voronoiPlot.addRegionSelectEventListener(this.props.onRegionSelect);
             this.voronoiPlot.updateViewLimits(this.props.view.startX, this.props.view.endX, this.props.view.startY, this.props.view.endY);
             this.voronoiPlot.setChromPair(this.props.sourceChrom, this.props.targetChrom);

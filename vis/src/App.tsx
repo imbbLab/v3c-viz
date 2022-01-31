@@ -12,6 +12,7 @@ import { VoronoiPlot } from "./voronoiPlot";
 import { Rectangle } from "./axis";
 import { ColourBar, Histogram } from "./components/ColourBar";
 import d3 = require("d3");
+import { exportToImage } from "./exportToImage";
 
 
 export interface View {
@@ -61,6 +62,9 @@ const NUM_COLOURS = 100;
 const COLOURMAP_WIDTH = 700;
 
 export class App extends React.Component<AppProps, AppState> {
+    belowBrowser: IGViewer | undefined
+    rightBrowser: IGViewer | undefined
+
     xRequest: ViewRequest | undefined
     yRequest: ViewRequest | undefined
     timeoutFunction: any;
@@ -100,6 +104,8 @@ export class App extends React.Component<AppProps, AppState> {
         this.setSmoothingIterations = this.setSmoothingIterations.bind(this);
         this.generateHistogram = this.generateHistogram.bind(this);
         this.canvasWidth = this.canvasWidth.bind(this);
+        this.browserWidth = this.browserWidth.bind(this);
+        this.rotatedBrowserWidth = this.rotatedBrowserWidth.bind(this);
     }
 
     // Perform once when first initialising the app: load details
@@ -116,6 +122,7 @@ export class App extends React.Component<AppProps, AppState> {
         } else if (this.state.view != prevState.view || this.state.smoothingIterations != prevState.smoothingIterations) {
             this.updateView(this.state.view);
         }
+
     }
 
     updateView(view: View) {
@@ -311,6 +318,23 @@ export class App extends React.Component<AppProps, AppState> {
         }
     }
 
+    browserWidth(): string {
+        if (this.state.hideImageMap) {
+            return "calc(50vw - 80px)"
+        } else {
+            return "calc(33vw - 55px)"
+        }
+    }
+
+
+    rotatedBrowserWidth(): string {
+        if (this.state.hideImageMap) {
+            return "calc(50vw - 80px)"
+        } else {
+            return "calc(33vw - 55px)"
+        }
+    }
+
     browserRightPosition(): string {
         if (this.state.hideImageMap) {
             return "50vw"
@@ -319,15 +343,35 @@ export class App extends React.Component<AppProps, AppState> {
         }
     }
 
+    browserTopPosition(): string {
+        if (this.state.hideImageMap) {
+            return "calc(50vw - 65px)"
+        } else {
+            return "calc(33vw - 41px)"
+        }
+    }
+
     render() {
         return (
             <React.Fragment>
                 <Menu onColourButtonClicked={() => this.setState({ colourMapVisible: !this.state.colourMapVisible })}
-                    onHideImageButtonClicked={() => this.setState({ hideImageMap: !this.state.hideImageMap })}
+                    onHideImageButtonClicked={() => this.setState({ hideImageMap: !this.state.hideImageMap }, () => {
+                        if (this.belowBrowser) {
+                            this.belowBrowser.refresh();
+                        }
+                        if (this.rightBrowser) {
+                            this.rightBrowser.refresh();
+                        }
+                    })}
                     onTriangleButtonClicked={() => this.setState({ intrachromosomeView: !this.state.intrachromosomeView })}
 
                     loadUploadedTrack={(uploadedTrack: UploadedTrack) => {
                         this.setState({ tracks: this.state.tracks.concat(uploadedTrack) })
+                    }}
+
+                    onSaveToSVGClicked={() => {
+                        console.log("Exporting")
+                        exportToImage(true, this.voronoiView!.voronoiPlot!, this.belowBrowser!.browser!, this.rightBrowser?.browser)
                     }}
                 ></Menu>
                 {
@@ -368,15 +412,17 @@ export class App extends React.Component<AppProps, AppState> {
                                 scale={this.state.scale}
                                 colourScale={this.state.colourScale!}
                                 onRegionSelect={this.onRegionSelect}
-                                onSetSmoothing={this.setSmoothingIterations}></VoronoiView>
+                                onSetSmoothing={this.setSmoothingIterations}
+                            ></VoronoiView>
                         </div>
                     </div>
                     <div style={{ width: "100%", height: "100%" }}>
                         {!this.state.hideImageMap &&
                             <div style={{ width: this.canvasWidth(), display: "inline-block" }}></div>
                         }
-                        <div style={{ width: this.canvasWidth(), display: "inline-block" }}>
+                        <div style={{ paddingLeft: "16px", width: this.browserWidth(), display: "inline-block" }}>
                             <IGViewer id={"gene-browser-below"}
+                                ref={(viewer: IGViewer) => { this.belowBrowser = viewer }}
                                 browserOptions={{
                                     palette: ['#00A0B0', '#6A4A3C', '#CC333F', '#EB6841'],
                                     locus: this.state.sourceChrom.name + ":" + this.state.view.startX + "-" + this.state.view.endX,
@@ -387,8 +433,9 @@ export class App extends React.Component<AppProps, AppState> {
                                 requestViewUpdate={this.requestViewUpdate}></IGViewer>
                         </div>
                         {!this.state.intrachromosomeView &&
-                            <div style={{ width: this.canvasWidth(), position: "absolute", left: this.browserRightPosition(), top: this.canvasWidth() }}>
+                            <div style={{ width: this.rotatedBrowserWidth(), position: "absolute", left: this.browserRightPosition(), top: this.browserTopPosition() }}>
                                 <IGViewer id={"gene-browser-right"} className="rotated"
+                                    ref={(viewer: IGViewer) => { this.rightBrowser = viewer }}
                                     browserOptions={{
                                         palette: ['#00A0B0', '#6A4A3C', '#CC333F', '#EB6841'],
                                         locus: this.state.targetChrom.name + ":" + this.state.view.startY + "-" + this.state.view.endY,
@@ -400,6 +447,9 @@ export class App extends React.Component<AppProps, AppState> {
                             </div>
                         }
                     </div>
+
+                    <div id='vertline' style={{ height: "1px", backgroundColor: "black", position: "absolute" }}></div>
+                    <div id='horline' style={{ height: "1px", backgroundColor: "black", position: "absolute" }}></div>
                 </div>
             </React.Fragment >
         );

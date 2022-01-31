@@ -84,6 +84,8 @@ export abstract class Axis {
     mouseDown = false;
     lastMousePos: Coordinate = { x: 0, y: 0 };
 
+    onAxisSizeChange: (() => void) | undefined;
+
     constructor(canvas: HTMLCanvasElement) {
         this.canvas = canvas;
         this.axisCanvas = document.createElement("canvas");
@@ -307,6 +309,10 @@ export abstract class Axis {
 
         this.axisCanvas.width = Math.max(this.axisWidth, this.axisHeight);
         this.axisCanvas.height = Math.max(this.axisWidth, this.axisHeight);
+
+        if (this.onAxisSizeChange) {
+            this.onAxisSizeChange();
+        }
     }
 
 
