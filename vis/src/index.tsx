@@ -58,9 +58,10 @@ fetch('/details').then(response => {
         console.log(genomeDetails)
 
 
+
         ReactDOM.render(
             <React.StrictMode>
-                <App chromosomes={chromosomes} genome={genomeDetails} sourceChrom={sourceChrom} targetChrom={targetChrom}></App>
+                <App chromosomes={chromosomes} genome={genomeDetails} sourceChrom={sourceChrom} targetChrom={targetChrom} hasInteract={details['hasInteract'] as boolean}></App>
             </React.StrictMode>,
             document.getElementById("output")
         );

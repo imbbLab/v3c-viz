@@ -1483,8 +1483,8 @@ fetch('./genomes.json').then((response) => {
                                                     continue
                                                 }
 
-                                                imageMap.addContactMenu(name, imageGUI);
-                                                voronoiMap.addContactMenu(name, voronoiGUI);
+                                                //imageMap.addContactMenu(name, imageGUI);
+                                                //voronoiMap.addContactMenu(name, voronoiGUI);
 
                                                 let serverInteractions = new Map<string, Interaction[]>();
 

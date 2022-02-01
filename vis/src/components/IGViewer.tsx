@@ -46,7 +46,7 @@ export class IGViewer extends React.Component<IGViewerProps, IGViewerState> {
             return { chr: "", start: 0, end: 0 }
         }
 
-        let value = this.props.browserOptions.locus;// this.browser.$searchInput.val();
+        let value = this.browser.$searchInput.val(); //this.props.browserOptions.locus;//
         if (value) {
             let searchValue = value.toString();
             let parts = searchValue.split(':');

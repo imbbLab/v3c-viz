@@ -77,7 +77,6 @@ export class ImageView extends React.Component<ImageViewProps, ImageViewState> {
 
         if (this.imageMap) {
             let requiresUpdate = false;
-            console.log("componnentDidUpdatE", this.props.colourScale!.domain())
 
             if (this.props.colourScale && this.props.scale &&
                 (this.props.colourScale != prevProps.colourScale || this.props.scale != prevProps.scale)) {

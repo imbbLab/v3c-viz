@@ -1,5 +1,6 @@
 import { Chromosome, Interaction } from "./chromosome"
 import { SVGContext } from "./canvas2svg"
+import GUI from "lil-gui";
 
 export interface Coordinate {
     x: number;
@@ -454,7 +455,7 @@ export abstract class Axis {
     }
 
 
-    addContactMenu(name: string, gui: dat.GUI) {
+    addContactMenu(name: string, gui: GUI) {
         //gui.add(this, 'originLocation', {"Top Left": OriginLocation.TopLeft, "Bottom Left": OriginLocation.BottomLeft}).name("Origin Location").onChange((value) => {
         //    this.redraw();
         //})
@@ -462,22 +463,22 @@ export abstract class Axis {
         this.contactOptions.set(name, new ContactOptions());
 
         const imageContactFolder = gui.addFolder('Contacts: ' + name);
-        imageContactFolder.add(<ContactOptions>this.contactOptions.get(name), 'contactSize', 1, 20).name("Contact size").onChange((value) => {
+        imageContactFolder.add(<ContactOptions>this.contactOptions.get(name), 'contactSize', 1, 20).name("Contact size").onChange(() => {
             this.redraw();
         });
-        imageContactFolder.add(<ContactOptions>this.contactOptions.get(name), 'contactOpacity', 0, 1).name("Opacity").onChange((value) => {
+        imageContactFolder.add(<ContactOptions>this.contactOptions.get(name), 'contactOpacity', 0, 1).name("Opacity").onChange(() => {
             this.redraw();
         });
-        imageContactFolder.addColor(<ContactOptions>this.contactOptions.get(name), 'contactEdgeColour').name("Edge colour").onChange((value) => {
+        imageContactFolder.addColor(<ContactOptions>this.contactOptions.get(name), 'contactEdgeColour').name("Edge colour").onChange(() => {
             this.redraw();
         });
-        imageContactFolder.add(<ContactOptions>this.contactOptions.get(name), 'edgeWidth', 0, 10).name("Edge width").onChange((value) => {
+        imageContactFolder.add(<ContactOptions>this.contactOptions.get(name), 'edgeWidth', 0, 10).name("Edge width").onChange(() => {
             this.redraw();
         });
-        imageContactFolder.add(<ContactOptions>this.contactOptions.get(name), 'contactFill').name("Fill").onChange((value) => {
+        imageContactFolder.add(<ContactOptions>this.contactOptions.get(name), 'contactFill').name("Fill").onChange(() => {
             this.redraw();
         });
-        imageContactFolder.addColor(<ContactOptions>this.contactOptions.get(name), 'contactFillColour').name("Fill colour").onChange((value) => {
+        imageContactFolder.addColor(<ContactOptions>this.contactOptions.get(name), 'contactFillColour').name("Fill colour").onChange(() => {
             this.redraw();
         });
     }

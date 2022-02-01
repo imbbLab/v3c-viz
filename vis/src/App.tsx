@@ -27,7 +27,7 @@ interface AppProps {
     chromosomes: Map<string, Chromosome>
     genome: GenomeDetails,
 
-    interactions?: Map<string, Map<string, Interaction[]>>;
+    hasInteract: boolean
 
     sourceChrom: Chromosome,
     targetChrom: Chromosome
@@ -43,6 +43,8 @@ interface AppState {
 
     intrachromosomeView: boolean
     hideImageMap: boolean
+
+    interactions?: Map<string, Map<string, Interaction[]>>;
 
     smoothingIterations: number,
 
@@ -129,7 +131,45 @@ export class App extends React.Component<AppProps, AppState> {
 
     // Perform once when first initialising the app: load details
     componentDidMount() {
-        // Load the dataset list from server
+        if (this.props.hasInteract) {
+            fetch('./interact').then((response) => {
+                if (response.status !== 200) {
+                    console.log('Looks like there was a problem. Status Code: ' +
+                        response.status);
+                    return;
+                }
+
+                response.json().then(interactFiles => {
+                    let interactions: Map<string, Map<string, Interaction[]>> = new Map();
+
+                    for (const [name, interact] of Object.entries<any>(interactFiles)) {
+                        if (interact == null) {
+                            continue
+                        }
+
+                        this.imageView!.imageMap!.addContactMenu(name, this.imageView!.imageGUI!);
+                        this.voronoiView!.voronoiPlot!.addContactMenu(name, this.voronoiView!.voronoiGUI!);
+
+                        let serverInteractions = new Map<string, Interaction[]>();
+
+                        for (var chromPair in interact['Interactions']) {
+
+                            var interactionArray: Interaction[] = [];
+                            interact['Interactions'][chromPair].forEach((interaction: any) => {
+                                interactionArray.push(Interaction.fromJSON(interaction, this.props.chromosomes));
+                            });
+
+                            serverInteractions.set(chromPair, interactionArray)
+                        }
+
+                        interactions.set(name, serverInteractions)
+                    }
+
+                    this.setState({ interactions: interactions })
+                })
+            });
+        }
+
         this.updateView(this.state.view);
     }
 
@@ -141,7 +181,6 @@ export class App extends React.Component<AppProps, AppState> {
         } else if (this.state.view != prevState.view || this.state.smoothingIterations != prevState.smoothingIterations || this.state.imageBinSize != prevState.imageBinSize) {
             this.updateView(this.state.view);
         }
-
     }
 
     updateView(view: View) {
@@ -196,8 +235,8 @@ export class App extends React.Component<AppProps, AppState> {
                     }
 
                     response.arrayBuffer().then((buffer: ArrayBuffer) => {
-                        if (this.props.interactions) {
-                            this.props.interactions.forEach((interactionMap, name, map) => {
+                        if (this.state.interactions) {
+                            this.state.interactions.forEach((interactionMap, name, map) => {
                                 let interactionSet = interactionMap.get(this.state.sourceChrom.nameWithChr() + "-" + this.state.targetChrom.nameWithChr())
 
                                 if (interactionSet) {
@@ -297,7 +336,7 @@ export class App extends React.Component<AppProps, AppState> {
 
     }
 
-    requestViewUpdate(request: ViewRequest) {
+    requestViewUpdate(request: ViewRequest, timeout?: number) {
         let validRequest = false;
 
         if (request.dimension == "x") {
@@ -318,6 +357,10 @@ export class App extends React.Component<AppProps, AppState> {
 
         clearTimeout(this.timeoutFunction);
         if (validRequest) {
+            if (!timeout) {
+                timeout = 50;
+            }
+
             this.timeoutFunction = setTimeout(() => {
                 // Update view if no new requests in last 50 ms
 
@@ -326,7 +369,7 @@ export class App extends React.Component<AppProps, AppState> {
 
                     clearTimeout(this.timeoutFunction);
                 }
-            }, 50);
+            }, timeout);
         }
     }
 
@@ -526,20 +569,18 @@ export class App extends React.Component<AppProps, AppState> {
                                 tracks={this.state.tracks}
                                 requestViewUpdate={this.requestViewUpdate}></IGViewer>
                         </div>
-                        {!this.state.intrachromosomeView &&
-                            <div style={{ width: this.rotatedBrowserWidth(), position: "absolute", left: this.browserRightPosition(), top: this.browserTopPosition() }}>
-                                <IGViewer id={"gene-browser-right"} className="rotated"
-                                    ref={(viewer: IGViewer) => { this.rightBrowser = viewer }}
-                                    browserOptions={{
-                                        palette: ['#00A0B0', '#6A4A3C', '#CC333F', '#EB6841'],
-                                        locus: this.state.targetChrom.name + ":" + this.state.view.startY + "-" + this.state.view.endY,
+                        <div style={{ width: this.rotatedBrowserWidth(), position: "absolute", left: this.browserRightPosition(), top: this.browserTopPosition(), visibility: this.state.intrachromosomeView ? "hidden" : "visible" }}>
+                            <IGViewer id={"gene-browser-right"} className="rotated"
+                                ref={(viewer: IGViewer) => { this.rightBrowser = viewer }}
+                                browserOptions={{
+                                    palette: ['#00A0B0', '#6A4A3C', '#CC333F', '#EB6841'],
+                                    locus: this.state.targetChrom.name + ":" + this.state.view.startY + "-" + this.state.view.endY,
 
-                                        reference: this.props.genome,
-                                    }} dimension="y"
-                                    tracks={this.state.tracks}
-                                    requestViewUpdate={this.requestViewUpdate}></IGViewer>
-                            </div>
-                        }
+                                    reference: this.props.genome,
+                                }} dimension="y"
+                                tracks={this.state.tracks}
+                                requestViewUpdate={this.requestViewUpdate}></IGViewer>
+                        </div>
                     </div>
 
                     <div id='vertline' style={{ height: "1px", backgroundColor: "black", position: "absolute" }}></div>
