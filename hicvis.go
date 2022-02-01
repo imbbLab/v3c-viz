@@ -188,7 +188,7 @@ func GetVoronoi(w http.ResponseWriter, r *http.Request) {
 	sourceChrom := query.Get("sourceChrom")
 	targetChrom := query.Get("targetChrom")
 
-	numPixelsX, err := strconv.Atoi(query.Get("pixelsX"))
+	/*numPixelsX, err := strconv.Atoi(query.Get("pixelsX"))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -198,7 +198,7 @@ func GetVoronoi(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
-	}
+	}*/
 
 	smoothingIterations, err := strconv.Atoi(query.Get("smoothingIterations"))
 	if err != nil {
@@ -238,7 +238,7 @@ func GetVoronoi(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	result, err := performVoronoi(points, pairsQuery, smoothingIterations, numPixelsX, numPixelsY)
+	result, err := performVoronoi(points, pairsQuery, smoothingIterations) //, numPixelsX, numPixelsY
 
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -273,7 +273,7 @@ func boundingPolygonFromQuery(query pairs.Query) voronoi.Polygon {
 	return boundingPolygon
 }
 
-func performVoronoi(points []*pairs.Entry, query pairs.Query, smoothingIterations int, numPixelsX, numPixelsY int) (*voronoi.Voronoi, error) {
+func performVoronoi(points []*pairs.Entry, query pairs.Query, smoothingIterations int) (*voronoi.Voronoi, error) { //, numPixelsX, numPixelsY int
 	// Normalisation options for voronoi calculation:
 	// 1) No normalisation
 	// 2) Normalise to chromosomes
@@ -433,12 +433,23 @@ func GetVoronoiAndImage(w http.ResponseWriter, r *http.Request) {
 	sourceChrom := query.Get("sourceChrom")
 	targetChrom := query.Get("targetChrom")
 
-	numBins, err := strconv.Atoi(query.Get("numBins"))
+	/*numBins, err := strconv.Atoi(query.Get("numBins"))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}*/
+	binSizeX, err := strconv.Atoi(query.Get("binSizeX"))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	numPixelsX, err := strconv.Atoi(query.Get("pixelsX"))
+	binSizeY, err := strconv.Atoi(query.Get("binSizeY"))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	/*numPixelsX, err := strconv.Atoi(query.Get("pixelsX"))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -448,7 +459,7 @@ func GetVoronoiAndImage(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
-	}
+	}*/
 
 	smoothingIterations, err := strconv.Atoi(query.Get("smoothingIterations"))
 	if err != nil {
@@ -506,21 +517,22 @@ func GetVoronoiAndImage(w http.ResponseWriter, r *http.Request) {
 
 	fmt.Println(pairsQuery)
 
-	overviewImage, err := pairsFile.Image(pairsQuery, viewQuery, uint64(numBins))
+	overviewImage, err := pairsFile.Image(pairsQuery, viewQuery, uint64(binSizeX), uint64(binSizeY))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	buf := new(bytes.Buffer)
-	binary.Write(buf, binary.BigEndian, uint32(numBins))
-	err = binary.Write(buf, binary.BigEndian, overviewImage)
+	binary.Write(buf, binary.BigEndian, overviewImage.Width)
+	binary.Write(buf, binary.BigEndian, overviewImage.Height)
+	err = binary.Write(buf, binary.BigEndian, overviewImage.Data)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	sumPoints := 0
-	for _, count := range overviewImage {
+	for _, count := range overviewImage.Data {
 		sumPoints += int(count)
 	}
 
@@ -534,7 +546,7 @@ func GetVoronoiAndImage(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		result, err = performVoronoi(points, pairsQuery, smoothingIterations, numPixelsX, numPixelsY)
+		result, err = performVoronoi(points, pairsQuery, smoothingIterations) //, numPixelsX, numPixelsY
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -542,13 +554,13 @@ func GetVoronoiAndImage(w http.ResponseWriter, r *http.Request) {
 	} else {
 		var points []*pairs.Entry
 
-		for y := 0; y < numBins; y++ {
-			for x := 0; x < numBins; x++ {
-				index := y*numBins + x
+		for y := 0; y < int(overviewImage.Height); y++ {
+			for x := 0; x < int(overviewImage.Width); x++ {
+				index := y*int(overviewImage.Width) + x
 
-				if overviewImage[index] > 0 {
-					sourcePos := uint64(math.Floor((float64(x)/float64(numBins))*float64(maxX-minX))) + uint64(minX)
-					targetPos := uint64(math.Floor((float64(y)/float64(numBins))*float64(maxY-minY))) + uint64(minY)
+				if overviewImage.Data[index] > 0 {
+					sourcePos := uint64(math.Floor((float64(x)/float64(overviewImage.Width))*float64(maxX-minX))) + uint64(minX)
+					targetPos := uint64(math.Floor((float64(y)/float64(overviewImage.Height))*float64(maxY-minY))) + uint64(minY)
 
 					if sourceChrom == targetChrom && sourcePos > targetPos {
 						temp := targetPos
@@ -564,7 +576,7 @@ func GetVoronoiAndImage(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
-		result, err = performVoronoi(points, pairsQuery, smoothingIterations, numPixelsX, numPixelsY)
+		result, err = performVoronoi(points, pairsQuery, smoothingIterations) //, numPixelsX, numPixelsY
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -679,113 +691,141 @@ func max(a, b uint64) uint64 {
 	return b
 }
 
-func GetDensityImage(w http.ResponseWriter, r *http.Request) {
-	query := r.URL.Query()
+// func GetDensityImage(w http.ResponseWriter, r *http.Request) {
+// 	query := r.URL.Query()
 
-	sourceChrom := query.Get("sourceChrom")
-	targetChrom := query.Get("targetChrom")
+// 	sourceChrom := query.Get("sourceChrom")
+// 	targetChrom := query.Get("targetChrom")
 
-	numBins, err := strconv.Atoi(query.Get("numBins"))
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	minX, err := strconv.Atoi(query.Get("xStart"))
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
+// 	numBins, err := strconv.Atoi(query.Get("numBins"))
+// 	if err != nil {
+// 		http.Error(w, err.Error(), http.StatusInternalServerError)
+// 		return
+// 	}
+// 	minX, err := strconv.Atoi(query.Get("xStart"))
+// 	if err != nil {
+// 		http.Error(w, err.Error(), http.StatusInternalServerError)
+// 		return
+// 	}
 
-	minY, err := strconv.Atoi(query.Get("yStart"))
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
+// 	minY, err := strconv.Atoi(query.Get("yStart"))
+// 	if err != nil {
+// 		http.Error(w, err.Error(), http.StatusInternalServerError)
+// 		return
+// 	}
 
-	maxX, err := strconv.Atoi(query.Get("xEnd"))
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
+// 	maxX, err := strconv.Atoi(query.Get("xEnd"))
+// 	if err != nil {
+// 		http.Error(w, err.Error(), http.StatusInternalServerError)
+// 		return
+// 	}
 
-	maxY, err := strconv.Atoi(query.Get("yEnd"))
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
+// 	maxY, err := strconv.Atoi(query.Get("yEnd"))
+// 	if err != nil {
+// 		http.Error(w, err.Error(), http.StatusInternalServerError)
+// 		return
+// 	}
 
-	/*if minX == 0 && minY == 0 && maxX == int(db.chromosomeLength) && maxY == int(db.chromosomeLength) {
-		if uint32(numBins) != db.oNumBins {
-			db.createOverviewImage(uint32(numBins))
-		}
+// 	/*if minX == 0 && minY == 0 && maxX == int(db.chromosomeLength) && maxY == int(db.chromosomeLength) {
+// 		if uint32(numBins) != db.oNumBinfunc GetDensityImage(w http.ResponseWriter, r *http.Request) {
+// 	query := r.URL.Query()
 
-		w.Write(uint32ToByte(db.overviewImage))
-	} else {
-		overviewImage := make([]uint32, numBins*numBins)
+// 	sourceChrom := query.Get("sourceChrom")
+// 	targetChrom := query.Get("targetChrom")
 
-		binSizeX := ((maxX - minX) / numBins) + 1
-		binSizeY := ((maxY - minY) / numBins) + 1
+// 	numBins, err := strconv.Atoi(query.Get("numBins"))
+// 	if err != nil {
+// 		http.Error(w, err.Error(), http.StatusInternalServerError)
+// 		return
+// 	}
+// 	minX, err := strconv.Atoi(query.Get("xStart"))
+// 	if err != nil {
+// 		http.Error(w, err.Error(), http.StatusInternalServerError)
+// 		return
+// 	}
 
-		db.db.View(func(tx *buntdb.Tx) error {
-			tx.Intersects(db.chromosomeName, fmt.Sprintf("[%d %d],[%d %d]", minX, minY, maxX, maxY), func(key, val string) bool {
-				points := strings.Split(val[1:len(val)-1], " ")
+// 	minY, err := strconv.Atoi(query.Get("yStart"))
+// 	if err != nil {
+// 		http.Error(w, err.Error(), http.StatusInternalServerError)
+// 		return
+// 	}
 
-				xPos, err := strconv.Atoi(points[0])
-				if err != nil {
-					return false
-				}
-				yPos, err := strconv.Atoi(points[1])
-				if err != nil {
-					return false
-				}
+// 	maxX, err := strconv.Atoi(query.Get("xEnd"))
+// 	if err != nil {
+// 		http.Error(w, err.Error(), http.StatusInternalServerError)
+// 		return
+// 	}
+// s {
+// 			db.createOverviewImage(uint32(numBins))
+// 		}
 
-				xPos = (xPos - minX) / binSizeX
-				yPos = (yPos - minY) / binSizeY
+// 		w.Write(uint32ToByte(db.overviewImage))
+// 	} else {
+// 		overviewImage := make([]uint32, numBins*numBins)
 
-				loc := (yPos * numBins) + xPos
+// 		binSizeX := ((maxX - minX) / numBins) + 1
+// 		binSizeY := ((maxY - minY) / numBins) + 1
 
-				overviewImage[loc]++
-				return true
-			})
-			return nil
-		})
+// 		db.db.View(func(tx *buntdb.Tx) error {
+// 			tx.Intersects(db.chromosomeName, fmt.Sprintf("[%d %d],[%d %d]", minX, minY, maxX, maxY), func(key, val string) bool {
+// 				points := strings.Split(val[1:len(val)-1], " ")
 
-		db.db.View(func(tx *buntdb.Tx) error {
-			tx.Intersects(db.chromosomeName, fmt.Sprintf("[%d %d],[%d %d]", minY, minX, maxY, maxX), func(key, val string) bool {
-				points := strings.Split(val[1:len(val)-1], " ")
+// 				xPos, err := strconv.Atoi(points[0])
+// 				if err != nil {
+// 					return false
+// 				}
+// 				yPos, err := strconv.Atoi(points[1])
+// 				if err != nil {
+// 					return false
+// 				}
 
-				yPos, err := strconv.Atoi(points[0])
-				if err != nil {
-					return false
-				}
-				xPos, err := strconv.Atoi(points[1])
-				if err != nil {
-					return false
-				}
+// 				xPos = (xPos - minX) / binSizeX
+// 				yPos = (yPos - minY) / binSizeY
 
-				xPos = (xPos - minX) / binSizeX
-				yPos = (yPos - minY) / binSizeY
+// 				loc := (yPos * numBins) + xPos
 
-				loc := (yPos * numBins) + xPos
+// 				overviewImage[loc]++
+// 				return true
+// 			})
+// 			return nil
+// 		})
 
-				overviewImage[loc]++
-				return true
-			})
-			return nil
-		})
+// 		db.db.View(func(tx *buntdb.Tx) error {
+// 			tx.Intersects(db.chromosomeName, fmt.Sprintf("[%d %d],[%d %d]", minY, minX, maxY, maxX), func(key, val string) bool {
+// 				points := strings.Split(val[1:len(val)-1], " ")
 
-	}*/
+// 				yPos, err := strconv.Atoi(points[0])
+// 				if err != nil {
+// 					return false
+// 				}
+// 				xPos, err := strconv.Atoi(points[1])
+// 				if err != nil {
+// 					return false
+// 				}
 
-	overviewImage, err := pairsFile.Image(pairs.Query{SourceChrom: sourceChrom, SourceStart: uint64(minX), SourceEnd: uint64(maxX), TargetChrom: targetChrom, TargetStart: uint64(minY), TargetEnd: uint64(maxY)},
-		pairs.Query{SourceChrom: sourceChrom, SourceStart: uint64(minX), SourceEnd: uint64(maxX), TargetChrom: targetChrom, TargetStart: uint64(minY), TargetEnd: uint64(maxY)}, uint64(numBins))
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
+// 				xPos = (xPos - minX) / binSizeX
+// 				yPos = (yPos - minY) / binSizeY
 
-	w.Header().Set("Content-Type", "application/octet-stream")
-	w.Write(uint32ToByte(overviewImage))
-}
+// 				loc := (yPos * numBins) + xPos
+
+// 				overviewImage[loc]++
+// 				return true
+// 			})
+// 			return nil
+// 		})
+
+// 	}*/
+
+// 	overviewImage, err := pairsFile.Image(pairs.Query{SourceChrom: sourceChrom, SourceStart: uint64(minX), SourceEnd: uint64(maxX), TargetChrom: targetChrom, TargetStart: uint64(minY), TargetEnd: uint64(maxY)},
+// 		pairs.Query{SourceChrom: sourceChrom, SourceStart: uint64(minX), SourceEnd: uint64(maxX), TargetChrom: targetChrom, TargetStart: uint64(minY), TargetEnd: uint64(maxY)}, uint64(numBins))
+// 	if err != nil {
+// 		http.Error(w, err.Error(), http.StatusInternalServerError)
+// 		return
+// 	}
+
+// 	w.Header().Set("Content-Type", "application/octet-stream")
+// 	w.Write(uint32ToByte(overviewImage))
+// }
 
 func uploadFile(w http.ResponseWriter, r *http.Request) {
 	// Parse our multipart form, 10 << 20 specifies a maximum
@@ -842,7 +882,7 @@ func startServer(listener net.Listener) {
 	router.HandleFunc("/voronoiandimage", GetVoronoiAndImage)
 	router.HandleFunc("/interact", GetInteract).Methods("GET")
 	router.HandleFunc("/interact", SetInteract).Methods("POST")
-	router.HandleFunc("/densityImage", GetDensityImage)
+	//	router.HandleFunc("/densityImage", GetDensityImage)
 	//router.HandleFunc("/", ListProjects).Methods("GET")
 	router.PathPrefix("/").Handler(http.FileServer(http.Dir("./static/")))
 

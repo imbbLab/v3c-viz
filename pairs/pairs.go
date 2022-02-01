@@ -10,6 +10,7 @@ import (
 	"image/png"
 	"io"
 	"log"
+	"math"
 	"os"
 	"strconv"
 	"strings"
@@ -53,6 +54,12 @@ type ChromPairChunk struct {
 	MaxY uint64
 }
 
+type Image struct {
+	Width  uint32
+	Height uint32
+	Data   []uint32
+}
+
 type File interface {
 	//Index() Index
 	Close()
@@ -62,7 +69,7 @@ type File interface {
 	ChromPairList() []string
 	Search(pairsQuery Query) ([]*Entry, error)
 
-	Image(query Query, viewQuery Query, numBins uint64) ([]uint32, error)
+	Image(query Query, viewQuery Query, binSizeX uint64, binSizeY uint64) (Image, error)
 
 	Chromsizes() map[string]Chromsize
 	Chromosomes() []string
@@ -347,43 +354,47 @@ func (file *bgzfFile) Search(query Query) ([]*Entry, error) {
 	return pairs, err
 }
 
-func (file *bgzfFile) Image(query Query, viewQuery Query, numBins uint64) ([]uint32, error) {
+func (file *bgzfFile) Image(query Query, viewQuery Query, binSizeX uint64, binSizeY uint64) (Image, error) {
 	fmt.Printf("Processing Image query %v\n", query)
 	start := time.Now()
-	imageData := make([]uint32, numBins*numBins)
+
+	numBinsX := uint32(math.Ceil(float64(viewQuery.SourceEnd-viewQuery.SourceStart) / float64(binSizeX)))
+	numBinsY := uint32(math.Ceil(float64(viewQuery.TargetEnd-viewQuery.TargetStart) / float64(binSizeY)))
+
+	imageData := make([]uint32, numBinsX*numBinsY)
 
 	// Convert to float to make sure that when
-	binSizeX := (float64(viewQuery.SourceEnd-viewQuery.SourceStart) / float64(numBins)) //+ 1
-	binSizeY := (float64(viewQuery.TargetEnd-viewQuery.TargetStart) / float64(numBins)) //+ 1
+	//binSizeX := (float64(viewQuery.SourceEnd-viewQuery.SourceStart) / float64(numBins)) //+ 1
+	//binSizeY := (float64(viewQuery.TargetEnd-viewQuery.TargetStart) / float64(numBins)) //+ 1
 
 	sameChrom := query.SourceChrom == query.TargetChrom
 
-	var xPos, yPos int64
+	var xPos, yPos int32
 
 	pointCounter := 0
 
 	err := file.Query(query, func(entry *Entry) {
 		pointCounter++
 		if entry.SourceChrom != query.SourceChrom {
-			xPos = int64(float64(entry.TargetPosition-viewQuery.SourceStart) / binSizeX)
-			yPos = int64(float64(entry.SourcePosition-viewQuery.TargetStart) / binSizeY)
+			xPos = int32(float64(entry.TargetPosition-viewQuery.SourceStart) / float64(binSizeX))
+			yPos = int32(float64(entry.SourcePosition-viewQuery.TargetStart) / float64(binSizeY))
 		} else {
-			xPos = int64(float64(entry.SourcePosition-viewQuery.SourceStart) / binSizeX)
-			yPos = int64(float64(entry.TargetPosition-viewQuery.TargetStart) / binSizeY)
+			xPos = int32(float64(entry.SourcePosition-viewQuery.SourceStart) / float64(binSizeX))
+			yPos = int32(float64(entry.TargetPosition-viewQuery.TargetStart) / float64(binSizeY))
 		}
 		//fmt.Printf("(%d)[%f, %f]%v -> (%d, %d)\n", numBins, binSizeX, binSizeY, entry, xPos, yPos)
-		if xPos >= 0 && yPos >= 0 && xPos < int64(numBins) && yPos < int64(numBins) {
-			imageIndex := int(yPos)*int(numBins) + int(xPos)
+		if xPos >= 0 && yPos >= 0 && uint32(xPos) < numBinsX && uint32(yPos) < numBinsY {
+			imageIndex := int(yPos)*int(numBinsX) + int(xPos)
 			imageData[imageIndex]++
 		}
 
 		// Check if reverse is within view, as we only store diagonal
 		if sameChrom {
-			xPos = int64(float64(entry.TargetPosition-viewQuery.SourceStart) / binSizeX)
-			yPos = int64(float64(entry.SourcePosition-viewQuery.TargetStart) / binSizeY)
+			xPos = int32(float64(entry.TargetPosition-viewQuery.SourceStart) / float64(binSizeX))
+			yPos = int32(float64(entry.SourcePosition-viewQuery.TargetStart) / float64(binSizeY))
 
-			if xPos >= 0 && yPos >= 0 && xPos < int64(numBins) && yPos < int64(numBins) {
-				imageIndex := int(yPos)*int(numBins) + int(xPos)
+			if xPos >= 0 && yPos >= 0 && uint32(xPos) < numBinsX && uint32(yPos) < numBinsY {
+				imageIndex := int(yPos)*int(numBinsX) + int(xPos)
 				imageData[imageIndex]++
 			}
 		}
@@ -392,7 +403,7 @@ func (file *bgzfFile) Image(query Query, viewQuery Query, numBins uint64) ([]uin
 	elapsed := time.Since(start)
 	fmt.Printf("Image query finished having processed %d points, taking %s\n", pointCounter, elapsed)
 
-	return imageData, err
+	return Image{Width: numBinsX, Height: numBinsY, Data: imageData}, err
 }
 
 func EntriesToImage(entries []*Entry, query Query, numBins uint64) []uint32 {

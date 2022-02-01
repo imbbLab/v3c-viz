@@ -4,10 +4,11 @@ import { View } from "../App";
 import { Rectangle } from "../axis";
 import { Chromosome } from "../chromosome";
 import { ImageMap } from "../imageMap";
+import { Image } from "../server"
 
 interface ImageViewProps {
     numBins: number
-    imageData: Uint32Array | null
+    imageData: Image | null
 
     view: View
 
@@ -20,7 +21,7 @@ interface ImageViewProps {
     colourScale: d3.ScaleContinuousNumeric<string, string, never> | null
 
     onRegionSelect: (region: Rectangle) => void
-    onSetSmoothing: (numSmoothing: number) => void
+    onSetBinSize: (binSize: number) => void
 }
 
 interface ImageViewState {
@@ -58,8 +59,8 @@ export class ImageView extends React.Component<ImageViewProps, ImageViewState> {
             this.imageGUI = new GUI({ title: "Image Options", autoPlace: false });
             this.menuDiv!.appendChild(this.imageGUI.domElement);
 
-            this.imageGUI.add(this.imageMap, 'numBins').name('Number of bins').onChange((value: number) => {
-                this.imageMap!.setNumberBins(value);
+            this.imageGUI.add(this.imageMap, 'binSize').name('Bin size (bp)').onChange((value: number) => {
+                this.props.onSetBinSize(value);
                 //requestViewUpdate({ dimension: "x", locus: getLocusFromBrowser(bottomBrowser) })
             });
             //this.imageGUI.add(this.imageMap, 'percentile', 0, 1, 0.001).name('Percentile (threshold) ').onChange((value: number) => {

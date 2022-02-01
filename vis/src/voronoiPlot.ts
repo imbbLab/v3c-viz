@@ -243,7 +243,10 @@ export class VoronoiPlot extends Axis {
             voronoiCanvasCTX.fillStyle = this.colourScale(0);
         }
 
-        voronoiCanvasCTX.fillRect(0, 0, width, height);
+        if (voronoiCanvasCTX instanceof CanvasRenderingContext2D) {
+            // If we are saving to SVG then we don't need or want to fill the whole area
+            voronoiCanvasCTX.fillRect(0, 0, width, height);
+        }
 
         let startTime = performance.now();
         let polygons = this.convertVoronoiToPolygons(width, height, clipDiagonal);

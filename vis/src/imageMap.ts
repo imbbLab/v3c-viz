@@ -1,6 +1,6 @@
 import { Axis, OriginLocation } from './axis'
 import { Chromosome } from './chromosome';
-import { VoronoiPlot } from './voronoiPlot'
+import { Image } from './server'
 
 export class ImageMap extends Axis {
     //numBinsForDensity = 300;
@@ -12,20 +12,22 @@ export class ImageMap extends Axis {
     //numPointsLabel: HTMLLabelElement
 
     // Editable options
-    numBins = 200;
+    //numBins = 200;
     percentile = 0.97;
     imageThreshold = -1;
 
+    binSize = 5000;
+
     //voronoiPlot: VoronoiPlot
 
-    imageData: Uint32Array
+    imageData: Image | undefined
     buffer: Uint8ClampedArray
-    iData: ImageData
+    iData: ImageData | undefined
     //bitmapData: ImageBitmap | undefined
 
     //axis: Axis;
 
-    setNumberBins(numBins: number) {
+    /*setNumberBins(numBins: number) {
         this.numBins = numBins;
 
         if (this.imageCanvas) {
@@ -35,23 +37,22 @@ export class ImageMap extends Axis {
 
 
         //this.updateView(this.minDataX, this.maxDataX, this.minDataY, this.maxDataY);
-    }
+    }*/
 
     constructor(canvas: HTMLCanvasElement, numBins: number) {
         super(canvas)
 
-        this.imageData = new Uint32Array();
         this.buffer = new Uint8ClampedArray();
 
-        var axisCanvasCTX = <CanvasRenderingContext2D>this.getAxisCanvas().getContext('2d');
+        //var axisCanvasCTX = <CanvasRenderingContext2D>this.getAxisCanvas().getContext('2d');
         this.imageCanvas = document.createElement("canvas");
-        this.imageCanvas.width = this.numBins;
-        this.imageCanvas.height = this.numBins;
+        //this.imageCanvas.width = this.numBins;
+        //this.imageCanvas.height = this.numBins;
         this.imageCTX = <CanvasRenderingContext2D>this.imageCanvas.getContext('2d');
-        this.iData = axisCanvasCTX.createImageData(this.numBins, this.numBins);
+        //this.iData = axisCanvasCTX.createImageData(this.numBins, this.numBins);
 
 
-        this.setNumberBins(numBins);
+        //this.setNumberBins(numBins);
 
         //this.voronoiPlot = voronoiPlot;
 
@@ -90,7 +91,11 @@ export class ImageMap extends Axis {
     }
 
     calculatePercentile(percentile: number): number {
-        let sortedData = Uint32Array.from(this.imageData);
+        if (!this.imageData) {
+            return 0
+        }
+
+        let sortedData = Uint32Array.from(this.imageData.data);
         sortedData.sort();
         var index = sortedData.findIndex(function (val) {
             return val > 0;
@@ -122,6 +127,10 @@ export class ImageMap extends Axis {
     }
 
     thresholdImage() {
+        if (!this.iData || !this.imageData) {
+            return;
+        }
+
         var clamped = new Uint8ClampedArray([0]);
 
         //var axisCanvas = this.getAxisCanvas();
@@ -132,7 +141,7 @@ export class ImageMap extends Axis {
 
         for (var y = 0; y < this.iData.height; ++y) {
             for (var x = 0; x < this.iData.width; ++x) {
-                clamped[0] = this.imageData[y * this.iData.width + x] / this.imageThreshold * 255;
+                clamped[0] = this.imageData.data[y * this.iData.width + x] / this.imageThreshold * 255;
 
                 var pos = (y * this.iData.width + x) * 4; // position in buffer based on x and y
                 this.iData.data[pos] = clamped[0];           // some R value [0, 255]
@@ -146,13 +155,13 @@ export class ImageMap extends Axis {
     }
 
     recolourImage() {
-        if (!this.colourScale || !this.scale) {
+        if (!this.colourScale || !this.scale || !this.iData || !this.imageData) {
             return
         }
 
         for (var y = 0; y < this.iData.height; ++y) {
             for (var x = 0; x < this.iData.width; ++x) {
-                let colour = this.colourScale(this.scale(this.dataTransform(this.imageData[y * this.iData.width + x])));
+                let colour = this.colourScale(this.scale(this.dataTransform(this.imageData.data[y * this.iData.width + x])));
                 var rgb = colour.match(/\d+/g)!;
 
                 var pos = (y * this.iData.width + x) * 4; // position in buffer based on x and y
@@ -176,6 +185,10 @@ export class ImageMap extends Axis {
     }
 
     redraw() {
+        if (!this.iData) {
+            return
+        }
+
         // update canvas with new data
         //ctx.putImageData(idata, 0, 0);
 
@@ -213,25 +226,28 @@ export class ImageMap extends Axis {
         this.drawAxisCanvas();
     }
 
-    async updateFromArray(imageData: Uint32Array) {
+    async updateFromArray(imageData: Image) {
         this.imageData = imageData;
 
         // Check whether the size of buffers are correct
-        if (this.iData.width != this.numBins || this.iData.height != this.numBins) {
-            this.buffer = new Uint8ClampedArray(this.numBins * this.numBins * 4)
+        if (!this.iData || this.iData.width != imageData.width || this.iData.height != imageData.height) {
+            this.imageCanvas.width = imageData.width;
+            this.imageCanvas.height = imageData.height;
+
+            this.buffer = new Uint8ClampedArray(imageData.width * imageData.height * 4)
 
             var axisCanvas = this.getAxisCanvas();
             var axisCanvasCTX = <CanvasRenderingContext2D>axisCanvas.getContext('2d');
-            this.iData = axisCanvasCTX.createImageData(this.numBins, this.numBins);
+            this.iData = axisCanvasCTX.createImageData(imageData.width, imageData.height);
             this.iData.data.set(this.buffer);
         }
 
-        let maxIntensity = 0;
+        /*let maxIntensity = 0;
         let countNotZero = 0;
 
         var numPoints = 0;
 
-        this.imageData.forEach(value => {
+        this.imageData.data.forEach(value => {
             numPoints += value;
 
             if (value > maxIntensity) {
@@ -240,7 +256,7 @@ export class ImageMap extends Axis {
             if (value > 0) {
                 countNotZero += 1;
             }
-        })
+        })*/
 
         //this.setPercentile(this.percentile);
         this.recolourImage();

@@ -6,7 +6,7 @@ import { GenomeDetails } from "./genome";
 import { IGViewer, ViewRequest } from "./components/IGViewer";
 import { ImageView } from "./components/ImageView";
 import { VoronoiView } from "./components/VoronoiView";
-import { parseVoronoiAndImage } from "./server";
+import { parseVoronoiAndImage, Image } from "./server";
 import { Voronoi, MinMax } from "./voronoi";
 import { VoronoiPlot } from "./voronoiPlot";
 import { Rectangle } from "./axis";
@@ -46,8 +46,13 @@ interface AppState {
 
     smoothingIterations: number,
 
+    maxNumBins: number,
+    imageBinSize: number,
+    binSizeX: number,
+    binSizeY: number
+
     voronoi: Voronoi | null
-    imageData: Uint32Array | null
+    imageData: Image | null
     histogram: Histogram | null
     imageHistogram: Histogram | null
 
@@ -95,6 +100,10 @@ export class App extends React.Component<AppProps, AppState> {
             intrachromosomeView: false,
             hideImageMap: false,
             smoothingIterations: 1,
+            maxNumBins: 500,
+            imageBinSize: 5000,
+            binSizeX: 0,
+            binSizeY: 0,
             tracks: new Array(),
             voronoi: null,
             imageData: null,
@@ -127,9 +136,9 @@ export class App extends React.Component<AppProps, AppState> {
     componentDidUpdate(prevProps: AppProps, prevState: AppState) {
         if (this.state.intrachromosomeView != prevState.intrachromosomeView) {
             // If we have swapped view, then we might need to update the view parameters
-            // /            this.requestViewUpdate({ dimension: "x", locus: { chr: this.state.sourceChrom.name, start: this.state.view.startX, end: this.state.view.endX } });
+            this.requestViewUpdate({ dimension: "x", locus: { chr: this.state.sourceChrom.name, start: this.state.view.startX, end: this.state.view.endX } });
             this.requestViewUpdate({ dimension: "y", locus: { chr: this.state.sourceChrom.name, start: this.state.view.startX, end: this.state.view.endX } });
-        } else if (this.state.view != prevState.view || this.state.smoothingIterations != prevState.smoothingIterations) {
+        } else if (this.state.view != prevState.view || this.state.smoothingIterations != prevState.smoothingIterations || this.state.imageBinSize != prevState.imageBinSize) {
             this.updateView(this.state.view);
         }
 
@@ -154,11 +163,30 @@ export class App extends React.Component<AppProps, AppState> {
         //imageMap.setChromPair(sourceChrom, targetChrom);
         //imageMap.updateViewLimits(startX, endX, startY, endY);
 
-        let pixelsX = 100; // voronoiMap.getVoronoiDrawWidth()
-        let pixelsY = 100; // voronoiMap.getVoronoiDrawHeight()
-        let numBins = 200; // imageMap.numBins
+        //let pixelsX = 100; // voronoiMap.getVoronoiDrawWidth()
+        //let pixelsY = 100; // voronoiMap.getVoronoiDrawHeight()
+        //pixelsX=' + pixelsX + '&pixelsY=' + pixelsY + '&
 
-        fetch('./voronoiandimage?pixelsX=' + pixelsX + '&pixelsY=' + pixelsY + '&smoothingIterations=' + this.state.smoothingIterations + '&numBins=' + numBins + '&sourceChrom=' + this.state.sourceChrom.name + '&targetChrom=' + this.state.targetChrom.name + '&xStart=' + view.startX + '&xEnd=' + view.endX + '&yStart=' + view.startY + '&yEnd=' + view.endY)
+        let numBinsX = Math.round((view.endX - view.startX) / this.state.imageBinSize);
+        let numBinsY = Math.round((view.endY - view.startY) / this.state.imageBinSize);
+
+        if (numBinsX > this.state.maxNumBins) {
+            numBinsX = this.state.maxNumBins
+        }
+        if (numBinsY > this.state.maxNumBins) {
+            numBinsY = this.state.maxNumBins
+        }
+        let binSizeX = Math.floor((view.endX - view.startX) / numBinsX);
+        let binSizeY = Math.floor((view.endY - view.startY) / numBinsY);
+
+        if (binSizeX < this.state.imageBinSize) {
+            binSizeX = this.state.imageBinSize
+        }
+        if (binSizeY < this.state.imageBinSize) {
+            binSizeY = this.state.imageBinSize
+        }
+
+        fetch('./voronoiandimage?smoothingIterations=' + this.state.smoothingIterations + '&binSizeX=' + binSizeX + '&binSizeY=' + binSizeY + '&sourceChrom=' + this.state.sourceChrom.name + '&targetChrom=' + this.state.targetChrom.name + '&xStart=' + view.startX + '&xEnd=' + view.endX + '&yStart=' + view.startY + '&yEnd=' + view.endY)
             .then(
                 (response) => {
                     if (response.status !== 200) {
@@ -173,11 +201,11 @@ export class App extends React.Component<AppProps, AppState> {
                                 let interactionSet = interactionMap.get(this.state.sourceChrom.nameWithChr() + "-" + this.state.targetChrom.nameWithChr())
 
                                 if (interactionSet) {
-                                    //imageMap.setInteractions(name, interactionSet);
-                                    //voronoiMap.setInteractions(name, interactionSet);
+                                    this.imageView!.imageMap!.setInteractions(name, interactionSet);
+                                    this.voronoiView!.voronoiPlot!.setInteractions(name, interactionSet);
                                 } else {
-                                    //imageMap.setInteractions(name, []);
-                                    //voronoiMap.setInteractions(name, []);
+                                    this.imageView!.imageMap!.setInteractions(name, []);
+                                    this.voronoiView!.voronoiPlot!.setInteractions(name, []);
                                 }
 
                             })
@@ -203,6 +231,8 @@ export class App extends React.Component<AppProps, AppState> {
                             imageData: response.overviewImage,
                             histogram: histogram,
                             imageHistogram: imageHistogram,
+                            binSizeX: binSizeX,
+                            binSizeY: binSizeY,
                             scale: d3.scaleQuantize().range(d3.range(NUM_COLOURS)).domain([histogram.minMax.Min, histogram.minMax.Max]),
                             colourScale: d3.scaleLinear<string>().range(["saddlebrown", "lightgreen", "steelblue"]).domain([0, NUM_COLOURS / 2, NUM_COLOURS]),
                             imageScale: d3.scaleQuantize().range(d3.range(NUM_COLOURS)).domain([imageHistogram.minMax.Min, imageHistogram.minMax.Max]),
@@ -325,11 +355,11 @@ export class App extends React.Component<AppProps, AppState> {
         return histogram;
     }
 
-    generateImageHistogram(imageData: Uint32Array, numBins: number, transform: (value: number) => number): Histogram {
-        let min = transform(imageData[0]);
-        let max = transform(imageData[0]);
+    generateImageHistogram(image: Image, numBins: number, transform: (value: number) => number): Histogram {
+        let min = transform(image.data[0]);
+        let max = transform(image.data[0]);
 
-        for (let value of imageData) {
+        for (let value of image.data) {
             let trasformedValue = transform(value);
 
             if (trasformedValue < min) {
@@ -343,7 +373,7 @@ export class App extends React.Component<AppProps, AppState> {
         let minMax = { Min: min, Max: max };
         let histogram = new Histogram(numBins, minMax, transform);
 
-        for (let value of imageData) {
+        for (let value of image.data) {
             let areaBin = Math.round((transform(value) - minMax.Min) / histogram.binWidth);
             histogram.histogram[areaBin]++
         }
@@ -462,7 +492,8 @@ export class App extends React.Component<AppProps, AppState> {
                                     scale={this.state.imageScale}
                                     colourScale={this.state.imageColourScale!}
                                     onRegionSelect={this.onRegionSelect}
-                                    onSetSmoothing={this.setSmoothingIterations}></ImageView>
+                                    onSetBinSize={(binSize: number) => { this.setState({ imageBinSize: binSize }) }}></ImageView>
+                                <p style={{ float: "left" }}>Bin size: {this.state.binSizeX} x {this.state.binSizeY}</p>
                             </div>
                         }
                         <div style={{ width: this.canvasWidth(), display: "inline-block" }}>

@@ -2,17 +2,25 @@ import { Point, Polygon, Voronoi } from "./voronoi";
 
 export interface VoronoiAndImage {
     vor: Voronoi,
-    overviewImage: Uint32Array
+    overviewImage: Image
+}
+
+export interface Image {
+    width: number,
+    height: number,
+    data: Uint32Array
 }
 
 export function parseVoronoiAndImage(buffer: ArrayBuffer, area_scale: number): VoronoiAndImage {
 
     let dataView = new DataView(buffer);
     let offset = 0;
-    let numBinsImage = dataView.getUint32(offset);
+    let numBinsX = dataView.getUint32(offset);
+    offset += 4;
+    let numBinsY = dataView.getUint32(offset);
     offset += 4;
 
-    let imageSize = numBinsImage * numBinsImage;
+    let imageSize = numBinsX * numBinsY;
     let overviewImage = new Uint32Array(imageSize);
 
     for (let i = 0; i < imageSize; i++) {
@@ -53,5 +61,5 @@ export function parseVoronoiAndImage(buffer: ArrayBuffer, area_scale: number): V
         vor.polygons.push(polygon)
     }
 
-    return { vor: vor, overviewImage: overviewImage }
+    return { vor: vor, overviewImage: { width: numBinsX, height: numBinsY, data: overviewImage } }
 }

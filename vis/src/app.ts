@@ -715,8 +715,8 @@ function requestViewUpdate(request: ViewRequest) {
             voronoiMap.updateViewLimits(startX, endX, startY, endY);
             imageMap.setChromPair(sourceChrom, targetChrom);
             imageMap.updateViewLimits(startX, endX, startY, endY);
-            //
-            fetch('./voronoiandimage?pixelsX=' + voronoiMap.getVoronoiDrawWidth() + '&pixelsY=' + voronoiMap.getVoronoiDrawHeight() + '&smoothingIterations=' + voronoiMap.smoothingRepetitions + '&numBins=' + imageMap.numBins + '&sourceChrom=' + sourceChrom.name + '&targetChrom=' + targetChrom.name + '&xStart=' + startX + '&xEnd=' + endX + '&yStart=' + startY + '&yEnd=' + endY)
+            //&numBins=' + imageMap.numBins + '
+            fetch('./voronoiandimage?pixelsX=' + voronoiMap.getVoronoiDrawWidth() + '&pixelsY=' + voronoiMap.getVoronoiDrawHeight() + '&smoothingIterations=' + voronoiMap.smoothingRepetitions + '&sourceChrom=' + sourceChrom.name + '&targetChrom=' + targetChrom.name + '&xStart=' + startX + '&xEnd=' + endX + '&yStart=' + startY + '&yEnd=' + endY)
                 .then(
                     (response) => {
                         if (response.status !== 200) {
@@ -754,7 +754,7 @@ function requestViewUpdate(request: ViewRequest) {
                                 offset += 4;
                             }
 
-                            imageMap.updateFromArray(overviewImage);
+                            //imageMap.updateFromArray(overviewImage);
 
                             // TODO: Create voronoi representation from binary data
                             let vor = new Voronoi();
@@ -1414,7 +1414,7 @@ fetch('./genomes.json').then((response) => {
                                 document.getElementById('image-controls')?.appendChild(imageGUI.domElement);
                                 //document.getElementById('image-canvas-div')?.insertBefore(imageGUI.domElement, document.getElementById('image-canvas'));
                                 imageGUI.add(imageMap, 'numBins').name('Number of bins').onChange((value) => {
-                                    imageMap.setNumberBins(parseInt(value));
+                                    //     imageMap.setNumberBins(parseInt(value));
                                     requestViewUpdate({ dimension: "x", locus: getLocusFromBrowser(bottomBrowser) })
                                 });
                                 imageGUI.add(imageMap, 'percentile', 0, 1, 0.001).name('Percentile (threshold) ').onChange((value) => {
