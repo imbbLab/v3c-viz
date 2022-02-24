@@ -30,7 +30,14 @@ interface AppProps {
     hasInteract: boolean
 
     sourceChrom: Chromosome,
+    srcStart?: number,
+    srcEnd?: number,
+
     targetChrom: Chromosome
+    tarStart?: number,
+    tarEnd?: number
+
+    intrachromosomeView?: boolean
 }
 
 interface AppState {
@@ -85,21 +92,44 @@ export class App extends React.Component<AppProps, AppState> {
     voronoiView: VoronoiView | undefined
     imageView: ImageView | undefined
 
+    colourBar: ColourBar | undefined
+
     // Keep track of the last request to avoid duplicates
 
     constructor(props: AppProps) {
         super(props);
 
+        let view = {
+            startX: 0, endX: props.sourceChrom.length,
+            startY: 0, endY: props.targetChrom.length
+        };
+
+        if (props.srcStart) {
+            view.startX = props.srcStart;
+        }
+        if (props.srcEnd) {
+            view.endX = props.srcEnd;
+        }
+
+        if (props.tarStart) {
+            view.startY = props.tarStart;
+        }
+        if (props.tarEnd) {
+            view.endY = props.tarEnd;
+        }
+
+        let intrachromosomeView = false;
+        if (props.intrachromosomeView) {
+            intrachromosomeView = props.intrachromosomeView;
+        }
+
         this.state = {
             sourceChrom: props.sourceChrom,
             targetChrom: props.targetChrom,
 
-            view: {
-                startX: 0, endX: props.sourceChrom.length,
-                startY: 0, endY: props.targetChrom.length
-            },
+            view: view,
 
-            intrachromosomeView: false,
+            intrachromosomeView: intrachromosomeView,
             hideImageMap: false,
             smoothingIterations: 1,
             maxNumBins: 500,
@@ -240,10 +270,14 @@ export class App extends React.Component<AppProps, AppState> {
                                 let interactionSet = interactionMap.get(this.state.sourceChrom.nameWithChr() + "-" + this.state.targetChrom.nameWithChr())
 
                                 if (interactionSet) {
-                                    this.imageView!.imageMap!.setInteractions(name, interactionSet);
+                                    if (this.imageView) {
+                                        this.imageView.imageMap!.setInteractions(name, interactionSet);
+                                    }
                                     this.voronoiView!.voronoiPlot!.setInteractions(name, interactionSet);
                                 } else {
-                                    this.imageView!.imageMap!.setInteractions(name, []);
+                                    if (this.imageView) {
+                                        this.imageView.imageMap!.setInteractions(name, []);
+                                    }
                                     this.voronoiView!.voronoiPlot!.setInteractions(name, []);
                                 }
 
@@ -315,16 +349,16 @@ export class App extends React.Component<AppProps, AppState> {
             endY = endX
         }
 
-        if (this.state.sourceChrom != newSourceChrom || this.state.targetChrom != newTargetChrom) {
-            startX = 0
-            endX = newSourceChrom.length
-            //sourceChrom = newSourceChrom
+        // if (this.state.sourceChrom != newSourceChrom || this.state.targetChrom != newTargetChrom) {
+        //     startX = 0
+        //     endX = newSourceChrom.length
+        //     //sourceChrom = newSourceChrom
 
-            startY = 0
-            endY = newTargetChrom.length
-            //targetChrom = newTargetChrom
+        //     startY = 0
+        //     endY = newTargetChrom.length
+        //     //targetChrom = newTargetChrom
 
-        }
+        // }
 
         // TODO: Update state?
         console.log("setting state")
@@ -491,15 +525,18 @@ export class App extends React.Component<AppProps, AppState> {
                     }}
 
                     onSaveToSVGClicked={() => {
-                        console.log("Exporting")
-                        exportToImage(true, this.voronoiView!.voronoiPlot!, this.belowBrowser!.browser!, this.rightBrowser?.browser)
+                        this.setState({ colourMapVisible: true }, () => {
+                            exportToImage(true, this.voronoiView!.voronoiPlot!, this.colourBar!, this.belowBrowser!.browser!, this.rightBrowser?.browser)
+                        })
+
                     }}
                 ></Menu>
                 <div style={{ marginLeft: 40, width: "calc(100vw - 40px)", height: "100vh" }}>
                     <div style={{ display: "flex" }}>
                         {
                             this.state.colourMapVisible && !this.state.hideImageMap &&
-                            <ColourBar scale={this.state.imageScale!}
+                            <ColourBar
+                                scale={this.state.imageScale!}
                                 colourScale={this.state.imageColourScale!}
                                 histogram={this.state.imageHistogram}
                                 onScaleChange={(scale: d3.ScaleQuantize<number, never>) => {
@@ -512,7 +549,9 @@ export class App extends React.Component<AppProps, AppState> {
                         }
                         {
                             this.state.colourMapVisible && this.state.histogram &&
-                            <ColourBar scale={this.state.scale!}
+                            <ColourBar
+                                ref={(colourBar: ColourBar) => this.colourBar = colourBar}
+                                scale={this.state.scale!}
                                 colourScale={this.state.colourScale!}
                                 histogram={this.state.histogram}
                                 onScaleChange={(scale: d3.ScaleQuantize<number, never>) => {

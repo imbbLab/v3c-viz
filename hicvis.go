@@ -2,6 +2,9 @@ package main
 
 import (
 	"bytes"
+	"math/rand"
+
+	//"crypto/rand"
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
@@ -536,6 +539,8 @@ func GetVoronoiAndImage(w http.ResponseWriter, r *http.Request) {
 		sumPoints += int(count)
 	}
 
+	fmt.Printf("Max # points is %d and have %d\n", opts.MaximumVoronoiPoints, sumPoints)
+
 	//var result *voronoi.Int16VoronoiResult
 	var result *voronoi.Voronoi
 	if sumPoints < opts.MaximumVoronoiPoints {
@@ -558,9 +563,21 @@ func GetVoronoiAndImage(w http.ResponseWriter, r *http.Request) {
 			for x := 0; x < int(overviewImage.Width); x++ {
 				index := y*int(overviewImage.Width) + x
 
-				if overviewImage.Data[index] > 0 {
-					sourcePos := uint64(math.Floor((float64(x)/float64(overviewImage.Width))*float64(maxX-minX))) + uint64(minX)
-					targetPos := uint64(math.Floor((float64(y)/float64(overviewImage.Height))*float64(maxY-minY))) + uint64(minY)
+				// TODO: It would be better to have a function that allows different size binning for the voronoi and the image
+
+				numPointsToSample := int(math.Floor(float64(overviewImage.Data[index]) / float64(sumPoints) * float64(opts.MaximumVoronoiPoints)))
+
+				// Limit the number of times we sample a pixel - but make sure there is always at least one if there was one present
+				if overviewImage.Data[index] > 0 && numPointsToSample == 0 {
+					numPointsToSample = 1
+				}
+				if numPointsToSample > 20 {
+					numPointsToSample = 20
+				}
+
+				for i := 0; i < numPointsToSample; i++ {
+					sourcePos := uint64(math.Floor(((float64(x)+rand.Float64())/float64(overviewImage.Width))*float64(maxX-minX))) + uint64(minX)
+					targetPos := uint64(math.Floor(((float64(y)+rand.Float64())/float64(overviewImage.Height))*float64(maxY-minY))) + uint64(minY)
 
 					if sourceChrom == targetChrom && sourcePos > targetPos {
 						temp := targetPos

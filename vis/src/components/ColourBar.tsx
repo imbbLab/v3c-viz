@@ -1,5 +1,6 @@
 import d3 = require("d3");
 import React = require("react");
+import { SVGContext } from "../canvas2svg";
 import { MinMax } from "../voronoi";
 
 export class Histogram {
@@ -91,41 +92,54 @@ export class ColourBar extends React.Component<ColourBarProps, ColourBarState> {
                 this.setState({ colourDomain: [minScale, maxScale] })
             });
 
-            this.renderColourBar();
+            let ctx = this.canvas.getContext("2d");
+            if (ctx) {
+                this.renderColourBar(ctx, this.props.width, this.props.height);
+            }
         }
     }
 
     componentDidUpdate(prevProps: ColourBarProps, prevState: ColourBarState) {
         if (this.canvas && this.canvas.width != this.props.width) {
             this.canvas.width = this.props.width;
-            this.renderColourBar();
+
+            let ctx = this.canvas.getContext("2d");
+            if (ctx) {
+                this.renderColourBar(ctx, this.props.width, this.props.height);
+            }
         }
 
         if (prevProps.scale != this.props.scale || prevProps.colourScale != this.props.colourScale || prevProps.histogram != this.props.histogram) {
-            this.renderColourBar();
+            if (this.canvas) {
+                let ctx = this.canvas.getContext("2d");
+                if (ctx) {
+                    this.renderColourBar(ctx, this.props.width, this.props.height);
+                }
+            }
         }
 
         if (this.state.colourDomain != prevState.colourDomain) {
             this.props.scale.domain(this.state.colourDomain);
             this.props.onScaleChange(this.props.scale);
-            this.renderColourBar();
+
+            if (this.canvas) {
+                let ctx = this.canvas.getContext("2d");
+                if (ctx) {
+                    this.renderColourBar(ctx, this.props.width, this.props.height);
+                }
+            }
         }
     }
 
-    renderColourBar() {
-        if (!this.canvas) {
-            return;
-        }
-
-        let ctx = this.canvas.getContext("2d");
+    renderColourBar(ctx: CanvasRenderingContext2D | SVGContext, width: number, height: number) {
         if (!ctx) {
             return;
         }
 
 
-        ctx.clearRect(0, 0, this.props.width, this.props.height)
+        ctx.clearRect(0, 0, width, height)
 
-        let histogramY = this.props.height - 10
+        let histogramY = height - 10
 
         let histogram = this.props.histogram;
 
@@ -151,7 +165,7 @@ export class ColourBar extends React.Component<ColourBarProps, ColourBarState> {
 
             ctx.strokeStyle = this.props.colourScale(this.props.scale(histogram.binWidth * i + histogram.minMax.Min))
             ctx.beginPath();
-            ctx.moveTo(i + 5, this.props.height);
+            ctx.moveTo(i + 5, height);
             ctx.lineTo(i + 5, histogramY)
             ctx.stroke();
         }
@@ -162,14 +176,14 @@ export class ColourBar extends React.Component<ColourBarProps, ColourBarState> {
         let minScaleX = (minScale - histogram.minMax.Min) / histogram.binWidth + 5
         ctx.beginPath();
         ctx.moveTo(minScaleX, histogramY);
-        ctx.lineTo(minScaleX - 5, this.props.height);
-        ctx.lineTo(minScaleX + 5, this.props.height);
+        ctx.lineTo(minScaleX - 5, height);
+        ctx.lineTo(minScaleX + 5, height);
         ctx.fill();
         let maxScaleX = (maxScale - histogram.minMax.Min) / histogram.binWidth + 5
         ctx.beginPath();
         ctx.moveTo(maxScaleX, histogramY);
-        ctx.lineTo(maxScaleX - 5, this.props.height);
-        ctx.lineTo(maxScaleX + 5, this.props.height);
+        ctx.lineTo(maxScaleX - 5, height);
+        ctx.lineTo(maxScaleX + 5, height);
         ctx.fill();
     }
 

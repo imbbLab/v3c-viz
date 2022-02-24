@@ -323,8 +323,8 @@ export abstract class Axis {
         //var axisCanvas = this.getAxisCanvas();
         //var axisCanvasCTX = <CanvasRenderingContext2D>axisCanvas.getContext('2d');
 
-        let binSizeX = (this.maxViewX - this.minViewX) / width;
-        let binSizeY = (this.maxViewY - this.minViewY) / height;
+        let binSizeX = width / (this.maxViewX - this.minViewX);
+        let binSizeY = height / (this.maxViewY - this.minViewY);
 
         this.contactOptions.forEach((options, key, map) => {
             let interactions = <Interaction[]>this.interactions.get(key);
@@ -356,24 +356,23 @@ export abstract class Axis {
                     // and only draw if it is.
 
                     //if (x >= this.minViewX && x <= this.maxDataX && y >= this.minViewY && y <= this.maxViewY) {
-                    x = (x - this.minViewX) / binSizeX;
-                    y = (y - this.minViewY) / binSizeY;
+                    x = (x - this.minViewX) * binSizeX;
+                    y = (y - this.minViewY) * binSizeY;
 
                     if (x < 0 || x > width || y < 0 || y > height) {
-                        continue;
-                    }
+                        // Don't continue, otherwise we won't draw the other side
+                    } else {
+                        // Make sure it is visible
+                        halfWidth = Math.max(halfWidth * binSizeX, options.contactSize);
+                        halfHeight = Math.max(halfHeight * binSizeY, options.contactSize);
 
-                    // Make sure it is visible
-                    halfWidth = Math.max(halfWidth / binSizeX, options.contactSize);
-                    halfHeight = Math.max(halfHeight / binSizeY, options.contactSize);
-
-                    axisCanvasCTX.beginPath();
-                    axisCanvasCTX.rect(x - halfWidth, y - halfHeight, halfWidth * 2, halfHeight * 2);
-                    if (options.contactFill) {
-                        axisCanvasCTX.fill();
+                        axisCanvasCTX.beginPath();
+                        axisCanvasCTX.rect(x - halfWidth, y - halfHeight, halfWidth * 2, halfHeight * 2);
+                        if (options.contactFill) {
+                            axisCanvasCTX.fill();
+                        }
+                        axisCanvasCTX.stroke();
                     }
-                    axisCanvasCTX.stroke();
-                    // }
                 }
 
                 if (interactions[i].sourceChrom == this.targetChrom && interactions[i].targetChrom == this.sourceChrom) {
@@ -387,8 +386,8 @@ export abstract class Axis {
                     y += halfHeight;
 
                     // if (x >= this.minViewX && x <= this.maxDataX && y >= this.minViewY && y <= this.maxViewY) {
-                    x = (x - this.minViewX) / binSizeX;
-                    y = (y - this.minViewY) / binSizeY;
+                    x = (x - this.minViewX) * binSizeX;
+                    y = (y - this.minViewY) * binSizeY;
 
                     if (x < 0 || x > width || y < 0 || y > height) {
                         continue;
@@ -399,8 +398,8 @@ export abstract class Axis {
                     }
 
                     // Make sure it is visible
-                    halfWidth = Math.max(halfWidth / binSizeX, options.contactSize);
-                    halfHeight = Math.max(halfHeight / binSizeY, options.contactSize);
+                    halfWidth = Math.max(halfWidth * binSizeX, options.contactSize);
+                    halfHeight = Math.max(halfHeight * binSizeY, options.contactSize);
 
                     axisCanvasCTX.beginPath();
                     axisCanvasCTX.rect(x - halfWidth, y - halfHeight, halfWidth * 2, halfHeight * 2);
@@ -565,12 +564,8 @@ export abstract class Axis {
         let xDiff = this.maxViewX - this.minViewX;
         let yDiff = this.maxViewY - this.minViewY;
 
-        let textYOffset = 0;
-        let textXOffset = 10;
-        if (ctx instanceof CanvasRenderingContext2D) {
-            textXOffset = 0;
-            textYOffset = -10;
-        }
+        let textXOffset = 0;
+        let textYOffset = -10;
 
         // Draw x-axis ticks
         for (let i = 0; i < this.numTicks; i++) {

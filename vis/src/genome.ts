@@ -16,7 +16,7 @@ export interface TrackDetails {
     format: string
     name: string
     url: string
-    indexURL: string
+    indexURL: string | undefined
     order: number
     removable: boolean
     visibilityWindow: number

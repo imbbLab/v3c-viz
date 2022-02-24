@@ -4,7 +4,13 @@ import { App } from "./App";
 import { Chromosome, getChromosomeFromMap } from "./chromosome";
 import { GenomeDetails, getGenomeDetails } from "./genome";
 
+function parseUrlParam(value: string | null): number | undefined {
+    if (value) {
+        return parseInt(value);
+    }
 
+    return undefined;
+}
 
 fetch('/details').then(response => {
     if (response.status !== 200) {
@@ -33,10 +39,12 @@ fetch('/details').then(response => {
 
         const srcChrom = urlParams.get('srcChrom');
         const tarChrom = urlParams.get('tarChrom');
-        const srcStart = urlParams.get('srcStart');
-        const srcEnd = urlParams.get('srcEnd');
-        const tarStart = urlParams.get('tarStart');
-        const tarEnd = urlParams.get('tarEnd');
+        const srcStart = parseUrlParam(urlParams.get('srcStart'));
+        const srcEnd = parseUrlParam(urlParams.get('srcEnd'));
+        const tarStart = parseUrlParam(urlParams.get('tarStart'));
+        const tarEnd = parseUrlParam(urlParams.get('tarEnd'));
+
+        const intrachromosomeView = urlParams.get('triangleView') == 'true';
 
 
         if (srcChrom && srcStart && srcEnd && tarChrom && tarStart && tarEnd) {
@@ -61,7 +69,8 @@ fetch('/details').then(response => {
 
         ReactDOM.render(
             <React.StrictMode>
-                <App chromosomes={chromosomes} genome={genomeDetails} sourceChrom={sourceChrom} targetChrom={targetChrom} hasInteract={details['hasInteract'] as boolean}></App>
+                <App chromosomes={chromosomes} genome={genomeDetails} sourceChrom={sourceChrom} targetChrom={targetChrom} srcStart={srcStart} srcEnd={srcEnd} tarStart={tarStart} tarEnd={tarEnd}
+                    intrachromosomeView={intrachromosomeView} hasInteract={details['hasInteract'] as boolean}></App>
             </React.StrictMode>,
             document.getElementById("output")
         );

@@ -1,11 +1,12 @@
 import { Browser, TrackView } from "igv";
 import { SVGContext } from "./canvas2svg";
+import { ColourBar } from "./components/ColourBar";
 import { VoronoiPlot } from "./voronoiPlot";
 
 const downloadCanvas: HTMLCanvasElement = document.createElement("canvas");
 let link: HTMLAnchorElement = document.createElement("a")
 
-export function exportToImage(drawSVG: boolean, voronoiMap: VoronoiPlot, bottomBrowser: Browser, rightBrowser: Browser | undefined): void {
+export function exportToImage(drawSVG: boolean, voronoiMap: VoronoiPlot, colourBar: ColourBar, bottomBrowser: Browser, rightBrowser: Browser | undefined): void {
     //let downloadCanvas = <HTMLCanvasElement>document.getElementById('downloadCanvas');
     voronoiMap.redraw();
 
@@ -38,8 +39,6 @@ export function exportToImage(drawSVG: boolean, voronoiMap: VoronoiPlot, bottomB
         downloadCanvasCTX.drawImage(voronoiMap.canvas, 0, 0);
 
         let lastY = voronoiMap.canvas.height;
-
-        console.log("DRAWING!!")
 
         bottomBrowser.trackViews.forEach((trackView: TrackView) => {
             const visibleViewports = trackView.viewports.filter(vp => vp.isVisible())
@@ -133,6 +132,13 @@ export function exportToImage(drawSVG: boolean, voronoiMap: VoronoiPlot, bottomB
 
             });
 
+        let baseYOffset = 100;
+        downloadCanvasCTX.save()
+        colourBar.renderColourBar(downloadCanvasCTX, voronoiMap.axisWidth, baseYOffset);
+        downloadCanvasCTX.restore()
+
+        downloadCanvasCTX.transform(1, 0, 0, 1, 0, baseYOffset);
+
         downloadCanvasCTX.save()
         downloadCanvasCTX.lineWidth = 0.25
 
@@ -165,8 +171,8 @@ export function exportToImage(drawSVG: boolean, voronoiMap: VoronoiPlot, bottomB
         var bottomBrowserElement = parser.parseFromString(bottomBrowserSVG, "image/svg+xml");
 
         // Specify the transformation first so that the definitions are created
-        bottomBrowserElement.documentElement.setAttribute('transform', "translate(" + voronoiMap.axisOffsetX + " " + voronoiMap.canvas.height + ")")
-        mergeSVG(voronoiElement, bottomBrowserElement, "translate(" + voronoiMap.axisOffsetX + " " + voronoiMap.canvas.height + ")")
+        bottomBrowserElement.documentElement.setAttribute('transform', "translate(" + voronoiMap.axisOffsetX + " " + (voronoiMap.canvas.height + baseYOffset) + ")")
+        mergeSVG(voronoiElement, bottomBrowserElement, "translate(" + voronoiMap.axisOffsetX + " " + (voronoiMap.canvas.height + baseYOffset) + ")")
 
         if (!voronoiMap.intrachromosomeView && rightBrowser) {
             // Have to remove the CSS rotation, otherwise SVG export produces odd results
@@ -177,8 +183,8 @@ export function exportToImage(drawSVG: boolean, voronoiMap: VoronoiPlot, bottomB
 
             // Specify the transformation first so that the definitions are created
             //rightBrowserDocument.documentElement.setAttribute('viewport', '')
-            rightBrowserDocument.documentElement.setAttribute('transform', "translate(" + voronoiMap.canvas.width + " " + (voronoiMap.canvas.height - voronoiMap.axisOffsetY) + ") rotate(-90)")
-            mergeSVG(voronoiElement, rightBrowserDocument, "translate(" + voronoiMap.canvas.width + " " + (voronoiMap.canvas.height - voronoiMap.axisOffsetY) + ") rotate(-90)")
+            rightBrowserDocument.documentElement.setAttribute('transform', "translate(" + voronoiMap.canvas.width + " " + (voronoiMap.canvas.height - voronoiMap.axisOffsetY + baseYOffset) + ") rotate(-90)")
+            mergeSVG(voronoiElement, rightBrowserDocument, "translate(" + voronoiMap.canvas.width + " " + (voronoiMap.canvas.height - voronoiMap.axisOffsetY + baseYOffset) + ") rotate(-90)")
         }
 
         //resizeIGVElements(voronoiMap.axisWidth, bottomBrowser, rightBrowser);
