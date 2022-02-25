@@ -472,7 +472,7 @@ export class App extends React.Component<AppProps, AppState> {
         if (this.state.hideImageMap) {
             return "calc(50vw - 80px)"
         } else {
-            return "calc(33vw - 55px)"
+            return "calc(33vw - 48px)"
         }
     }
 
@@ -481,7 +481,7 @@ export class App extends React.Component<AppProps, AppState> {
         if (this.state.hideImageMap) {
             return "calc(50vw - 80px)"
         } else {
-            return "calc(33vw - 55px)"
+            return "calc(33vw - 48px)"
         }
     }
 
@@ -502,7 +502,7 @@ export class App extends React.Component<AppProps, AppState> {
         if (this.state.hideImageMap) {
             return "calc(50vw - 65px" + extraShift + ")"
         } else {
-            return "calc(33vw - 41px" + extraShift + ")"
+            return "calc(33vw - 34px" + extraShift + ")"
         }
     }
 

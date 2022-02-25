@@ -1413,11 +1413,11 @@ fetch('./genomes.json').then((response) => {
                                 //imageGUI.domElement.className = 'dgui main';
                                 document.getElementById('image-controls')?.appendChild(imageGUI.domElement);
                                 //document.getElementById('image-canvas-div')?.insertBefore(imageGUI.domElement, document.getElementById('image-canvas'));
-                                imageGUI.add(imageMap, 'numBins').name('Number of bins').onChange((value) => {
+                                imageGUI.add(imageMap, 'numBins').name('Number of bins').onChange((value: string) => {
                                     //     imageMap.setNumberBins(parseInt(value));
                                     requestViewUpdate({ dimension: "x", locus: getLocusFromBrowser(bottomBrowser) })
                                 });
-                                imageGUI.add(imageMap, 'percentile', 0, 1, 0.001).name('Percentile (threshold) ').onChange((value) => {
+                                imageGUI.add(imageMap, 'percentile', 0, 1, 0.001).name('Percentile (threshold) ').onChange((value: string) => {
                                     imageMap.setPercentile(parseFloat(value));
                                 });
 
@@ -1430,23 +1430,23 @@ fetch('./genomes.json').then((response) => {
 
                                 //voronoiGUI.add(voronoiMap, 'generateVoronoiOnServer').name("Server Voronoi")
 
-                                voronoiGUI.add(voronoiMap, 'displayVoronoiEdges').name('Display edges').onChange((value) => {
+                                voronoiGUI.add(voronoiMap, 'displayVoronoiEdges').name('Display edges').onChange((value: boolean) => {
                                     //voronoiMap.drawVoronoi();
                                     //voronoiMap.redraw();
                                     voronoiMap.drawPolygonsCanvas();
                                 })
-                                voronoiGUI.add(voronoiMap, 'displayVoronoiPoints').name('Display data').onChange((value) => {
+                                voronoiGUI.add(voronoiMap, 'displayVoronoiPoints').name('Display data').onChange((value: number) => {
                                     voronoiMap.drawPolygonsCanvas();
                                 })
-                                voronoiGUI.add(voronoiMap, 'displayCentroid').name('Display centroid').onChange((value) => {
+                                voronoiGUI.add(voronoiMap, 'displayCentroid').name('Display centroid').onChange((value: number) => {
                                     voronoiMap.drawPolygonsCanvas();
                                 })
-                                voronoiGUI.add(voronoiMap, 'dataPointSize', 0, 10, 0.1).name('Point size').onChange((value) => {
+                                voronoiGUI.add(voronoiMap, 'dataPointSize', 0, 10, 0.1).name('Point size').onChange((value: number) => {
                                     voronoiMap.drawPolygonsCanvas();
                                 })
 
                                 const smoothingMenu = voronoiGUI.addFolder('Smoothing');
-                                smoothingMenu.add(voronoiMap, 'smoothingRepetitions', 0, 10, 1).name('Repetitions').onChange((value) => {
+                                smoothingMenu.add(voronoiMap, 'smoothingRepetitions', 0, 10, 1).name('Repetitions').onChange((value: number) => {
                                     requestViewUpdate({ dimension: "x", locus: getLocusFromBrowser(bottomBrowser) })
                                     requestViewUpdate({ dimension: "y", locus: getLocusFromBrowser(rightBrowser) })
                                     /*voronoiMap.calculateVoronoi();
