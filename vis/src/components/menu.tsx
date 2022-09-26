@@ -90,58 +90,68 @@ export class Menu extends React.Component<MenuProps, MenuState> {
                         onMouseLeave={() => {
                             this.setState({ menuToShow: MenuToShow.None })
                         }}>
-                        <input type="file" id="file-selector" accept=".bed, .bw" onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
+                        <input type="file" id="file-selector" accept=".bed, .bw"
 
-                            if (event.target.files) {
-                                let data = new FormData();
-                                data.append('myFile', event.target.files[0]);
+                            onClick={(event: React.MouseEvent<HTMLInputElement>) => {
+                                event.currentTarget.value = '';
+                                console.log("Clearing target value");
+                            }}
 
-                                let filename = event.target.files[0].name;
+                            onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
 
-                                // send fetch along with cookies
-                                fetch('/upload', {
-                                    method: 'POST',
-                                    credentials: 'same-origin',
-                                    body: data
-                                }).then((response) => {
-                                    if (response.status !== 200) {
-                                        console.log('Looks like there was a problem. Status Code: ' +
-                                            response.status);
-                                        return;
-                                    }
+                                console.log("File upload event", event);
 
-                                    response.text().then((location: string) => {
-                                        var tracksString = window.sessionStorage.getItem("loadedTracks");
-                                        var tracks: UploadedTrack[]
+                                if (event.target.files) {
+                                    let data = new FormData();
+                                    data.append('myFile', event.target.files[0]);
 
-                                        if (!tracksString) {
-                                            tracks = []
-                                        } else {
-                                            tracks = JSON.parse(tracksString);
+                                    let filename = event.target.files[0].name;
+                                    console.log("About to upload file:", filename);
+
+                                    // send fetch along with cookies
+                                    fetch('/upload', {
+                                        method: 'POST',
+                                        credentials: 'same-origin',
+                                        body: data
+                                    }).then((response) => {
+                                        if (response.status !== 200) {
+                                            console.log('Looks like there was a problem. Status Code: ' +
+                                                response.status);
+                                            return;
                                         }
 
-                                        let newTrack: UploadedTrack = { filename: filename, location: location };
-                                        tracks.push(newTrack);
-                                        window.sessionStorage.setItem("loadedTracks", JSON.stringify(tracks));
+                                        response.text().then((location: string) => {
+                                            var tracksString = window.sessionStorage.getItem("loadedTracks");
+                                            var tracks: UploadedTrack[]
 
-                                        this.props.loadUploadedTrack(newTrack);
+                                            if (!tracksString) {
+                                                tracks = []
+                                            } else {
+                                                tracks = JSON.parse(tracksString);
+                                            }
+
+                                            let newTrack: UploadedTrack = { filename: filename, location: location };
+                                            tracks.push(newTrack);
+                                            window.sessionStorage.setItem("loadedTracks", JSON.stringify(tracks));
+
+                                            this.props.loadUploadedTrack(newTrack);
+                                        });
                                     });
-                                });
 
 
-                                /*const reader = new FileReader();
-                                
-                                } else if (extension?.localeCompare("bw") == 0) {
-                                    type = 'wig'
-                                    format = 'bigwig';
-                         
-                                    // Need to copy the file to the server and then load a link
+                                    /*const reader = new FileReader();
+                                    
+                                    } else if (extension?.localeCompare("bw") == 0) {
+                                        type = 'wig'
+                                        format = 'bigwig';
+                             
+                                        // Need to copy the file to the server and then load a link
+                                    }
+                             
+                             
+                                    reader.readAsDataURL(fileSelector.files[0])*/
                                 }
-                         
-                         
-                                reader.readAsDataURL(fileSelector.files[0])*/
-                            }
-                        }}></input>
+                            }}></input>
                     </div>
                 }
                 {this.state.menuToShow == MenuToShow.SaveImage &&

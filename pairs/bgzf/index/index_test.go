@@ -11,7 +11,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/imbbLab/hicvis/pairs/bgzf"
+	"github.com/imbbLab/v3c-vis/pairs/bgzf"
 
 	"gopkg.in/check.v1"
 )

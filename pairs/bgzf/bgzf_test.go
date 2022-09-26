@@ -23,8 +23,8 @@ import (
 	"testing"
 	"time"
 
-	. "github.com/imbbLab/hicvis/pairs/bgzf"
-	"github.com/imbbLab/hicvis/pairs/bgzf/cache"
+	. "github.com/imbbLab/v3c-vis/pairs/bgzf"
+	"github.com/imbbLab/v3c-vis/pairs/bgzf/cache"
 )
 
 var (

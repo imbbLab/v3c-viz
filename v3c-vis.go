@@ -25,9 +25,9 @@ import (
 
 	"github.com/gorilla/mux"
 
-	"github.com/imbbLab/hicvis/interact"
-	"github.com/imbbLab/hicvis/pairs"
-	"github.com/imbbLab/hicvis/voronoi"
+	"github.com/imbbLab/v3c-vis/interact"
+	"github.com/imbbLab/v3c-vis/pairs"
+	"github.com/imbbLab/v3c-vis/voronoi"
 
 	"github.com/fogleman/delaunay"
 )
@@ -845,9 +845,17 @@ func max(a, b uint64) uint64 {
 // }
 
 func uploadFile(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("Uploading file of size: ", r.ContentLength)
+
 	// Parse our multipart form, 10 << 20 specifies a maximum
 	// upload of 10 MB files.
-	r.ParseMultipartForm(10 << 20)
+	err := r.ParseMultipartForm(10 << 20)
+	if err != nil {
+		fmt.Print("Error Retrieving the File: ")
+		fmt.Println(err)
+		return
+	}
+
 	// FormFile returns the first file for the given key `myFile`
 	// it also returns the FileHeader so we can get the Filename,
 	// the Header and the size of the file

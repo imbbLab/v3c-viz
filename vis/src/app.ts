@@ -13,7 +13,6 @@ import { Rectangle } from "./axis";
 import { SVGContext } from "./canvas2svg"
 
 
-import * as d3 from 'd3';
 import { Point, Polygon, Voronoi } from "./voronoi";
 
 //import igv = require('igv');

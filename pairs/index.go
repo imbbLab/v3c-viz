@@ -6,7 +6,7 @@ import (
 	"sort"
 	"sync"
 
-	"github.com/imbbLab/hicvis/pairs/bgzf"
+	"github.com/imbbLab/v3c-vis/pairs/bgzf"
 )
 
 type Query struct {

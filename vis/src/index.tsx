@@ -4,6 +4,8 @@ import { App } from "./App";
 import { Chromosome, getChromosomeFromMap } from "./chromosome";
 import { GenomeDetails, getGenomeDetails } from "./genome";
 
+const VERSION = "0.8.6";
+
 function parseUrlParam(value: string | null): number | undefined {
     if (value) {
         return parseInt(value);
@@ -11,6 +13,8 @@ function parseUrlParam(value: string | null): number | undefined {
 
     return undefined;
 }
+
+console.log("v3c-vis version ", VERSION);
 
 fetch('/details').then(response => {
     if (response.status !== 200) {

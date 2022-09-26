@@ -5,7 +5,7 @@
 package index
 
 import (
-	"github.com/imbbLab/hicvis/pairs/bgzf"
+	"github.com/imbbLab/v3c-vis/pairs/bgzf"
 )
 
 // MergeStrategy represents a chunk compression strategy.

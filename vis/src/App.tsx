@@ -361,7 +361,7 @@ export class App extends React.Component<AppProps, AppState> {
         // }
 
         // TODO: Update state?
-        console.log("setting state")
+        //console.log("setting state")
         this.setState({ view: { startX, endX, startY, endY }, sourceChrom: newSourceChrom, targetChrom: newTargetChrom })
 
 
