@@ -1,4 +1,4 @@
-# hicvis
+# v3c-vis
 
 ![Screenshot](/docs/hicvis-screenshot.png?raw=true "Screenshot")
 
