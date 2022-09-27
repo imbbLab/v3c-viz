@@ -43,7 +43,7 @@ It is possible to interact with v3c-vis programmatically via GET/POST requests. 
 
 #### Compute Voronoi
 
-This command reads data between the supplied start and end loci, generates a
+This command reads data between the supplied start and end loci, generates a contact matrix with the user-specified bin size as well as computing a Voronoi diagram from the same data.
 
 *Example* 
 ```
@@ -54,17 +54,38 @@ http://localhost:5002/voronoiandimage?smoothingIterations=1&binSizeX=5000&binSiz
 
 | Name | Description |
 |------|-------------|
-| binSizeX | The size of  |
-| binSizeY |  |
-| sourceChromX | |
-| sourceChromY | |
-| targetChromX | |
-| targetChromY | |
-| xStart | |
-| xEnd | |
-| yStart | |
-| yEnd | |
-| smoothingIterations | The number of iterations of Lloyd's algorithm to apply to approximate centroided Voronoi |
+| `binSizeX` | The size of the bins (in base pairs) in the *x*-dimension when generating the contact matrix. |
+| `binSizeY` | The size of the bins (in base pairs) in the *y*-dimension when generating the contact matrix. |
+| `sourceChrom` | The chromosome identifier (e.g. chr3) to visualise in the *x*-dimension.  |
+| `targetChrom` | The chromosome identifier (e.g. chr3) to visualise in the *y*-dimension. |
+| `xStart` | The left-most position in the chromosome (in base pairs) marking the region of data to visualise (*x*-dimension). |
+| `xEnd` | The right-most position in the chromosome (in base pairs) marking the region of data to visualise (*x*-dimension). |
+| `yStart` | The left-most position in the chromosome (in base pairs) marking the region of data to visualise (*y*-dimension). |
+| `yEnd` | The right-most position in the chromosome (in base pairs) marking the region of data to visualise (*y*-dimension).  |
+| `smoothingIterations` | The number of iterations of Lloyd's algorithm to apply to approximate centroided Voronoi |
 
+*Output*
+
+The resulting data is transmitted in binary format, with the form described below.
+
+| Type | Number | Name | Description |
+| ---- | ------: | ----------- | --- |
+| `u32`  | 1 | `numBinsX` | Number of bins in the *x*-dimension for the contact matrix. |
+| `u32`  | 1 | `numBinsY` | Number of bins in the *y*-dimension for the contact matrix. |
+| `u32`  | `numBinsX * numBinsY` | `contactMatrix` | Contract matrix binned at the supplied bin size. |
+| `u32`  | 1 | `numDataEntries` | Number of data points (entries) described by the Voronoi diagram. |
+| `dataEntry` | `numDataEntries` | The data points and the corresponding Voronoi cells. |
+
+The following table describes the format of each `dataEntry`.
+
+
+| Type | Number | Name | Description |
+| ---- | ------: | ----------- | --- |
+| `u32` | 1 | `numPoints` | Number of points describing the Voronoi cell (polygon). |
+| `f64` | 1 | `polygonArea` | The area of the Voronoi cell (polygon). |
+| `u8` | 1 | `isPolygonClipped` | `0` if polygon is not clipped by the bounding rectangle (defined by `xStart:xEnd` and `yStart:yEnd`). `1` otherwise. |
+| `[f64,f64]` | 1 | `dataPoint` | Coordinates of the original data point as recorded in the .pairs file. |
+| `[f64,f64]` | 1 | `polygonCentroid` | Coordinates of the centroid of the Voronoi cell (polygon). |
+| `[f64,f64]` | `numPoints` | `polygonVertices` | Set of coordinates describing the Voronoi cell (polygon). |
 
 #### Set interactions to visualise
