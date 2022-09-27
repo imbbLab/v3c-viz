@@ -43,14 +43,14 @@ It is possible to interact with v3c-vis programmatically via GET/POST requests. 
 
 #### Compute Voronoi
 
-This command reads data between the supplied start and end loci, generates a contact matrix with the user-specified bin size as well as computing a Voronoi diagram from the same data.
+This command reads data between the supplied start and end loci, generates a contact matrix with the user-specified bin size as well as computing a Voronoi diagram from the same data. Issued with a GET request to a URL formatted like below.
 
 *Example* 
 ```
 http://localhost:5002/voronoiandimage?smoothingIterations=1&binSizeX=5000&binSizeY=5000&sourceChrom=chr3R&targetChrom=chr3R&xStart=15887016&xEnd=16390631&yStart=15947403&yEnd=16411610
 ```
 
-*Options*
+*Parameters*
 
 | Name | Description |
 |------|-------------|
@@ -72,9 +72,9 @@ The resulting data is transmitted in binary format, with the form described belo
 | ---- | ------: | ----------- | --- |
 | `u32`  | 1 | `numBinsX` | Number of bins in the *x*-dimension for the contact matrix. |
 | `u32`  | 1 | `numBinsY` | Number of bins in the *y*-dimension for the contact matrix. |
-| `u32`  | `numBinsX * numBinsY` | `contactMatrix` | Contract matrix binned at the supplied bin size. |
+| `u32`  | `numBinsX*numBinsY` | `contactMatrix` | Contract matrix binned at the supplied bin size. |
 | `u32`  | 1 | `numDataEntries` | Number of data points (entries) described by the Voronoi diagram. |
-| `dataEntry` | `numDataEntries` | The data points and the corresponding Voronoi cells. |
+| `dataEntry` | `numDataEntries` | `dataEntries` | The data points and the corresponding Voronoi cells. |
 
 The following table describes the format of each `dataEntry`.
 
@@ -89,3 +89,27 @@ The following table describes the format of each `dataEntry`.
 | `[f64,f64]` | `numPoints` | `polygonVertices` | Set of coordinates describing the Voronoi cell (polygon). |
 
 #### Set interactions to visualise
+
+This command specifies which interactions should be visualised alongside the .pairs data. To pass a set of interactions to v3c-vis, a POST request should be sent to `http://localhost:5002/interact` with a JSON body of the form below (which describes two interactions). Once this is successfully processed, refreshing the interface will show the submitted interactions. This replaces all previously submitted interactions.
+
+```json
+{
+    "Interactions":[
+        {
+            "SourceChrom":"chr3R",
+            "SourceStart":717970,
+            "SourceEnd":728975,
+            "TargetChrom":"chr3R",
+            "TargetStart":756550,
+            "TargetEnd":757555
+        },{
+            "SourceChrom":"chr3R",
+            "SourceStart":730815,
+            "SourceEnd":731820,
+            "TargetChrom":"chr3R",
+            "TargetStart":762140,
+            "TargetEnd":763145
+        }
+    ]
+}
+```
