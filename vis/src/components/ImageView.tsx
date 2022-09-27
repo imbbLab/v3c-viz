@@ -22,6 +22,8 @@ interface ImageViewProps {
 
     onRegionSelect: (region: Rectangle) => void
     onSetBinSize: (binSize: number) => void
+    onMaxNumBins: (numBins: number) => void
+    setIgnoreMaximum: (ignoreMaximum: boolean) => void
 }
 
 interface ImageViewState {
@@ -35,6 +37,10 @@ export class ImageView extends React.Component<ImageViewProps, ImageViewState> {
     canvas: HTMLCanvasElement | undefined
 
     imageGUI: GUI | undefined
+
+    binSize = 5000;
+    ignoreMaximum = false;
+    maxNumBins = 500;
 
     componentDidMount() {
         this.resizeCanvas();
@@ -59,9 +65,16 @@ export class ImageView extends React.Component<ImageViewProps, ImageViewState> {
             this.imageGUI = new GUI({ title: "Image Options", autoPlace: false });
             this.menuDiv!.appendChild(this.imageGUI.domElement);
 
-            this.imageGUI.add(this.imageMap, 'binSize').name('Bin size (bp)').onChange((value: number) => {
+            this.imageGUI.add(this, 'binSize').name('Bin size (bp)').onFinishChange((value: number) => {
                 this.props.onSetBinSize(value);
                 //requestViewUpdate({ dimension: "x", locus: getLocusFromBrowser(bottomBrowser) })
+            });
+            this.imageGUI.add(this, 'ignoreMaximum').name("Ignore maximum").onChange((value: boolean) => {
+                this.props.setIgnoreMaximum(value);
+            });
+            this.imageGUI.add(this, 'maxNumBins').name('Maximum number of bins').onFinishChange((value: number) => {
+                this.props.onMaxNumBins(value);
+                //requestViewUpdate({dimension: "x", locus: getLocusFromBrowser(bottomBrowser) })
             });
             //this.imageGUI.add(this.imageMap, 'percentile', 0, 1, 0.001).name('Percentile (threshold) ').onChange((value: number) => {
             //    this.imageMap!.setPercentile(value);
@@ -103,7 +116,7 @@ export class ImageView extends React.Component<ImageViewProps, ImageViewState> {
             }
 
             /*if (requiresUpdate) {
-                this.voronoiPlot.redrawVoronoi();
+                    this.voronoiPlot.redrawVoronoi();
             }*/
 
 

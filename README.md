@@ -41,6 +41,40 @@ v3c-vis can be started in server mode and will not automatically open the browse
 
 It is possible to interact with v3c-vis programmatically via GET/POST requests. In the following, it is assumed that v3c-vis is running locally on port 5002. If you are running v3c-vis on a separate machine or a different port, then all URLs should be updated accordingly.
 
+#### Genome details
+
+This command retrieves the genome information corresponding to the genome of the loaded pairs file.
+
+```
+http://localhost:5002/details
+```
+
+The output is in JSON and has the following format.
+
+```json
+{
+   "Genome":"dm6",
+   "Chromosomes":[
+      {
+         "Name":"chr3R",
+         "Length":32079331
+      },
+      {
+         "Name":"chr3L",
+         "Length":28110227
+      },
+      {
+         "Name":"chr2R",
+         "Length":25286936
+      },
+      ...
+   ],
+   "hasInteract":1
+}
+```
+
+
+
 #### Compute Voronoi
 
 This command reads data between the supplied start and end loci, generates a contact matrix with the user-specified bin size as well as computing a Voronoi diagram from the same data. Issued with a GET request to a URL formatted like below.

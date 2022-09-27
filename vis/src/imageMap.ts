@@ -16,8 +16,6 @@ export class ImageMap extends Axis {
     percentile = 0.97;
     imageThreshold = -1;
 
-    binSize = 5000;
-
     //voronoiPlot: VoronoiPlot
 
     imageData: Image | undefined

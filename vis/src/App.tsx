@@ -22,6 +22,11 @@ export interface View {
     endY: number
 }
 
+enum Axis {
+    X,
+    Y
+}
+
 interface AppProps {
     // These three are more like properties than state
     chromosomes: Map<string, Chromosome>
@@ -56,6 +61,7 @@ interface AppState {
     smoothingIterations: number,
 
     maxNumBins: number,
+    ignoreMaximum: boolean,
     imageBinSize: number,
     binSizeX: number,
     binSizeY: number
@@ -133,6 +139,7 @@ export class App extends React.Component<AppProps, AppState> {
             hideImageMap: false,
             smoothingIterations: 1,
             maxNumBins: 500,
+            ignoreMaximum: false,
             imageBinSize: 5000,
             binSizeX: 0,
             binSizeY: 0,
@@ -208,9 +215,28 @@ export class App extends React.Component<AppProps, AppState> {
             // If we have swapped view, then we might need to update the view parameters
             this.requestViewUpdate({ dimension: "x", locus: { chr: this.state.sourceChrom.name, start: this.state.view.startX, end: this.state.view.endX } });
             this.requestViewUpdate({ dimension: "y", locus: { chr: this.state.sourceChrom.name, start: this.state.view.startX, end: this.state.view.endX } });
-        } else if (this.state.view != prevState.view || this.state.smoothingIterations != prevState.smoothingIterations || this.state.imageBinSize != prevState.imageBinSize) {
+        } else if (this.state.view != prevState.view || this.state.smoothingIterations != prevState.smoothingIterations ||
+            this.state.ignoreMaximum != prevState.ignoreMaximum ||
+            this.state.imageBinSize != prevState.imageBinSize || this.state.maxNumBins != prevState.maxNumBins) {
+
             this.updateView(this.state.view);
         }
+    }
+
+    numberOfBins(view: View, axis: Axis) {
+        let numBins = 0;
+
+        if (axis == Axis.X) {
+            numBins = Math.round((view.endX - view.startX) / this.state.imageBinSize);
+        } else {
+            numBins = Math.round((view.endY - view.startY) / this.state.imageBinSize);
+        }
+
+        if (!this.state.ignoreMaximum && numBins > this.state.maxNumBins) {
+            numBins = this.state.maxNumBins;
+        }
+
+        return numBins;
     }
 
     updateView(view: View) {
@@ -236,15 +262,9 @@ export class App extends React.Component<AppProps, AppState> {
         //let pixelsY = 100; // voronoiMap.getVoronoiDrawHeight()
         //pixelsX=' + pixelsX + '&pixelsY=' + pixelsY + '&
 
-        let numBinsX = Math.round((view.endX - view.startX) / this.state.imageBinSize);
-        let numBinsY = Math.round((view.endY - view.startY) / this.state.imageBinSize);
+        let numBinsX = this.numberOfBins(view, Axis.X);
+        let numBinsY = this.numberOfBins(view, Axis.Y);
 
-        if (numBinsX > this.state.maxNumBins) {
-            numBinsX = this.state.maxNumBins
-        }
-        if (numBinsY > this.state.maxNumBins) {
-            numBinsY = this.state.maxNumBins
-        }
         let binSizeX = Math.floor((view.endX - view.startX) / numBinsX);
         let binSizeY = Math.floor((view.endY - view.startY) / numBinsY);
 
@@ -574,8 +594,15 @@ export class App extends React.Component<AppProps, AppState> {
                                     scale={this.state.imageScale}
                                     colourScale={this.state.imageColourScale!}
                                     onRegionSelect={this.onRegionSelect}
-                                    onSetBinSize={(binSize: number) => { this.setState({ imageBinSize: binSize }) }}></ImageView>
-                                <p style={{ float: "left" }}>Bin size: {this.state.binSizeX} x {this.state.binSizeY}</p>
+                                    onSetBinSize={(binSize: number) => { this.setState({ imageBinSize: binSize }) }}
+                                    onMaxNumBins={(numBins: number) => { this.setState({ maxNumBins: numBins }) }}
+                                    setIgnoreMaximum={(ignoreMaximum: boolean) => { this.setState({ ignoreMaximum: ignoreMaximum }) }}
+                                ></ImageView>
+                                <p style={{ float: "left" }}>
+                                    Bin size: {this.state.binSizeX} x {this.state.binSizeY}
+                                    <br />
+                                    # bins: {this.numberOfBins(this.state.view, Axis.X)} x {this.numberOfBins(this.state.view, Axis.Y)}
+                                </p>
                             </div>
                         }
                         <div style={{ width: this.canvasWidth(), display: "inline-block" }}>
