@@ -39,6 +39,9 @@ export class IGViewer extends React.Component<IGViewerProps, IGViewerState> {
 
     constructor(props: IGViewerProps) {
         super(props);
+
+
+        this.enableSearchUpdate = this.enableSearchUpdate.bind(this);
     }
 
     getLocus(): Locus {
@@ -84,6 +87,25 @@ export class IGViewer extends React.Component<IGViewerProps, IGViewerState> {
         })
     }
 
+    enableSearchUpdate() {
+        if (this.browser) {
+            let self = this;
+
+            console.log("I should be enabled!");
+
+            // Override the method for updating search widget when resizing
+            this.browser._updateLocusSearchWidget = this.browser.updateLocusSearchWidget;
+            this.browser.updateLocusSearchWidget = function (referenceFrameList: igv.ReferenceFrame[]): void {
+                self.browser!._updateLocusSearchWidget(referenceFrameList);
+
+                console.log("CHANGEs..dz.sf,d", self.getLocus());
+
+                self.props.requestViewUpdate({ dimension: self.props.dimension, locus: self.getLocus() })
+
+            }
+        }
+    }
+
     componentDidMount() {
         let self = this;
 
@@ -94,15 +116,6 @@ export class IGViewer extends React.Component<IGViewerProps, IGViewerState> {
 
                 // Make sure that the correct locus is set
                 self.browser.search(self.props.browserOptions.locus);
-
-                // Override the method for updating search widget when resizing
-                self.browser._updateLocusSearchWidget = self.browser.updateLocusSearchWidget;
-                self.browser.updateLocusSearchWidget = function (referenceFrameList: igv.ReferenceFrame[]): void {
-                    self.browser!._updateLocusSearchWidget(referenceFrameList);
-
-                    self.props.requestViewUpdate({ dimension: self.props.dimension, locus: self.getLocus() })
-
-                }
 
                 for (let track of self.props.tracks) {
                     self.addTrack(track)

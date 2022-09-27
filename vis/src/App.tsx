@@ -117,11 +117,19 @@ export class App extends React.Component<AppProps, AppState> {
             view.endX = props.srcEnd;
         }
 
+        if (props.srcStart && props.srcEnd) {
+            this.xRequest = { dimension: "x", locus: { chr: props.sourceChrom.name, start: props.srcStart, end: props.srcEnd } };
+        }
+
         if (props.tarStart) {
             view.startY = props.tarStart;
         }
         if (props.tarEnd) {
             view.endY = props.tarEnd;
+        }
+
+        if (props.tarStart && props.tarEnd) {
+            this.yRequest = { dimension: "y", locus: { chr: props.targetChrom.name, start: props.tarStart, end: props.tarEnd } };
         }
 
         let intrachromosomeView = false;
@@ -164,6 +172,7 @@ export class App extends React.Component<AppProps, AppState> {
         this.canvasWidth = this.canvasWidth.bind(this);
         this.browserWidth = this.browserWidth.bind(this);
         this.rotatedBrowserWidth = this.rotatedBrowserWidth.bind(this);
+        this.enableSearchUpdate = this.enableSearchUpdate.bind(this);
     }
 
     // Perform once when first initialising the app: load details
@@ -208,6 +217,21 @@ export class App extends React.Component<AppProps, AppState> {
         }
 
         this.updateView(this.state.view);
+
+        this.enableSearchUpdate();
+    }
+
+    enableSearchUpdate() {
+        if (this.belowBrowser && this.belowBrowser.browser && this.rightBrowser && this.rightBrowser.browser) {
+            this.belowBrowser.enableSearchUpdate();
+            this.rightBrowser.enableSearchUpdate();
+        } else {
+            let self = this;
+
+            setTimeout(() => {
+                self.enableSearchUpdate();
+            }, 100);
+        }
     }
 
     componentDidUpdate(prevProps: AppProps, prevState: AppState) {
