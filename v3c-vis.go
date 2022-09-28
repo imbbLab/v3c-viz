@@ -470,6 +470,12 @@ func GetVoronoiAndImage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	filterDistance, err := strconv.Atoi(query.Get("filterDistance"))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
 	minX, err := strconv.Atoi(query.Get("xStart"))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -494,8 +500,8 @@ func GetVoronoiAndImage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	pairsQuery := pairs.Query{SourceChrom: sourceChrom, SourceStart: uint64(minX), SourceEnd: uint64(maxX), TargetChrom: targetChrom, TargetStart: uint64(minY), TargetEnd: uint64(maxY)}
-	viewQuery := pairs.Query{SourceChrom: sourceChrom, SourceStart: uint64(minX), SourceEnd: uint64(maxX), TargetChrom: targetChrom, TargetStart: uint64(minY), TargetEnd: uint64(maxY)}
+	pairsQuery := pairs.Query{SourceChrom: sourceChrom, SourceStart: uint64(minX), SourceEnd: uint64(maxX), TargetChrom: targetChrom, TargetStart: uint64(minY), TargetEnd: uint64(maxY), FilterDistance: uint64(filterDistance)}
+	viewQuery := pairs.Query{SourceChrom: sourceChrom, SourceStart: uint64(minX), SourceEnd: uint64(maxX), TargetChrom: targetChrom, TargetStart: uint64(minY), TargetEnd: uint64(maxY), FilterDistance: uint64(filterDistance)}
 
 	fmt.Println(pairsQuery)
 

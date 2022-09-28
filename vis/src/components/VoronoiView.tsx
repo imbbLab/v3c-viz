@@ -21,6 +21,7 @@ interface VoronoiViewProps {
 
     onRegionSelect: (region: Rectangle) => void
     onSetSmoothing: (numSmoothing: number) => void
+    onSetFilterDistance: (filterDistance: number) => void
 }
 
 interface VoronoiViewState {
@@ -72,8 +73,13 @@ export class VoronoiView extends React.Component<VoronoiViewProps, VoronoiViewSt
             })
 
             const smoothingMenu = this.voronoiGUI.addFolder('Smoothing');
-            smoothingMenu.add(this.voronoiPlot, 'smoothingRepetitions', 0, 10, 1).name('Repetitions').onChange((value: number) => {
+            smoothingMenu.add(this.voronoiPlot, 'smoothingRepetitions', 0, 20, 1).name('Repetitions').onChange((value: number) => {
                 this.props.onSetSmoothing(value)
+            })
+
+            const filteringMenu = this.voronoiGUI.addFolder('Filtering');
+            filteringMenu.add(this.voronoiPlot, 'filterDistance', 0).name('Filter distance (x-y)').onFinishChange((value: number) => {
+                this.props.onSetFilterDistance(value)
             })
 
             this.voronoiGUI.close();

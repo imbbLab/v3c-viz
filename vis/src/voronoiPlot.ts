@@ -16,8 +16,8 @@ export class VoronoiPlot extends Axis {
     smoothingRepetitions: number;
     omega: number;
 
-    //belowBrowser: igv.Browser
-    //rightBrowser: igv.Browser
+    // Filter points that have (x - y) < filterDistance
+    filterDistance: number;
 
     displayVoronoiEdges: boolean;
     displayCentroid: boolean = false;
@@ -51,6 +51,7 @@ export class VoronoiPlot extends Axis {
 
         this.smoothingRepetitions = 1;
         this.omega = 1;
+        this.filterDistance = 0;
         this.points = new Uint32Array(0);
         this.normPoints = new Array<number[]>();
         this.boxesToDraw = new Array<number[]>();

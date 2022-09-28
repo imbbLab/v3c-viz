@@ -59,6 +59,7 @@ interface AppState {
     interactions?: Map<string, Map<string, Interaction[]>>;
 
     smoothingIterations: number,
+    filterDistance: number,
 
     maxNumBins: number,
     ignoreMaximum: boolean,
@@ -146,6 +147,7 @@ export class App extends React.Component<AppProps, AppState> {
             intrachromosomeView: intrachromosomeView,
             hideImageMap: false,
             smoothingIterations: 1,
+            filterDistance: 0,
             maxNumBins: 500,
             ignoreMaximum: false,
             imageBinSize: 5000,
@@ -167,6 +169,7 @@ export class App extends React.Component<AppProps, AppState> {
         this.requestViewUpdate = this.requestViewUpdate.bind(this);
         this.onRegionSelect = this.onRegionSelect.bind(this);
         this.setSmoothingIterations = this.setSmoothingIterations.bind(this);
+        this.setFilterDistance = this.setFilterDistance.bind(this);
         this.generateHistogram = this.generateHistogram.bind(this);
         this.generateImageHistogram = this.generateImageHistogram.bind(this);
         this.canvasWidth = this.canvasWidth.bind(this);
@@ -240,7 +243,7 @@ export class App extends React.Component<AppProps, AppState> {
             this.requestViewUpdate({ dimension: "x", locus: { chr: this.state.sourceChrom.name, start: this.state.view.startX, end: this.state.view.endX } });
             this.requestViewUpdate({ dimension: "y", locus: { chr: this.state.sourceChrom.name, start: this.state.view.startX, end: this.state.view.endX } });
         } else if (this.state.view != prevState.view || this.state.smoothingIterations != prevState.smoothingIterations ||
-            this.state.ignoreMaximum != prevState.ignoreMaximum ||
+            this.state.ignoreMaximum != prevState.ignoreMaximum || this.state.filterDistance != prevState.filterDistance ||
             this.state.imageBinSize != prevState.imageBinSize || this.state.maxNumBins != prevState.maxNumBins) {
 
             this.updateView(this.state.view);
@@ -276,7 +279,8 @@ export class App extends React.Component<AppProps, AppState> {
         let voronoiPlot: VoronoiPlot = this.voronoiView.voronoiPlot;
 
         // Update the URL to reflect the current view
-        let nextURL = window.location.href.split('?')[0] + "?srcChrom=" + this.state.sourceChrom.name + "&srcStart=" + view.startX + "&srcEnd=" + view.endX + "&tarChrom=" + this.state.targetChrom.name + "&tarStart=" + view.startY + "&tarEnd=" + view.endY + "&triangleView=" + this.state.intrachromosomeView
+        let nextURL = window.location.href.split('?')[0] + "?srcChrom=" + this.state.sourceChrom.name + "&srcStart=" + view.startX + "&srcEnd=" + view.endX +
+            "&tarChrom=" + this.state.targetChrom.name + "&tarStart=" + view.startY + "&tarEnd=" + view.endY + "&triangleView=" + this.state.intrachromosomeView;
         window.history.pushState({}, this.state.sourceChrom.nameWithChr() + ":" + view.startX + "-" + view.endX + " x " + this.state.targetChrom + ":" + view.startY + "-" + view.endY, nextURL);
 
         //imageMap.setChromPair(sourceChrom, targetChrom);
@@ -299,7 +303,9 @@ export class App extends React.Component<AppProps, AppState> {
             binSizeY = this.state.imageBinSize
         }
 
-        fetch('./voronoiandimage?smoothingIterations=' + this.state.smoothingIterations + '&binSizeX=' + binSizeX + '&binSizeY=' + binSizeY + '&sourceChrom=' + this.state.sourceChrom.name + '&targetChrom=' + this.state.targetChrom.name + '&xStart=' + view.startX + '&xEnd=' + view.endX + '&yStart=' + view.startY + '&yEnd=' + view.endY)
+        fetch('./voronoiandimage?smoothingIterations=' + this.state.smoothingIterations + '&binSizeX=' + binSizeX + '&binSizeY=' + binSizeY + '&sourceChrom=' + this.state.sourceChrom.name +
+            '&targetChrom=' + this.state.targetChrom.name + '&xStart=' + view.startX + '&xEnd=' + view.endX + '&yStart=' + view.startY + '&yEnd=' + view.endY +
+            "&filterDistance=" + this.state.filterDistance)
             .then(
                 (response) => {
                     if (response.status !== 200) {
@@ -458,6 +464,10 @@ export class App extends React.Component<AppProps, AppState> {
 
     setSmoothingIterations(iterations: number) {
         this.setState({ smoothingIterations: iterations })
+    }
+
+    setFilterDistance(filterDistance: number) {
+        this.setState({ filterDistance: filterDistance });
     }
 
     generateHistogram(voronoi: Voronoi, numBins: number): Histogram {
@@ -640,6 +650,7 @@ export class App extends React.Component<AppProps, AppState> {
                                 colourScale={this.state.colourScale!}
                                 onRegionSelect={this.onRegionSelect}
                                 onSetSmoothing={this.setSmoothingIterations}
+                                onSetFilterDistance={this.setFilterDistance}
                             ></VoronoiView>
                         </div>
                     </div>
