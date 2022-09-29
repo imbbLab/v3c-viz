@@ -1,6 +1,6 @@
 # v3c-viz
 
-![Screenshot](/docs/hicvis-screenshot.png?raw=true "Screenshot")
+![Screenshot](/docs/screenshot-cut.png?raw=true "Screenshot")
 
 ## Features
 * Visualisation interactively customisable using GUI
