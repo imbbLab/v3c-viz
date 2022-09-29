@@ -25,9 +25,9 @@ import (
 
 	"github.com/gorilla/mux"
 
-	"github.com/imbbLab/v3c-vis/interact"
-	"github.com/imbbLab/v3c-vis/pairs"
-	"github.com/imbbLab/v3c-vis/voronoi"
+	"github.com/imbbLab/v3c-viz/interact"
+	"github.com/imbbLab/v3c-viz/pairs"
+	"github.com/imbbLab/v3c-viz/voronoi"
 
 	"github.com/fogleman/delaunay"
 )
@@ -39,7 +39,7 @@ var opts struct {
 	// Example of a required flag
 	DataFile             string `short:"d" long:"data" description:"Data to load (.pairs)" required:"true"`
 	Genome               string `short:"g" long:"genome" description:"Genome to load" required:"false"`
-	InteractFile         string `short:"i" long:"interact" description:"Interact file to visualise" required:"false"`
+	InteractFile         string `short:"i" long:"interact" description:"Interact file to visualize" required:"false"`
 	MaximumVoronoiPoints int    `long:"maxpoints" description:"Maximum points to calculate voronoi" default:"100000"`
 	Port                 string `short:"p" long:"port" description:"Port used for the server" default:"5002"`
 	Server               bool   `long:"server" description:"Start just the server and don't automatically open the browser"`

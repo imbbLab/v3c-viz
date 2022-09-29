@@ -1,4 +1,4 @@
-# v3c-vis
+# v3c-viz
 
 ![Screenshot](/docs/hicvis-screenshot.png?raw=true "Screenshot")
 
@@ -16,30 +16,30 @@
 * Download the latest archive from the releases page
 * Extract and then run the following command (where `-g` specifies the genome):
 ```
-./v3c-vis -d path/to/data.gz -i path/to/contacts.interact -g dm6
+./v3c-viz -d path/to/data.gz -i path/to/contacts.interact -g dm6
 ```
 ## Optional Commands 
 ### Maximum points for Voronoi
 Optional additional command line controls the maximum number of points used to calculate voronoi (when more points are requested, no voronoi is calculated):
 ```
-./v3c-vis -d path/to/data.gz -i path/to/contacts.interact -g dm6 --maxpoints 100000
+./v3c-viz -d path/to/data.gz -i path/to/contacts.interact -g dm6 --maxpoints 100000
 ```
 ### Port
 Optional additional command line controls which port is used for the server (change if conflict with other software):
 ```
-./v3c-vis -d path/to/data.gz -i path/to/contacts.interact -g dm6 -p 5002
+./v3c-viz -d path/to/data.gz -i path/to/contacts.interact -g dm6 -p 5002
 ```
 
 ### Server mode
-v3c-vis can be started in server mode and will not automatically open the browser:
+v3c-viz can be started in server mode and will not automatically open the browser:
 ```
-./v3c-vis -d path/to/data.gz -i path/to/contacts.interact -g dm6 --server
+./v3c-viz -d path/to/data.gz -i path/to/contacts.interact -g dm6 --server
 ```
 
 
 ### API
 
-It is possible to interact with v3c-vis programmatically via GET/POST requests. In the following, it is assumed that v3c-vis is running locally on port 5002. If you are running v3c-vis on a separate machine or a different port, then all URLs should be updated accordingly.
+It is possible to interact with v3c-viz programmatically via GET/POST requests. In the following, it is assumed that v3c-viz is running locally on port 5002. If you are running v3c-viz on a separate machine or a different port, then all URLs should be updated accordingly.
 
 #### Genome details
 
@@ -124,7 +124,7 @@ The following table describes the format of each `dataEntry`.
 
 #### Set interactions to visualise
 
-This command specifies which interactions should be visualised alongside the .pairs data. To pass a set of interactions to v3c-vis, a POST request should be sent to `http://localhost:5002/interact` with a JSON body of the form below (which describes two interactions). Once this is successfully processed, refreshing the interface will show the submitted interactions. This replaces all previously submitted interactions.
+This command specifies which interactions should be visualised alongside the .pairs data. To pass a set of interactions to v3c-viz, a POST request should be sent to `http://localhost:5002/interact` with a JSON body of the form below (which describes two interactions). Once this is successfully processed, refreshing the interface will show the submitted interactions. This replaces all previously submitted interactions.
 
 ```json
 {

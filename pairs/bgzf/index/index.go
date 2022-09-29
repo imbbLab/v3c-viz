@@ -9,7 +9,7 @@ import (
 	"errors"
 	"io"
 
-	"github.com/imbbLab/v3c-vis/pairs/bgzf"
+	"github.com/imbbLab/v3c-viz/pairs/bgzf"
 )
 
 var (

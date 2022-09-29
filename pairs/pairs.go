@@ -18,7 +18,7 @@ import (
 	"time"
 
 	//"github.com/biogo/hts/bgzf"
-	"github.com/imbbLab/v3c-vis/pairs/bgzf"
+	"github.com/imbbLab/v3c-viz/pairs/bgzf"
 )
 
 type Order int
