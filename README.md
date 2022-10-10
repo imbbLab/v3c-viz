@@ -2,6 +2,14 @@
 
 ![Screenshot](/docs/screenshot-cut.png?raw=true "Screenshot")
 
+## Table of Contents
+* [Features](#features)
+* [Current limitations](#current-limitations)
+* [Getting started](#getting-started)
+* [Optional commands](#optional-commands)
+* [API](#api)
+* [Developer guide](#developer-guide)
+
 ## Features
 * Visualisation interactively customisable using GUI
 * Full matrix view and triangle view 
@@ -18,7 +26,7 @@
 ```
 ./v3c-viz -d path/to/data.gz -i path/to/contacts.interact -g dm6
 ```
-## Optional Commands 
+## Optional commands 
 ### Maximum points for Voronoi
 Optional additional command line controls the maximum number of points used to calculate voronoi (when more points are requested, no voronoi is calculated):
 ```
@@ -37,11 +45,11 @@ v3c-viz can be started in server mode and will not automatically open the browse
 ```
 
 
-### API
+## API
 
 It is possible to interact with v3c-viz programmatically via GET/POST requests. In the following, it is assumed that v3c-viz is running locally on port 5002. If you are running v3c-viz on a separate machine or a different port, then all URLs should be updated accordingly.
 
-#### Genome details
+### Genome details
 
 This command retrieves the genome information corresponding to the genome of the loaded pairs file.
 
@@ -75,7 +83,7 @@ The output is in JSON and has the following format.
 
 
 
-#### Compute Voronoi
+### Compute Voronoi
 
 This command reads data between the supplied start and end loci, generates a contact matrix with the user-specified bin size as well as computing a Voronoi diagram from the same data. Issued with a GET request to a URL formatted like below.
 
@@ -122,7 +130,7 @@ The following table describes the format of each `dataEntry`.
 | `[f64,f64]` | 1 | `polygonCentroid` | Coordinates of the centroid of the Voronoi cell (polygon). |
 | `[f64,f64]` | `numPoints` | `polygonVertices` | Set of coordinates describing the Voronoi cell (polygon). |
 
-#### Set interactions to visualise
+### Set interactions to visualise
 
 This command specifies which interactions should be visualised alongside the .pairs data. To pass a set of interactions to v3c-viz, a POST request should be sent to `http://localhost:5002/interact` with a JSON body of the form below (which describes two interactions). Once this is successfully processed, refreshing the interface will show the submitted interactions. This replaces all previously submitted interactions.
 
@@ -149,7 +157,7 @@ This command specifies which interactions should be visualised alongside the .pa
 ```
 
 
-## Developer Guide
+## Developer guide
 
 To compile the server, [Go must be installed](https://go.dev/doc/install) and then simply run the following command in the main folder:
 
