@@ -147,3 +147,18 @@ This command specifies which interactions should be visualised alongside the .pa
     ]
 }
 ```
+
+
+## Developer Guide
+
+To compile the server, [Go must be installed](https://go.dev/doc/install) and then simply run the following command in the main folder:
+
+```sh
+go build
+```
+
+To compile the interface, [npm must be installed](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm) and then simply run the following command in the `vis/` folder:
+
+```sh
+npm run watch
+```
