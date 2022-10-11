@@ -1,4 +1,4 @@
-module github.com/imbbLab/hicvis
+module github.com/imbbLab/v3c-viz
 
 go 1.16
 

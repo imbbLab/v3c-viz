@@ -6,7 +6,7 @@ import (
 	"sort"
 	"sync"
 
-	"github.com/imbbLab/hicvis/pairs/bgzf"
+	"github.com/imbbLab/v3c-viz/pairs/bgzf"
 )
 
 type Query struct {
@@ -17,6 +17,9 @@ type Query struct {
 	TargetChrom string
 	TargetStart uint64
 	TargetEnd   uint64
+
+	// Ignore points that are within abs(x - y) < FilterDistance
+	FilterDistance uint64
 }
 
 func (query Query) Reverse() Query {

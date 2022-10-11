@@ -25,9 +25,9 @@ import (
 
 	"github.com/gorilla/mux"
 
-	"github.com/imbbLab/hicvis/interact"
-	"github.com/imbbLab/hicvis/pairs"
-	"github.com/imbbLab/hicvis/voronoi"
+	"github.com/imbbLab/v3c-viz/interact"
+	"github.com/imbbLab/v3c-viz/pairs"
+	"github.com/imbbLab/v3c-viz/voronoi"
 
 	"github.com/fogleman/delaunay"
 )
@@ -39,7 +39,7 @@ var opts struct {
 	// Example of a required flag
 	DataFile             string `short:"d" long:"data" description:"Data to load (.pairs)" required:"true"`
 	Genome               string `short:"g" long:"genome" description:"Genome to load" required:"false"`
-	InteractFile         string `short:"i" long:"interact" description:"Interact file to visualise" required:"false"`
+	InteractFile         string `short:"i" long:"interact" description:"Interact file to visualize" required:"false"`
 	MaximumVoronoiPoints int    `long:"maxpoints" description:"Maximum points to calculate voronoi" default:"100000"`
 	Port                 string `short:"p" long:"port" description:"Port used for the server" default:"5002"`
 	Server               bool   `long:"server" description:"Start just the server and don't automatically open the browser"`
@@ -470,6 +470,12 @@ func GetVoronoiAndImage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	filterDistance, err := strconv.Atoi(query.Get("filterDistance"))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
 	minX, err := strconv.Atoi(query.Get("xStart"))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -494,8 +500,8 @@ func GetVoronoiAndImage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	pairsQuery := pairs.Query{SourceChrom: sourceChrom, SourceStart: uint64(minX), SourceEnd: uint64(maxX), TargetChrom: targetChrom, TargetStart: uint64(minY), TargetEnd: uint64(maxY)}
-	viewQuery := pairs.Query{SourceChrom: sourceChrom, SourceStart: uint64(minX), SourceEnd: uint64(maxX), TargetChrom: targetChrom, TargetStart: uint64(minY), TargetEnd: uint64(maxY)}
+	pairsQuery := pairs.Query{SourceChrom: sourceChrom, SourceStart: uint64(minX), SourceEnd: uint64(maxX), TargetChrom: targetChrom, TargetStart: uint64(minY), TargetEnd: uint64(maxY), FilterDistance: uint64(filterDistance)}
+	viewQuery := pairs.Query{SourceChrom: sourceChrom, SourceStart: uint64(minX), SourceEnd: uint64(maxX), TargetChrom: targetChrom, TargetStart: uint64(minY), TargetEnd: uint64(maxY), FilterDistance: uint64(filterDistance)}
 
 	fmt.Println(pairsQuery)
 
@@ -845,9 +851,17 @@ func max(a, b uint64) uint64 {
 // }
 
 func uploadFile(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("Uploading file of size: ", r.ContentLength)
+
 	// Parse our multipart form, 10 << 20 specifies a maximum
 	// upload of 10 MB files.
-	r.ParseMultipartForm(10 << 20)
+	err := r.ParseMultipartForm(10 << 20)
+	if err != nil {
+		fmt.Print("Error Retrieving the File: ")
+		fmt.Println(err)
+		return
+	}
+
 	// FormFile returns the first file for the given key `myFile`
 	// it also returns the FileHeader so we can get the Filename,
 	// the Header and the size of the file

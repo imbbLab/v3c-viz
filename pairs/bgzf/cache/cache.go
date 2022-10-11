@@ -8,7 +8,7 @@ package cache
 import (
 	"sync"
 
-	"github.com/imbbLab/hicvis/pairs/bgzf"
+	"github.com/imbbLab/v3c-viz/pairs/bgzf"
 )
 
 var (

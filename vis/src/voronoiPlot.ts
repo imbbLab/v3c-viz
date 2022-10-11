@@ -16,8 +16,8 @@ export class VoronoiPlot extends Axis {
     smoothingRepetitions: number;
     omega: number;
 
-    //belowBrowser: igv.Browser
-    //rightBrowser: igv.Browser
+    // Filter points that have (x - y) < filterDistance
+    filterDistance: number;
 
     displayVoronoiEdges: boolean;
     displayCentroid: boolean = false;
@@ -51,6 +51,7 @@ export class VoronoiPlot extends Axis {
 
         this.smoothingRepetitions = 1;
         this.omega = 1;
+        this.filterDistance = 0;
         this.points = new Uint32Array(0);
         this.normPoints = new Array<number[]>();
         this.boxesToDraw = new Array<number[]>();
@@ -221,8 +222,8 @@ export class VoronoiPlot extends Axis {
                     polygon.points = points;
                     polygon.area = this.voronoi.polygons[i].area;
                     polygon.logArea = this.voronoi.polygons[i].logArea;
-                    polygon.centroid = { x: ((this.voronoi.polygons[i].centroid.x - this.minViewX) / binSizeX), y: ((this.voronoi.polygons[i].centroid.y - this.minViewY) / binSizeY) };
-                    polygon.dataPoint = { x: ((this.voronoi.polygons[i].dataPoint.x - this.minViewX) / binSizeX), y: ((this.voronoi.polygons[i].dataPoint.y - this.minViewY) / binSizeY) };
+                    polygon.centroid = { x: ((this.voronoi.polygons[i].centroid.y - this.minViewX) / binSizeX), y: ((this.voronoi.polygons[i].centroid.x - this.minViewY) / binSizeY) };
+                    polygon.dataPoint = { x: ((this.voronoi.polygons[i].dataPoint.y - this.minViewX) / binSizeX), y: ((this.voronoi.polygons[i].dataPoint.x - this.minViewY) / binSizeY) };
 
                     polygons.push(polygon)
                 }
@@ -337,19 +338,11 @@ export class VoronoiPlot extends Axis {
         if (this.displayCentroid) {
             for (let i = 0; i < polygons.length; i++) {
                 voronoiCanvasCTX.fillRect(polygons[i].centroid.x - this.dataPointSize / 2, polygons[i].centroid.y - this.dataPointSize / 2, this.dataPointSize, this.dataPointSize);
-
-                if (this.sourceChrom == this.targetChrom) {
-                    voronoiCanvasCTX.fillRect(polygons[i].centroid.x - this.dataPointSize / 2, polygons[i].centroid.y - this.dataPointSize / 2, this.dataPointSize, this.dataPointSize);
-                }
             }
         }
         if (this.displayVoronoiPoints) {
             for (let i = 0; i < polygons.length; i++) {
                 voronoiCanvasCTX.fillRect(polygons[i].dataPoint.x - this.dataPointSize / 2, polygons[i].dataPoint.y - this.dataPointSize / 2, this.dataPointSize, this.dataPointSize);
-
-                if (this.sourceChrom == this.targetChrom) {
-                    voronoiCanvasCTX.fillRect(polygons[i].dataPoint.x - this.dataPointSize / 2, polygons[i].dataPoint.y - this.dataPointSize / 2, this.dataPointSize, this.dataPointSize);
-                }
             }
         }
 

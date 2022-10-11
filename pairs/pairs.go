@@ -18,7 +18,7 @@ import (
 	"time"
 
 	//"github.com/biogo/hts/bgzf"
-	"github.com/imbbLab/hicvis/pairs/bgzf"
+	"github.com/imbbLab/v3c-viz/pairs/bgzf"
 )
 
 type Order int
@@ -1005,8 +1005,17 @@ func (entry Entry) IsInRange(query Query) bool {
 	if entry.SourceChrom != query.SourceChrom || entry.TargetChrom != query.TargetChrom {
 		return false
 	}
+
+	distance := uint64(0)
+	if entry.SourcePosition > entry.TargetPosition {
+		distance = entry.SourcePosition - entry.TargetPosition
+	} else {
+		distance = entry.TargetPosition - entry.SourcePosition
+	}
+
 	if entry.SourcePosition >= query.SourceStart && entry.SourcePosition <= query.SourceEnd &&
-		entry.TargetPosition >= query.TargetStart && entry.TargetPosition <= query.TargetEnd {
+		entry.TargetPosition >= query.TargetStart && entry.TargetPosition <= query.TargetEnd &&
+		(entry.SourceChrom == entry.TargetChrom && distance >= query.FilterDistance) {
 
 		return true
 
