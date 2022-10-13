@@ -4,7 +4,7 @@ import { App } from "./App";
 import { Chromosome, getChromosomeFromMap } from "./chromosome";
 import { GenomeDetails, getGenomeDetails } from "./genome";
 
-const VERSION = "0.8.6";
+const VERSION = "0.9.0";
 
 function parseUrlParam(value: string | null): number | undefined {
     if (value) {
